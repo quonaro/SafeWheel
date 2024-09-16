@@ -1,8 +1,9 @@
 from pprint import pprint
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 from dataclasses import dataclass
 import datetime
 from datetime import timedelta
+import os
 
 @dataclass
 class Member:
@@ -21,6 +22,8 @@ class Command:
     time : datetime.time
     penalty_points: int
     rank: int = None
+    
+   
     
   
     
@@ -50,8 +53,12 @@ def remove_empty(ws):
     for col in range(max_column, 0, -1):
         if all(ws.cell(row=row, column=col).value is None for row in range(1, max_row + 1)):
             ws.delete_cols(col)
+    return ws
 
 def get_data(sheet) -> list[Command]:
+    
+    sheet = remove_empty(sheet)
+    headers = [cell.value for cell in sheet[2]]
     data = list(sheet.iter_rows(values_only=True))[2:]
     
     # Получение данных в виде объектов датакласса
@@ -95,24 +102,32 @@ def get_data(sheet) -> list[Command]:
         cm.rank = i
 
     
-    return sort_result
+    return headers + sort_result
 
-def get_final_results():
-    ...
+def get_list_from_data(lst : list[Command]):
+    bg_list = []
+    for cmd in lst[1:]:
+        bg_list.append(cmd)
+    return bg_list
 
 
+def save_final(wb,sheetnames):
+    
+    try:
+        wb2 = load_workbook('Результаты.xlsx')
+    except FileNotFoundError:
+        wb2 = Workbook()
+    del wb2[wb2.sheetnames[0]]
+    for sheetname in sheetnames:
+        new_sheet = wb2.create_sheet(title=f'{sheetname}_ИТОГ')
+        sheet=wb[sheetname]
+        print(get_list_from_data(get_data(sheet)))
+        
+        
+        wb2.save(f'Результаты.xlsx')
 
-
-
+    
+    
+    
 if __name__ == "__main__":
-    # Загрузка рабочей книги
-    workbook = load_workbook('test.xlsx',data_only=True)
-    # Выбор активного листа
-    sheet = workbook['МЕДИЦИНА']
-    
-    remove_empty(sheet)
-    pprint(get_data(sheet))
-    
-    
-    
-    
+    save_final(load_workbook('test.xlsx'),['МЕДИЦИНА'])
