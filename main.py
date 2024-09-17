@@ -1,4 +1,3 @@
-from pprint import pprint
 import re
 from openpyxl import Workbook, load_workbook
 from dataclasses import dataclass
@@ -137,7 +136,7 @@ def get_data(sheet) -> list[Command]:
     sort_result = sorted(result, key=lambda m: (m.penalty_points, m.time.total_seconds() + m.penalty_points))
     
 
-    for i, cm in enumerate(sort_result):
+    for i, cm in enumerate(sort_result,start=1):
         cm.rank = i
 
     return sort_result
@@ -146,8 +145,7 @@ def get_list_from_data(lst : list[Command]):
     bg_list = []
     for cmd in lst:
         bg_list.append(cmd)
-    
-    print(len(bg_list))
+
     return bg_list
     
 
@@ -167,7 +165,6 @@ def save_final(wb,sheetnames):
         new_sheet.append(['Команда','ФИО участника','Пол','Время участника','Кол-во штрафных баллов','Общее время','Общее кол-во штрафных баллов','Место в личном зачёте','Место команды'])
         
         data = []
-        # pprint(d)
         for command in d:
             for row in command.get_list():
                 
@@ -283,14 +280,16 @@ def save_result():
     if 'Итоговые результаты' in wb.sheetnames:
         del wb['Итоговые результаты']
     new_sheet = wb.create_sheet(title='Итоговые результаты')
+
     new_sheet.append(
         ["Команда"] +
-        [f"{i.replace('_ИТОГ','')} \nкол-во штрафных баллов" for i in list_of_sheets] + \
-        ["Общее кол-во штрафных очков"]
+        [f"{i.replace('_ИТОГ','')} \nШтрафные баллы" for i in list_of_sheets] + \
+        ["Общее кол-во штрафных баллов"] + \
+        ["Место"]
         ) 
     
-    for row in result:
-        new_sheet.append(row)
+    for i,row in enumerate(result,start=1):
+        new_sheet.append(row + [i])
     
     # Устанавливаем выравнивание для первой строки (центрирование и перенос слов)
     for cell in new_sheet[1]:
@@ -309,3 +308,4 @@ def save_result():
 if __name__ == "__main__":
     wb = load_workbook('Тестовый.xlsx')
     save_final(wb,['МЕДИЦИНА'])
+    save_result()

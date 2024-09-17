@@ -5,10 +5,7 @@ import openpyxl
 from CTkListbox import CTkListbox
 from tkinter import messagebox
 from customtkinter import CTkFont
-
 import os
-
-
 
 def center_window(window):
     window.update_idletasks()
@@ -70,7 +67,9 @@ class SafetyWheel2024(ctk.CTk):
         from main import save_result
         try:
             save_result()
-            messagebox.showinfo('Успех!', f"Результаты можно найти в файле на листе <<Итоговые результаты>>")
+            answer = messagebox.askyesno(title="Вопрос", message="Открыть файл с результатом ?")
+            if answer:
+                os.startfile('Результаты.xlsx')
         except PermissionError as e :
             messagebox.showerror('Ошибка!',"Доступ к файлу запрещён , возможно файл (Результаты.xlsx) используется другой программой")
             
@@ -111,8 +110,12 @@ class SafetyWheel2024(ctk.CTk):
                 from main import save_final
                 try:
                     save_final(self.workbook, selected_sheets)
-                    messagebox.showinfo('Ура', f'Код завершился без ошибок!\nРезультаты в файле Результаты.xlsx')
+                    messagebox.showinfo('Создание смежных таблиц', f'Успешно!\nРезультаты в файле Результаты.xlsx')
                     self.get_final_score.configure(state='normal')
+                    
+                    
+                    
+                    
                 
                 except PermissionError as e :
                     messagebox.showerror('Ошибка!',"Доступ к файлу запрещён , возможно файл (Результаты.xlsx) используется другой программой")
