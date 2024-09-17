@@ -4,6 +4,8 @@ from tkinter import filedialog
 import openpyxl
 from CTkListbox import CTkListbox
 from tkinter import messagebox
+from customtkinter import CTkFont
+
 import os
 
 
@@ -24,24 +26,32 @@ class SafetyWheel2024(ctk.CTk):
         self.geometry('300x400')
         self.listbox_visible = False
         
+        self.bfont = CTkFont(family="RobotoFlex", size=15,weight='bold')
+        self.font = CTkFont(family="RobotoFlex", size=15,weight='normal')
+        
+        
+        
         
         # Центрируем кнопку выбора файла
-        self.select_button = ctk.CTkButton(self, text="Выбрать файл Excel",height=50,command=self.select_excel_file,corner_radius=0)
+        self.select_button = ctk.CTkButton(self, text="Выбрать файл Excel",height=50,command=self.select_excel_file,corner_radius=0,fg_color="#9642f5",hover_color='#81139c',
+                                           font=self.font)
         self.select_button.pack(pady=0, fill='x')
         
-       
+        self.get_final_score = ctk.CTkButton(self, text="Получить итоговый результат", command=self.final_score,corner_radius=0,state='disabled',fg_color='#4a39e9',hover_color='#115baf',font=self.font)
+        self.get_final_score.pack(side='bottom', fill='x',pady=5)
+        path = 'Результаты.xlsx'
+        if os.path.exists(path) and os.path.isfile(path):
+            self.result_exits = True
+            self.get_final_score.configure(state='normal')
+        else:
+            self.result_exits = False
         
-        # Создаем Listbox для отображения имен листов
-        self.listbox = CTkListbox(self, multiple_selection=True)
-        self.listbox.pack(padx=10, pady=5, fill='both', expand=True)
-        
-        # Центрируем кнопку получения выбранных листов
-        self.get_final_score = ctk.CTkButton(self, text="Получить итоговый результат листы", command=self.final_score,corner_radius=0)
-        self.get_final_score.pack(side='bottom', fill='x')
-        
-        
-        self.select_sheets_button = ctk.CTkButton(self, text="Получить выбранные листы", command=self.get_selected_sheets,corner_radius=0,fg_color='#881530')
+        self.select_sheets_button = ctk.CTkButton(self, text="Получить смежный результат\n(нужно выбрать листы в списке)",
+                                                  command=self.get_selected_sheets,corner_radius=0, fg_color="#9642f5",hover_color='#81139c', state='disabled',font=self.font)
         self.select_sheets_button.pack(side='bottom', fill='x')
+        
+        self.listbox = CTkListbox(self, multiple_selection=True,border_width=0,justify='center',hover_color='#9642f5',highlight_color='#6520b4')
+        self.listbox.pack(fill='both', expand=True)
         
         center_window(self)
         self.mainloop()
@@ -51,11 +61,11 @@ class SafetyWheel2024(ctk.CTk):
         if self.listbox:
             self.listbox.destroy()
 
-        # Создаем новый listbox
-        self.listbox = CTkListbox(self, multiple_selection=True)
-        self.listbox.pack(padx=10, pady=5, fill='both', expand=True)
-        
-        
+        # Создаем Listbox для отображения имен листов
+        self.listbox = CTkListbox(self, multiple_selection=True,border_width=0,justify='center',hover_color='#9642f5',highlight_color='#6520b4')
+
+        self.listbox.pack(fill='both', expand=True)
+            
     def final_score(self):
         from main import save_result
         try:
@@ -64,8 +74,7 @@ class SafetyWheel2024(ctk.CTk):
             
         except Exception as e:
             messagebox.showerror('Ошибка!', f"{e}\nЛист не подходит по формату, проверьте данные и колонки!")
-            
-        
+               
     def select_excel_file(self):
         
         
@@ -84,6 +93,7 @@ class SafetyWheel2024(ctk.CTk):
             for name in sheet_names:
                 self.listbox.insert(ctk.END, name)  # Добавляем имена листов в Listbox
             self.listbox_visible = True
+            self.select_sheets_button.configure(state='normal')
     
     def get_selected_sheets(self):
         if self.listbox_visible:
@@ -99,6 +109,8 @@ class SafetyWheel2024(ctk.CTk):
                 try:
                     save_final(self.workbook, selected_sheets)
                     messagebox.showinfo('Ура', f'Код завершился без ошибок!\nРезультаты в файле Результаты.xlsx')
+                    self.get_final_score.configure(state='normal')
+                    
                 except Exception as e:
                     messagebox.showerror('Ошибка!', f"{e}\nЛист не подходит по формату, проверьте данные и колонки!")
                     

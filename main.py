@@ -1,4 +1,4 @@
-import pprint
+from pprint import pprint
 import re
 from openpyxl import Workbook, load_workbook
 from dataclasses import dataclass
@@ -60,23 +60,24 @@ def remove_empty(ws):
         # Определение максимальных строк и столбцов
     max_row = ws.max_row
     max_column = ws.max_column
-
+    print(max_row)
+    
     # Удаление пустых строк
     for row in range(max_row, 0, -1):
         if all(ws.cell(row=row, column=col).value is None for col in range(1, max_column + 1)):
             ws.delete_rows(row)
 
-    # Удаление пустых столбцов
-    for col in range(max_column, 0, -1):
-        if all(ws.cell(row=row, column=col).value is None for row in range(1, max_row + 1)):
-            ws.delete_cols(col)
+            
+    for i in ws.iter_rows(values_only=True):
+        print(i)
     return ws
 
 def get_data(sheet) -> list[Command]:
     
     sheet = remove_empty(sheet)
-    headers = [cell.value for cell in sheet[2]]
+    
     data = list(sheet.iter_rows(values_only=True))[2:]
+    
     
     # Получение данных в виде объектов датакласса
     member_index = 1
@@ -85,8 +86,9 @@ def get_data(sheet) -> list[Command]:
     members : list[Member] = []
     
     # Разделение участников на девочек и мальчиков
-    girls = [row for row in data if row[2].lower() == 'ж']  # Пол может быть в разных форматах, проверьте как он хранится
-    boys = [row for row in data if row[2].lower() == 'м']
+    print(len(data))
+    girls = [row for row in data if row[2].lower() == 'ж'] ;print(len(girls))
+    boys = [row for row in data if row[2].lower() == 'м'];print(len(boys))
 
     # Сортировка девочек и мальчиков по времени и штрафным баллам
     sorted_girls = sorted(girls, key=lambda e: (e[4], time_to_timedelta(e[3]).total_seconds() + e[4]))
@@ -141,6 +143,7 @@ def get_list_from_data(lst : list[Command]):
     bg_list = []
     for cmd in lst[1:]:
         bg_list.append(cmd)
+    
     return bg_list
 
 def save_final(wb,sheetnames):
@@ -159,8 +162,10 @@ def save_final(wb,sheetnames):
         new_sheet.append(['Команда','ФИО участника','Пол','Время участника','Кол-во штрафных баллов','Общее время','Общее кол-во штрафных баллов','Место в личном зачёте','Место команды'])
         
         data = []
+        # pprint(d)
         for command in d:
             for row in command.get_list():
+                
                 data.append(row)
                 new_sheet.append(row)
         
@@ -297,4 +302,5 @@ def save_result():
     
     
 if __name__ == "__main__":
-    save_result()
+    wb = load_workbook('Тестовый.xlsx')
+    save_final(wb,['МЕДИЦИНА'])
