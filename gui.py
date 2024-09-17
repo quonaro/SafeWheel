@@ -71,6 +71,9 @@ class SafetyWheel2024(ctk.CTk):
         try:
             save_result()
             messagebox.showinfo('Успех!', f"Результаты можно найти в файле на листе <<Итоговые результаты>>")
+        except PermissionError as e :
+            messagebox.showerror('Ошибка!',"Доступ к файлу запрещён , возможно файл (Результаты.xlsx) используется другой программой")
+            
             
         except Exception as e:
             messagebox.showerror('Ошибка!', f"{e}\nЛист не подходит по формату, проверьте данные и колонки!")
@@ -110,7 +113,10 @@ class SafetyWheel2024(ctk.CTk):
                     save_final(self.workbook, selected_sheets)
                     messagebox.showinfo('Ура', f'Код завершился без ошибок!\nРезультаты в файле Результаты.xlsx')
                     self.get_final_score.configure(state='normal')
-                    
+                
+                except PermissionError as e :
+                    messagebox.showerror('Ошибка!',"Доступ к файлу запрещён , возможно файл (Результаты.xlsx) используется другой программой")
+                
                 except Exception as e:
                     messagebox.showerror('Ошибка!', f"{e}\nЛист не подходит по формату, проверьте данные и колонки!")
                     
