@@ -57,8 +57,15 @@ class SafetyWheel2024(ctk.CTk):
         
         
     def final_score(self):
-        pass
-    
+        from main import save_result
+        try:
+            save_result()
+            messagebox.showinfo('Успех!', f"Результаты можно найти в файле на листе <<Итоговые результаты>>")
+            
+        except Exception as e:
+            messagebox.showerror('Ошибка!', f"{e}\nЛист не подходит по формату, проверьте данные и колонки!")
+            
+        
     def select_excel_file(self):
         
         
@@ -100,12 +107,6 @@ class SafetyWheel2024(ctk.CTk):
         else:
             messagebox.showwarning("Предупреждение", "Сначала выберите файл Excel")
 
-
-
-    # def open_folder():
-    #     # Укажите путь к папке, которую нужно открыть
-    #     folder_path = "C:/Users/YourUsername/Documents"
-    #     os.startfile(folder_path)
 
 if __name__ == "__main__":
     app = SafetyWheel2024()
