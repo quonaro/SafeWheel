@@ -238,15 +238,23 @@ def save_result():
             col1_values_normalize = [normalize_key(i) for i in col1_values]  # Нормализованные значения
             col7_values = [row[6].value for row in sheet.iter_rows(min_row=2)]  # Значения из 7-й колонки
 
+            
+            
+            
             # Создаем словарь, где ключ - нормализованное значение, а значения - оригинальные и данные
             for original, normalized, score in zip(col1_values, col1_values_normalize, col7_values):
+                
                 if normalized:  # Проверяем, что нормализованный ключ не None
                     if normalized not in result:
-
                         result[normalized] = [original]  # Инициализируем список, начиная с оригинального названия
                     
-                    result[normalized].append(score)  # Добавляем данные в список
+                    
                 
+                    
+                    
+                    result[normalized].append(score)  # Добавляем данные в список
+
+            
     
     
     # После завершения всех итераций, добавляем сумму значений
