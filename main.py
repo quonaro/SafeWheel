@@ -4,7 +4,6 @@ from openpyxl import Workbook, load_workbook
 from dataclasses import dataclass
 import datetime
 from datetime import timedelta
-import os
 from openpyxl.styles import Alignment
 
 @dataclass
@@ -41,9 +40,6 @@ class Command:
             ])
         return global_list
    
-    
-  
-    
 def clean_row(lst : list[str]) -> list :
     row = []
     for ellement in lst:
@@ -57,19 +53,17 @@ def time_to_timedelta(t):
     return timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
 
 def remove_empty(ws):
+    """Отчистка от None по краям таблицы"""
         # Определение максимальных строк и столбцов
     max_row = ws.max_row
     max_column = ws.max_column
-    print(max_row)
+    
     
     # Удаление пустых строк
     for row in range(max_row, 0, -1):
         if all(ws.cell(row=row, column=col).value is None for col in range(1, max_column + 1)):
             ws.delete_rows(row)
 
-            
-    for i in ws.iter_rows(values_only=True):
-        print(i)
     return ws
 
 def get_data(sheet) -> list[Command]:
@@ -79,6 +73,8 @@ def get_data(sheet) -> list[Command]:
     data = list(sheet.iter_rows(values_only=True))[2:]
     
     
+    
+    
     # Получение данных в виде объектов датакласса
     member_index = 1
     command = ""
@@ -86,27 +82,30 @@ def get_data(sheet) -> list[Command]:
     members : list[Member] = []
     
     # Разделение участников на девочек и мальчиков
-    print(len(data))
-    girls = [row for row in data if row[2].lower() == 'ж'] ;print(len(girls))
-    boys = [row for row in data if row[2].lower() == 'м'];print(len(boys))
+    
+    girls = [row for row in data if row[2].lower() == 'ж'] 
+    boys = [row for row in data if row[2].lower() == 'м']
 
     # Сортировка девочек и мальчиков по времени и штрафным баллам
     sorted_girls = sorted(girls, key=lambda e: (e[4], time_to_timedelta(e[3]).total_seconds() + e[4]))
     sorted_boys = sorted(boys, key=lambda e: (e[4], time_to_timedelta(e[3]).total_seconds() + e[4]))
-
     # Присвоение рангов для девочек
     ranks_girls = {}
     for index, row in enumerate(sorted_girls, start=1):
         row = list(sorted_girls[index-1])
         row = clean_row(row)
         ranks_girls[row[1]] = index
-
+    
+    
     # Присвоение рангов для мальчиков
     ranks_boys = {}
     for index, row in enumerate(sorted_boys, start=1):
         row = list(sorted_boys[index-1])
         row = clean_row(row)
         ranks_boys[row[1]] = index
+
+    
+
 
     # Сопоставление мест для каждого участника
     for row in data:
@@ -115,6 +114,9 @@ def get_data(sheet) -> list[Command]:
             row[7] = ranks_girls[row[1]]
         elif row[2].lower() == 'м':
             row[7] = ranks_boys[row[1]]
+            
+            
+        
 
         members.append(Member(row[1], time_to_timedelta(row[3]), row[4], row[7], row[2]))
 
@@ -133,6 +135,7 @@ def get_data(sheet) -> list[Command]:
 
     """Сортировка команд"""
     sort_result = sorted(result, key=lambda m: (m.penalty_points, m.time.total_seconds() + m.penalty_points))
+    
 
     for i, cm in enumerate(sort_result):
         cm.rank = i
@@ -141,10 +144,12 @@ def get_data(sheet) -> list[Command]:
 
 def get_list_from_data(lst : list[Command]):
     bg_list = []
-    for cmd in lst[1:]:
+    for cmd in lst:
         bg_list.append(cmd)
     
+    print(len(bg_list))
     return bg_list
+    
 
 def save_final(wb,sheetnames):
     
