@@ -8,51 +8,37 @@ const {
 } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
+const BackendServer = require("./backend-server");
 const isDev = process.env.NODE_ENV === "development";
 
 let mainWindow;
-let backendProcess = null;
 let frontendProcess = null;
+let backendServer = null;
 
-// Функция для запуска бэкенда
+// Функция для запуска встроенного бэкенда
 function startBackend() {
-  if (backendProcess) {
-    console.log("🔄 Бэкенд уже запущен");
+  if (backendServer) {
+    console.log("🔄 Встроенный бэкенд уже запущен");
     return;
   }
 
-  console.log("🚀 Запуск бэкенда...");
+  console.log("🚀 Запуск встроенного бэкенда...");
 
-  // Определяем путь к Python и скрипту в зависимости от режима
-  const backendPath = isDev
-    ? path.join(__dirname, "../backend")
-    : path.join(process.resourcesPath, "backend");
-
-  const pythonCommand = isDev ? "python" : "python3";
-  const scriptPath = isDev ? "process_manager.py" : "process_manager.py";
-
-  backendProcess = spawn(pythonCommand, [scriptPath], {
-    cwd: backendPath,
-    stdio: "inherit",
-    shell: true,
-  });
-
-  backendProcess.on("error", (err) => {
-    console.error("❌ Ошибка запуска бэкенда:", err);
-  });
-
-  backendProcess.on("exit", (code) => {
-    console.log(`🛑 Бэкенд завершен с кодом ${code}`);
-    backendProcess = null;
-  });
+  try {
+    backendServer = new BackendServer();
+    backendServer.start();
+    console.log("✅ Встроенный бэкенд запущен успешно");
+  } catch (error) {
+    console.error("❌ Ошибка запуска встроенного бэкенда:", error);
+  }
 }
 
 // Функция для остановки бэкенда
 function stopBackend() {
-  if (backendProcess) {
-    console.log("🛑 Остановка бэкенда...");
-    backendProcess.kill("SIGTERM");
-    backendProcess = null;
+  if (backendServer) {
+    console.log("🛑 Остановка встроенного бэкенда...");
+    backendServer.stop();
+    backendServer = null;
   }
 }
 
