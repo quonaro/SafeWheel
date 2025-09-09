@@ -4,12 +4,12 @@
   "description": "Desktop приложение SafeWheel с Electron, Vue и встроенным Node.js сервером",
   "main": "electron/main.js",
   "scripts": {
-    "dev": "NODE_ENV=development electron .",
+    "dev": "NODE_ENV=development electron . --no-sandbox",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "npm run build:frontend && npm run build:electron",
     "build:frontend": "cd frontend && npm run build",
     "build:electron": "electron-builder",
-    "start": "NODE_ENV=production electron ."
+    "start": "NODE_ENV=production electron . --no-sandbox"
   },
   "devDependencies": {
     "electron": "^28.0.0",
@@ -25,8 +25,6 @@
     "files": [
       "electron/**/*",
       "frontend/dist/**/*",
-      "node_modules/express/**/*",
-      "node_modules/cors/**/*",
       "node_modules/better-sqlite3/**/*"
     ],
     "mac": {
@@ -36,12 +34,11 @@
       "target": "nsis"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "executableArgs": ["--no-sandbox"]
     }
   },
   "dependencies": {
-    "better-sqlite3": "^12.2.0",
-    "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "better-sqlite3": "^12.2.0"
   }
 }

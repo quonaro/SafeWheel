@@ -8,37 +8,37 @@ const {
 } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
-const BackendServer = require("./backend-server");
+const DatabaseManager = require("./database");
 const isDev = process.env.NODE_ENV === "development";
 
 let mainWindow;
 let frontendProcess = null;
-let backendServer = null;
+let database = null;
 
-// Функция для запуска встроенного бэкенда
-async function startBackend() {
-  if (backendServer) {
-    console.log("🔄 Встроенный бэкенд уже запущен");
+// Функция для инициализации базы данных
+async function initDatabase() {
+  if (database) {
+    console.log("🔄 База данных уже инициализирована");
     return;
   }
 
-  console.log("🚀 Запуск встроенного бэкенда...");
+  console.log("🚀 Инициализация базы данных...");
 
   try {
-    backendServer = new BackendServer();
-    await backendServer.start();
-    console.log("✅ Встроенный бэкенд запущен успешно");
+    database = new DatabaseManager();
+    await database.init();
+    console.log("✅ База данных инициализирована успешно");
   } catch (error) {
-    console.error("❌ Ошибка запуска встроенного бэкенда:", error);
+    console.error("❌ Ошибка инициализации базы данных:", error);
   }
 }
 
-// Функция для остановки бэкенда
-function stopBackend() {
-  if (backendServer) {
-    console.log("🛑 Остановка встроенного бэкенда...");
-    backendServer.stop();
-    backendServer = null;
+// Функция для закрытия базы данных
+function closeDatabase() {
+  if (database) {
+    console.log("🛑 Закрытие базы данных...");
+    database.close();
+    database = null;
   }
 }
 
@@ -78,8 +78,64 @@ function stopFrontend() {
 // Функция для остановки всех процессов
 function stopAllProcesses() {
   console.log("🛑 Остановка всех процессов...");
-  stopBackend();
+  closeDatabase();
   stopFrontend();
+}
+
+// Настройка IPC обработчиков для работы с базой данных
+function setupIpcHandlers() {
+  // Получить все колеса
+  ipcMain.handle("db:getAllWheels", async () => {
+    try {
+      return await database.getAllWheels();
+    } catch (error) {
+      console.error("❌ Ошибка получения колес:", error);
+      throw error;
+    }
+  });
+
+  // Получить колесо по ID
+  ipcMain.handle("db:getWheelById", async (event, id) => {
+    try {
+      return await database.getWheelById(id);
+    } catch (error) {
+      console.error("❌ Ошибка получения колеса:", error);
+      throw error;
+    }
+  });
+
+  // Создать новое колесо
+  ipcMain.handle("db:createWheel", async (event, wheelData) => {
+    try {
+      console.log("📨 IPC: Получен запрос на создание колеса:", wheelData);
+      const result = await database.createWheel(wheelData);
+      console.log("📤 IPC: Возвращаем результат:", result);
+      return result;
+    } catch (error) {
+      console.error("❌ IPC: Ошибка создания колеса:", error);
+      throw error;
+    }
+  });
+
+  // Обновить колесо
+  ipcMain.handle("db:updateWheel", async (event, id, wheelData) => {
+    try {
+      return await database.updateWheel(id, wheelData);
+    } catch (error) {
+      console.error("❌ Ошибка обновления колеса:", error);
+      throw error;
+    }
+  });
+
+  // Удалить колесо
+  ipcMain.handle("db:deleteWheel", async (event, id) => {
+    try {
+      return await database.deleteWheel(id);
+    } catch (error) {
+      console.error("❌ Ошибка удаления колеса:", error);
+      throw error;
+    }
+  });
 }
 
 function createWindow() {
@@ -90,10 +146,11 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
-      nodeIntegration: false,
+      nodeIntegration: true,
       contextIsolation: true,
-      enableRemoteModule: false,
-      webSecurity: true,
+      enableRemoteModule: true,
+      webSecurity: false,
+      sandbox: false,
       preload: path.join(__dirname, "preload.js"),
     },
     icon: path.join(__dirname, "../assets/icon.png"),
@@ -384,8 +441,11 @@ app.whenReady().then(async () => {
   // Полностью убираем меню для чистого интерфейса
   Menu.setApplicationMenu(null);
 
-  // Запускаем бэкенд всегда (и в разработке, и в продакшене)
-  await startBackend();
+  // Инициализируем базу данных
+  await initDatabase();
+
+  // Настраиваем IPC обработчики для работы с базой данных
+  setupIpcHandlers();
 
   // Фронтенд запускаем только в режиме разработки
   if (isDev) {

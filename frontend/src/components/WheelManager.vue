@@ -88,7 +88,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Edit, Delete } from '@element-plus/icons-vue'
-import { wheelApi } from '../services/api'
+import databaseService from '../services/database'
 
 const loading = ref(false)
 const wheels = ref([])
@@ -135,8 +135,8 @@ const getConditionType = (condition) => {
 const loadWheels = async () => {
   try {
     loading.value = true
-    const response = await wheelApi.getWheels()
-    wheels.value = response.data
+    const wheelsData = await databaseService.getAllWheels()
+    wheels.value = wheelsData
   } catch (error) {
     ElMessage.error('Ошибка при загрузке данных')
     console.error('Error loading wheels:', error)
@@ -159,7 +159,7 @@ const deleteWheel = async (id) => {
       type: 'warning'
     })
     
-    await wheelApi.deleteWheel(id)
+    await databaseService.deleteWheel(id)
     ElMessage.success('Колесо успешно удалено')
     loadWheels()
   } catch (error) {
@@ -175,10 +175,10 @@ const saveWheel = async () => {
     await formRef.value.validate()
     
     if (editingWheel.value) {
-      await wheelApi.updateWheel(editingWheel.value.id, wheelForm)
+      await databaseService.updateWheel(editingWheel.value.id, wheelForm)
       ElMessage.success('Колесо успешно обновлено')
     } else {
-      await wheelApi.createWheel(wheelForm)
+      await databaseService.createWheel(wheelForm)
       ElMessage.success('Колесо успешно добавлено')
     }
     
@@ -186,7 +186,8 @@ const saveWheel = async () => {
     resetForm()
     loadWheels()
   } catch (error) {
-    ElMessage.error('Ошибка при сохранении колеса')
+    const message = (error && (error.message || error.reason || error.toString && error.toString())) || 'Ошибка при сохранении колеса'
+    ElMessage.error(message)
     console.error('Error saving wheel:', error)
   }
 }
