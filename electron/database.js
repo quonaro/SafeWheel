@@ -1,33 +1,54 @@
-const Database = require("better-sqlite3");
+
+ const Database = require("better-sqlite3");
 const path = require("path");
 
 class DatabaseManager {
   constructor() {
-    const isPackaged = require("electron").app
-      ? require("electron").app.isPackaged
-      : false;
+    const { app } = require("electron");
+    const fs = require("fs");
 
-    if (isPackaged) {
-      // В собранном приложении используем папку рядом с AppImage файлом
-      const { app } = require("electron");
-      const execPath = process.execPath;
-      const execDir = path.dirname(execPath);
-
-      // Попробуем найти оригинальный путь к AppImage
-      let dbDir = execDir;
-      if (execPath.includes("/tmp/.mount_")) {
-        // Если мы в AppImage, попробуем найти оригинальный путь
-        const originalPath = process.env.APPIMAGE || process.env.ARGV0;
-        if (originalPath) {
-          dbDir = path.dirname(originalPath);
-        }
+    // Предпочтительно сохраняем БД рядом с исполняемым файлом (AppImage/EXE),
+    // но если каталог недоступен для записи (ROFS/Program Files), откатываемся в userData
+    const resolveDataDir = () => {
+      // 1) Явно заданный каталог через переменную окружения
+      const envDir = process.env.SAFEWHEEL_DB_DIR;
+      if (envDir) {
+        return envDir;
       }
 
-      this.dbPath = path.join(dbDir, "safewheel.db");
-    } else {
-      // В режиме разработки используем локальную папку
-      this.dbPath = path.join(__dirname, "../data/safewheel.db");
+      // 2) Каталог рядом с исполняемым файлом
+      try {
+        const exeDir = app ? path.dirname(app.getPath("exe")) : path.dirname(process.execPath);
+        // Проверим возможность записи: если нет — бросит исключение позже на mkdir
+        return exeDir;
+      } catch (_) {
+        // Игнорируем и откатываемся ниже
+      }
+
+      // 3) Fallback: userData
+      return app ? app.getPath("userData") : path.join(__dirname, "../data");
+    };
+
+    let dataDir = resolveDataDir();
+    try {
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      // Пробуем создать временный файл для проверки прав на запись
+      const testFile = path.join(dataDir, ".write_test");
+      fs.writeFileSync(testFile, "ok");
+      fs.unlinkSync(testFile);
+    } catch (e) {
+      // Если не удалось — используем userData
+      const fallback = app ? app.getPath("userData") : path.join(__dirname, "../data");
+      if (!fs.existsSync(fallback)) {
+        fs.mkdirSync(fallback, { recursive: true });
+      }
+      console.warn("⚠️ Каталог рядом с исполняемым файлом недоступен для записи, используем userData:", fallback, "Причина:", e.message);
+      dataDir = fallback;
     }
+
+    this.dbPath = path.join(dataDir, "safewheel.db");
 
     this.db = null;
   }
@@ -40,16 +61,18 @@ class DatabaseManager {
       const dataDir = path.dirname(this.dbPath);
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
+        console.log("📁 Создана папка для базы данных:", dataDir);
       }
 
       this.db = new Database(this.dbPath);
       console.log("✅ Подключение к SQLite базе данных установлено");
+      console.log("📂 Путь к базе данных:", this.dbPath);
 
       await this.createTables();
     } catch (error) {
       console.error("❌ Ошибка подключения к базе данных:", error.message);
       throw error;
-    }
+      }
   }
 
   // Создание таблиц
@@ -105,17 +128,37 @@ class DatabaseManager {
   // Создать новое колесо
   async createWheel(wheelData) {
     try {
+      console.log("🔄 Создание колеса с данными:", wheelData);
       const { name, diameter, width, material, condition } = wheelData;
+      
+      // Валидация данных (разрешаем 0 как валидное значение)
+      const isEmptyString = (v) => typeof v === "string" && v.trim().length === 0;
+      const isNil = (v) => v === null || v === undefined;
+      if (isEmptyString(name) || isNil(name) || isNil(diameter) || isNil(width) || isEmptyString(material) || isNil(material) || isEmptyString(condition) || isNil(condition)) {
+        throw new Error("Не все обязательные поля заполнены");
+      }
+
+      // Приведение типов
+      const numericDiameter = Number(diameter);
+      const numericWidth = Number(width);
+      if (Number.isNaN(numericDiameter) || Number.isNaN(numericWidth)) {
+        throw new Error("Диаметр и ширина должны быть числами");
+      }
+      
       const stmt = this.db.prepare(`
         INSERT INTO wheels (name, diameter, width, material, condition, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `);
 
-      const result = stmt.run(name, diameter, width, material, condition);
+      const result = stmt.run(String(name).trim(), numericDiameter, numericWidth, String(material).trim(), String(condition).trim());
+      console.log("✅ Колесо создано с ID:", result.lastInsertRowid);
+      
       const wheel = await this.getWheelById(result.lastInsertRowid);
+      console.log("📋 Созданное колесо:", wheel);
       return wheel;
     } catch (error) {
       console.error("❌ Ошибка создания колеса:", error.message);
+      console.error("❌ Стек ошибки:", error.stack);
       throw error;
     }
   }
