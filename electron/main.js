@@ -16,7 +16,7 @@ let frontendProcess = null;
 let backendServer = null;
 
 // Функция для запуска встроенного бэкенда
-function startBackend() {
+async function startBackend() {
   if (backendServer) {
     console.log("🔄 Встроенный бэкенд уже запущен");
     return;
@@ -26,7 +26,7 @@ function startBackend() {
 
   try {
     backendServer = new BackendServer();
-    backendServer.start();
+    await backendServer.start();
     console.log("✅ Встроенный бэкенд запущен успешно");
   } catch (error) {
     console.error("❌ Ошибка запуска встроенного бэкенда:", error);
@@ -378,14 +378,14 @@ function createMenu() {
 }
 
 // Этот метод будет вызван когда Electron закончит инициализацию
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow();
 
   // Полностью убираем меню для чистого интерфейса
   Menu.setApplicationMenu(null);
 
   // Запускаем бэкенд всегда (и в разработке, и в продакшене)
-  startBackend();
+  await startBackend();
 
   // Фронтенд запускаем только в режиме разработки
   if (isDev) {

@@ -1,19 +1,16 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const fs = require("fs").promises;
+const DatabaseManager = require("./database");
 
 class BackendServer {
   constructor() {
     this.app = express();
     this.port = 8000;
-    this.dbPath = path.join(__dirname, "../data/safewheel.db");
-    this.data = [];
-    this.nextId = 1;
+    this.database = new DatabaseManager();
 
     this.setupMiddleware();
     this.setupRoutes();
-    this.loadData();
   }
 
   setupMiddleware() {
@@ -40,134 +37,131 @@ class BackendServer {
     });
 
     // Получить все колеса
-    this.app.get("/api/wheels", (req, res) => {
-      res.json(this.data);
+    this.app.get("/api/wheels", async (req, res) => {
+      try {
+        const wheels = await this.database.getAllWheels();
+        res.json(wheels);
+      } catch (error) {
+        console.error("❌ Ошибка получения колес:", error);
+        res.status(500).json({ detail: "Ошибка сервера при получении данных" });
+      }
     });
 
     // Получить колесо по ID
-    this.app.get("/api/wheels/:id", (req, res) => {
-      const id = parseInt(req.params.id);
-      const wheel = this.data.find((w) => w.id === id);
+    this.app.get("/api/wheels/:id", async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const wheel = await this.database.getWheelById(id);
 
-      if (!wheel) {
-        return res.status(404).json({ detail: "Колесо не найдено" });
+        if (!wheel) {
+          return res.status(404).json({ detail: "Колесо не найдено" });
+        }
+
+        res.json(wheel);
+      } catch (error) {
+        console.error("❌ Ошибка получения колеса:", error);
+        res.status(500).json({ detail: "Ошибка сервера при получении данных" });
       }
-
-      res.json(wheel);
     });
 
     // Создать новое колесо
-    this.app.post("/api/wheels", (req, res) => {
-      const wheel = {
-        id: this.nextId++,
-        ...req.body,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+    this.app.post("/api/wheels", async (req, res) => {
+      try {
+        const wheel = await this.database.createWheel(req.body);
 
-      this.data.push(wheel);
-      this.saveData();
-
-      res.json({
-        success: true,
-        message: "Колесо успешно создано",
-        data: wheel,
-      });
+        res.json({
+          success: true,
+          message: "Колесо успешно создано",
+          data: wheel,
+        });
+      } catch (error) {
+        console.error("❌ Ошибка создания колеса:", error);
+        res.status(500).json({ detail: "Ошибка сервера при создании колеса" });
+      }
     });
 
     // Обновить колесо
-    this.app.put("/api/wheels/:id", (req, res) => {
-      const id = parseInt(req.params.id);
-      const index = this.data.findIndex((w) => w.id === id);
+    this.app.put("/api/wheels/:id", async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const wheel = await this.database.updateWheel(id, req.body);
 
-      if (index === -1) {
-        return res.status(404).json({ detail: "Колесо не найдено" });
+        res.json({
+          success: true,
+          message: "Колесо успешно обновлено",
+          data: wheel,
+        });
+      } catch (error) {
+        if (error.message === "Колесо не найдено") {
+          res.status(404).json({ detail: "Колесо не найдено" });
+        } else {
+          console.error("❌ Ошибка обновления колеса:", error);
+          res
+            .status(500)
+            .json({ detail: "Ошибка сервера при обновлении колеса" });
+        }
       }
-
-      this.data[index] = {
-        ...this.data[index],
-        ...req.body,
-        id: id,
-        updated_at: new Date().toISOString(),
-      };
-
-      this.saveData();
-
-      res.json({
-        success: true,
-        message: "Колесо успешно обновлено",
-        data: this.data[index],
-      });
     });
 
     // Удалить колесо
-    this.app.delete("/api/wheels/:id", (req, res) => {
-      const id = parseInt(req.params.id);
-      const index = this.data.findIndex((w) => w.id === id);
+    this.app.delete("/api/wheels/:id", async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const deletedWheel = await this.database.deleteWheel(id);
 
-      if (index === -1) {
-        return res.status(404).json({ detail: "Колесо не найдено" });
+        res.json({
+          success: true,
+          message: "Колесо успешно удалено",
+          data: deletedWheel,
+        });
+      } catch (error) {
+        if (error.message === "Колесо не найдено") {
+          res.status(404).json({ detail: "Колесо не найдено" });
+        } else {
+          console.error("❌ Ошибка удаления колеса:", error);
+          res
+            .status(500)
+            .json({ detail: "Ошибка сервера при удалении колеса" });
+        }
       }
+    });
+  }
 
-      const deletedWheel = this.data.splice(index, 1)[0];
-      this.saveData();
+  async start() {
+    try {
+      // Инициализируем базу данных
+      await this.database.init();
 
-      res.json({
-        success: true,
-        message: "Колесо успешно удалено",
-        data: deletedWheel,
+      // Выполняем миграцию данных из JSON (если есть)
+      await this.database.migrateFromJson();
+
+      this.server = this.app.listen(this.port, "0.0.0.0", () => {
+        console.log(`🚀 Backend сервер запущен на http://0.0.0.0:${this.port}`);
       });
-    });
-  }
 
-  async loadData() {
-    try {
-      // Создаем папку для данных если её нет
-      const dataDir = path.dirname(this.dbPath);
-      await fs.mkdir(dataDir, { recursive: true });
-
-      // Пытаемся загрузить данные из файла
-      const data = await fs.readFile(this.dbPath, "utf8");
-      this.data = JSON.parse(data);
-      this.nextId = Math.max(...this.data.map((w) => w.id), 0) + 1;
-      console.log("✅ Данные загружены из файла");
+      this.server.on("error", (err) => {
+        if (err.code === "EADDRINUSE") {
+          console.log(
+            `⚠️  Порт ${this.port} занят, пробуем порт ${this.port + 1}`
+          );
+          this.port += 1;
+          this.start();
+        } else {
+          console.error("❌ Ошибка сервера:", err);
+        }
+      });
     } catch (error) {
-      console.log("📝 Создаем новую базу данных");
-      this.data = [];
-      this.nextId = 1;
+      console.error("❌ Ошибка инициализации сервера:", error);
     }
-  }
-
-  async saveData() {
-    try {
-      await fs.writeFile(this.dbPath, JSON.stringify(this.data, null, 2));
-    } catch (error) {
-      console.error("❌ Ошибка сохранения данных:", error);
-    }
-  }
-
-  start() {
-    this.server = this.app.listen(this.port, "0.0.0.0", () => {
-      console.log(`🚀 Backend сервер запущен на http://0.0.0.0:${this.port}`);
-    });
-
-    this.server.on("error", (err) => {
-      if (err.code === "EADDRINUSE") {
-        console.log(
-          `⚠️  Порт ${this.port} занят, пробуем порт ${this.port + 1}`
-        );
-        this.port += 1;
-        this.start();
-      } else {
-        console.error("❌ Ошибка сервера:", err);
-      }
-    });
   }
 
   stop() {
     if (this.server) {
       this.server.close();
       console.log("🛑 Backend сервер остановлен");
+    }
+    if (this.database) {
+      this.database.close();
     }
   }
 }
