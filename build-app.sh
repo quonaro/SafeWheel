@@ -23,12 +23,11 @@ npm install
 npm run build
 cd ..
 
-# Устанавливаем зависимости Python
-echo "📦 Устанавливаем зависимости Python..."
+# Устанавливаем зависимости Python (только основные)
+echo "📦 Проверяем зависимости Python..."
 cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# Устанавливаем только основные зависимости без конфликтов
+pip install fastapi uvicorn pydantic python-multipart tortoise-orm aiosqlite --user --quiet
 cd ..
 
 # Собираем Electron приложение

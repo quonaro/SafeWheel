@@ -28,17 +28,16 @@
     "files": [
       "electron/**/*",
       "frontend/dist/**/*",
-      "backend/**/*",
-      "!backend/venv/**/*",
-      "!backend/__pycache__/**/*",
-      "!backend/*.db-shm",
-      "!backend/*.db-wal"
+      "backend/main.py",
+      "backend/models.py",
+      "backend/process_manager.py",
+      "backend/requirements.txt"
     ],
     "extraResources": [
       {
         "from": "backend",
         "to": "backend",
-        "filter": ["**/*", "!venv/**/*", "!__pycache__/**/*", "!*.db-shm", "!*.db-wal"]
+        "filter": ["main.py", "models.py", "process_manager.py", "requirements.txt"]
       }
     ],
     "mac": {

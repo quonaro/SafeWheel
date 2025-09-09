@@ -29,35 +29,18 @@ class ProcessManager:
         print("✅ Бэкенд корректно завершен")
 
     async def ensure_dependencies(self):
-        """Проверяет и устанавливает зависимости при необходимости"""
+        """Проверяет зависимости"""
         try:
             # Пытаемся импортировать основные зависимости
             import fastapi
             import uvicorn
             import tortoise
 
-            print("✅ Все зависимости уже установлены")
-        except ImportError:
-            print("📦 Устанавливаем зависимости...")
-            try:
-                # Устанавливаем зависимости
-                subprocess.check_call(
-                    [
-                        sys.executable,
-                        "-m",
-                        "pip",
-                        "install",
-                        "-r",
-                        "requirements.txt",
-                        "--user",
-                        "--quiet",
-                    ]
-                )
-                print("✅ Зависимости установлены успешно")
-            except subprocess.CalledProcessError as e:
-                print(f"❌ Ошибка установки зависимостей: {e}")
-                print("💡 Попробуйте запустить: pip install -r requirements.txt")
-                sys.exit(1)
+            print("✅ Все зависимости доступны")
+        except ImportError as e:
+            print(f"❌ Отсутствует зависимость: {e}")
+            print("💡 Установите зависимости: pip install -r requirements.txt")
+            sys.exit(1)
 
     async def start_backend(self):
         """Запуск бэкенда с ожиданием завершения"""
