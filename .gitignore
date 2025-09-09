@@ -16,7 +16,7 @@ frontend/dist/
 
 .sqlite3
 .db
-
+data/
 */dist/
 */data/*
 
