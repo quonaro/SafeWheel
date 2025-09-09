@@ -120,6 +120,8 @@ function createWindow() {
     ? "http://localhost:3000" // Фронтенд запускается на порту 3000
     : `file://${path.join(__dirname, "../frontend/dist/index.html")}`;
 
+  console.log("🔗 Загружаем URL:", startUrl);
+
   // Ждем пока фронтенд будет готов
   if (isDev) {
     // В режиме разработки ждем немного перед загрузкой
@@ -127,8 +129,41 @@ function createWindow() {
       mainWindow.loadURL(startUrl);
     }, 2000);
   } else {
+    // В продакшене загружаем сразу
     mainWindow.loadURL(startUrl);
   }
+
+  // Обработка ошибок загрузки
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (event, errorCode, errorDescription, validatedURL) => {
+      console.error(
+        "❌ Ошибка загрузки:",
+        errorCode,
+        errorDescription,
+        validatedURL
+      );
+
+      // Показываем страницу с ошибкой
+      mainWindow.loadURL(`data:text/html,
+      <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+          <h1>🚫 Ошибка загрузки SafeWheel</h1>
+          <p><strong>Код ошибки:</strong> ${errorCode}</p>
+          <p><strong>Описание:</strong> ${errorDescription}</p>
+          <p><strong>URL:</strong> ${validatedURL}</p>
+          <hr>
+          <p>Попробуйте:</p>
+          <ul style="text-align: left; display: inline-block;">
+            <li>Перезапустить приложение</li>
+            <li>Проверить, что все файлы на месте</li>
+            <li>Запустить в режиме разработки: <code>npm run dev</code></li>
+          </ul>
+        </body>
+      </html>
+    `);
+    }
+  );
 
   // Показываем окно когда оно готово
   mainWindow.once("ready-to-show", () => {
