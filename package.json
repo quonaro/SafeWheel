@@ -28,7 +28,18 @@
     "files": [
       "electron/**/*",
       "frontend/dist/**/*",
-      "backend/**/*"
+      "backend/**/*",
+      "!backend/venv/**/*",
+      "!backend/__pycache__/**/*",
+      "!backend/*.db-shm",
+      "!backend/*.db-wal"
+    ],
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": ["**/*", "!venv/**/*", "!__pycache__/**/*", "!*.db-shm", "!*.db-wal"]
+      }
     ],
     "mac": {
       "category": "public.app-category.productivity"
