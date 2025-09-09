@@ -22,8 +22,17 @@ function startBackend() {
   }
 
   console.log("🚀 Запуск бэкенда...");
-  backendProcess = spawn("python", ["process_manager.py"], {
-    cwd: path.join(__dirname, "../backend"),
+
+  // Определяем путь к Python и скрипту в зависимости от режима
+  const backendPath = isDev
+    ? path.join(__dirname, "../backend")
+    : path.join(process.resourcesPath, "backend");
+
+  const pythonCommand = isDev ? "python" : "python3";
+  const scriptPath = isDev ? "process_manager.py" : "process_manager.py";
+
+  backendProcess = spawn(pythonCommand, [scriptPath], {
+    cwd: backendPath,
     stdio: "inherit",
     shell: true,
   });
@@ -354,9 +363,11 @@ app.whenReady().then(() => {
   // Полностью убираем меню для чистого интерфейса
   Menu.setApplicationMenu(null);
 
-  // Запускаем процессы только в режиме разработки
+  // Запускаем бэкенд всегда (и в разработке, и в продакшене)
+  startBackend();
+
+  // Фронтенд запускаем только в режиме разработки
   if (isDev) {
-    startBackend();
     startFrontend();
   }
 
