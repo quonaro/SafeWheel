@@ -12,7 +12,7 @@ class DatabaseManager {
       const { app } = require("electron");
       const execPath = process.execPath;
       const execDir = path.dirname(execPath);
-      
+
       // Попробуем найти оригинальный путь к AppImage
       let dbDir = execDir;
       if (execPath.includes("/tmp/.mount_")) {
@@ -22,7 +22,7 @@ class DatabaseManager {
           dbDir = path.dirname(originalPath);
         }
       }
-      
+
       this.dbPath = path.join(dbDir, "safewheel.db");
     } else {
       // В режиме разработки используем локальную папку
