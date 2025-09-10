@@ -15,7 +15,7 @@
         :data="paginatedParticipants" 
         style="width: 100%" 
         :class="['modern-table', { 'empty-table': participants.length === 0 }]"
-        height="480px" 
+        height="460px" 
         empty-text="Нет данных для отображения"
       >
         <el-table-column prop="rank" label="Место" :width="participants.length > 0 ? 100 : 0">
@@ -52,30 +52,22 @@
         </el-table-column>
         <el-table-column prop="age" label="Возраст" :width="participants.length > 0 ? 100 : 0">
           <template #default="scope">
-            <div class="age-cell">
-              <span class="age-value">{{ scope.row.age || '—' }}</span>
-            </div>
+            <span>{{ scope.row.age || '—' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="gender" label="Пол" :width="participants.length > 0 ? 80 : 0">
           <template #default="scope">
-            <div class="gender-cell">
-              <span class="gender-value">{{ scope.row.gender || '—' }}</span>
-            </div>
+            <span>{{ scope.row.gender || '—' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="total_penalties" label="Штрафы" :width="participants.length > 0 ? 120 : 0">
           <template #default="scope">
-            <div class="penalty-cell">
-              <span class="penalty-value">{{ scope.row.total_penalties }}</span>
-            </div>
+            <span>{{ scope.row.total_penalties }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="total_time" label="Время" :width="participants.length > 0 ? 150 : 0">
+        <el-table-column prop="total_time" label="Время" :width="participants.length > 0 ? 120 : 0">
           <template #default="scope">
-            <div class="time-cell">
-              <span class="time-value">{{ formatTime(scope.row.total_time) }}</span>
-            </div>
+            <span>{{ formatTime(scope.row.total_time) }}</span>
           </template>
         </el-table-column>
         </el-table>
@@ -272,7 +264,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   background: #f3f4f6;
   color: #111827;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
   padding: 10px 12px;
   border: none;
 }
@@ -379,73 +371,6 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   font-size: 14px;
 }
 
-.age-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  min-height: 20px;
-}
-
-.age-value {
-  font-weight: 600;
-  color: #7c3aed;
-  font-size: 14px;
-}
-
-.gender-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: rgba(236, 72, 153, 0.1);
-  border: 1px solid rgba(236, 72, 153, 0.2);
-  min-height: 20px;
-}
-
-.gender-value {
-  font-weight: 600;
-  color: #be185d;
-  font-size: 14px;
-}
-
-.penalty-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  min-height: 20px;
-}
-
-.penalty-value {
-  font-weight: 600;
-  color: #dc2626;
-  font-size: 14px;
-}
-
-.time-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  min-height: 20px;
-}
-
-.time-value {
-  font-weight: 600;
-  color: #059669;
-  font-size: 14px;
-}
 
 /* Заголовок таблицы */
 .table-title {
@@ -497,6 +422,26 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   word-break: break-word;
 }
 
+/* Центрирование текста в колонках */
+.modern-table :deep(.el-table__body td:nth-child(4)), /* Возраст */
+.modern-table :deep(.el-table__body td:nth-child(5)), /* Пол */
+.modern-table :deep(.el-table__body td:nth-child(6)), /* Штрафы */
+.modern-table :deep(.el-table__body td:nth-child(7)) { /* Время */
+  text-align: center;
+}
+
+.modern-table :deep(.el-table__header th:nth-child(4)), /* Возраст */
+.modern-table :deep(.el-table__header th:nth-child(5)), /* Пол */
+.modern-table :deep(.el-table__header th:nth-child(6)), /* Штрафы */
+.modern-table :deep(.el-table__header th:nth-child(7)) { /* Время */
+  text-align: center;
+}
+
+/* Центрирование всех заголовков таблицы */
+.modern-table :deep(.el-table__header th) {
+  text-align: center;
+}
+
 /* Состояния загрузки и пустого состояния */
 .loading-container {
   display: flex;
@@ -542,20 +487,12 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   }
 
   .participant-cell,
-  .team-cell,
-  .age-cell,
-  .gender-cell,
-  .penalty-cell,
-  .time-cell {
+  .team-cell {
     padding: 2px 4px;
   }
 
   .participant-name,
-  .team-name,
-  .age-value,
-  .gender-value,
-  .penalty-value,
-  .time-value {
+  .team-name {
     font-size: 12px;
   }
 

@@ -89,7 +89,19 @@ class DatabaseManager {
         console.log("📁 Создана папка для базы данных:", dataDir);
       }
 
-      this.db = new Database(this.dbPath);
+      this.db = new Database(this.dbPath, {
+        // Оптимизации для better-sqlite3
+        verbose: process.env.NODE_ENV === 'development' ? console.log : null,
+        // Включаем WAL режим для лучшей производительности
+        pragma: {
+          journal_mode: 'WAL',
+          synchronous: 'NORMAL',
+          cache_size: -64000, // 64MB кэш
+          temp_store: 'MEMORY',
+          mmap_size: 134217728, // 128MB memory-mapped I/O
+          page_size: 4096
+        }
+      });
       console.log("✅ Подключение к SQLite базе данных установлено");
       console.log("📂 Путь к базе данных:", this.dbPath);
 
@@ -164,12 +176,25 @@ class DatabaseManager {
           FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
         )`,
 
-        // Индексы
+        // Базовые индексы
         `CREATE INDEX IF NOT EXISTS idx_teams_competition ON teams(competition_id)`,
         `CREATE INDEX IF NOT EXISTS idx_participants_team ON participants(team_id)`,
         `CREATE INDEX IF NOT EXISTS idx_stages_competition ON stages(competition_id)`,
         `CREATE INDEX IF NOT EXISTS idx_results_stage ON stage_results(stage_id)`,
         `CREATE INDEX IF NOT EXISTS idx_results_participant ON stage_results(participant_id)`,
+        
+        // Составные индексы для оптимизации сложных запросов
+        `CREATE INDEX IF NOT EXISTS idx_stages_competition_order ON stages(competition_id, order_index)`,
+        `CREATE INDEX IF NOT EXISTS idx_participants_team_competition ON participants(team_id) INCLUDE (id, full_name, gender, age)`,
+        `CREATE INDEX IF NOT EXISTS idx_results_stage_participant ON stage_results(stage_id, participant_id) INCLUDE (time_seconds, penalty_points)`,
+        `CREATE INDEX IF NOT EXISTS idx_results_participant_stage ON stage_results(participant_id, stage_id) INCLUDE (time_seconds, penalty_points)`,
+        `CREATE INDEX IF NOT EXISTS idx_teams_competition_name ON teams(competition_id, name)`,
+        
+        // Индексы для сортировки и группировки
+        `CREATE INDEX IF NOT EXISTS idx_participants_age ON participants(age)`,
+        `CREATE INDEX IF NOT EXISTS idx_participants_gender ON participants(gender)`,
+        `CREATE INDEX IF NOT EXISTS idx_results_penalties ON stage_results(penalty_points)`,
+        `CREATE INDEX IF NOT EXISTS idx_results_time ON stage_results(time_seconds)`,
       ];
 
       this.db.exec(ddl.join(";"));
@@ -438,34 +463,33 @@ class DatabaseManager {
       .all(stageId);
   }
 
-  // ===== Итоги по соревнованию =====
+  // ===== Итоги по соревнованию (ОПТИМИЗИРОВАННАЯ ВЕРСИЯ) =====
   // Сумма штрафных баллов и времени по всем этапам; при равенстве — по среднему возрасту команды (меньше — выше)
   async computeStandings(competitionId) {
     const sql = `
-      WITH team_members AS (
-        SELECT t.id AS team_id, t.name AS team_name,
-               AVG(p.age) AS avg_age
+      WITH team_aggregates AS (
+        SELECT 
+          t.id AS team_id, 
+          t.name AS team_name,
+          AVG(p.age) AS avg_age,
+          COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
+          COALESCE(SUM(sr.time_seconds), 0) AS total_time
         FROM teams t
-        JOIN participants p ON p.team_id = t.id
-        WHERE t.competition_id = ?
-        GROUP BY t.id
-      ),
-      member_results AS (
-        SELECT p.team_id,
-               COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
-               COALESCE(SUM(sr.time_seconds), 0) AS total_time
-        FROM participants p
+        LEFT JOIN participants p ON p.team_id = t.id
         LEFT JOIN stage_results sr ON sr.participant_id = p.id
-        JOIN teams t ON t.id = p.team_id AND t.competition_id = ?
-        GROUP BY p.team_id
+        WHERE t.competition_id = ?
+        GROUP BY t.id, t.name
       )
-      SELECT tm.team_id, tm.team_name,
-             mr.total_penalties, mr.total_time, tm.avg_age
-      FROM team_members tm
-      JOIN member_results mr ON mr.team_id = tm.team_id
-      ORDER BY mr.total_penalties ASC, mr.total_time ASC, tm.avg_age ASC
+      SELECT 
+        team_id, 
+        team_name,
+        total_penalties, 
+        total_time, 
+        avg_age
+      FROM team_aggregates
+      ORDER BY total_penalties ASC, total_time ASC, avg_age ASC
     `;
-    const rows = this.db.prepare(sql).all(competitionId, competitionId);
+    const rows = this.db.prepare(sql).all(competitionId);
     // Добавим ранги
     return rows.map((r, idx) => ({ ...r, rank: idx + 1 }));
   }
@@ -516,25 +540,64 @@ class DatabaseManager {
     return stages;
   }
 
-  // ===== Детальные результаты по этапам с личным прогрессом =====
+  // ===== Детальные результаты по этапам с личным прогрессом (ОПТИМИЗИРОВАННАЯ ВЕРСИЯ) =====
   async getStageStandingsWithParticipants(competitionId) {
+    // Используем более эффективный запрос с предварительной агрегацией
     const sql = `
-      WITH stage_participant_results AS (
-        SELECT s.id AS stage_id, s.name AS stage_name, s.order_index,
-               t.id AS team_id, t.name AS team_name,
-               p.id AS participant_id, p.full_name, p.gender, p.age,
-               COALESCE(sr.penalty_points, 0) AS penalty_points,
-               COALESCE(sr.time_seconds, 0) AS time_seconds
+      WITH stage_team_aggregates AS (
+        SELECT 
+          s.id AS stage_id, 
+          s.name AS stage_name, 
+          s.order_index,
+          t.id AS team_id, 
+          t.name AS team_name,
+          COALESCE(SUM(sr.penalty_points), 0) AS team_total_penalties,
+          COALESCE(SUM(sr.time_seconds), 0) AS team_total_time,
+          COUNT(p.id) AS participant_count
         FROM stages s
         CROSS JOIN teams t
         LEFT JOIN participants p ON p.team_id = t.id
         LEFT JOIN stage_results sr ON sr.stage_id = s.id AND sr.participant_id = p.id
         WHERE s.competition_id = ? AND t.competition_id = ?
-        ORDER BY s.order_index, t.name, p.full_name
+        GROUP BY s.id, s.name, s.order_index, t.id, t.name
+      ),
+      participant_details AS (
+        SELECT 
+          s.id AS stage_id,
+          t.id AS team_id,
+          p.id AS participant_id,
+          p.full_name,
+          p.gender,
+          p.age,
+          COALESCE(sr.penalty_points, 0) AS penalty_points,
+          COALESCE(sr.time_seconds, 0) AS time_seconds
+        FROM stages s
+        CROSS JOIN teams t
+        LEFT JOIN participants p ON p.team_id = t.id
+        LEFT JOIN stage_results sr ON sr.stage_id = s.id AND sr.participant_id = p.id
+        WHERE s.competition_id = ? AND t.competition_id = ?
       )
-      SELECT * FROM stage_participant_results
+      SELECT 
+        sta.stage_id,
+        sta.stage_name,
+        sta.order_index,
+        sta.team_id,
+        sta.team_name,
+        sta.team_total_penalties,
+        sta.team_total_time,
+        sta.participant_count,
+        pd.participant_id,
+        pd.full_name,
+        pd.gender,
+        pd.age,
+        pd.penalty_points,
+        pd.time_seconds
+      FROM stage_team_aggregates sta
+      LEFT JOIN participant_details pd ON pd.stage_id = sta.stage_id AND pd.team_id = sta.team_id
+      ORDER BY sta.order_index, sta.team_total_penalties, sta.team_total_time, pd.full_name
     `;
-    const rows = this.db.prepare(sql).all(competitionId, competitionId);
+    
+    const rows = this.db.prepare(sql).all(competitionId, competitionId, competitionId, competitionId);
     
     // Группируем по этапам и командам
     const stagesMap = new Map();
@@ -554,23 +617,22 @@ class DatabaseManager {
           team_id: row.team_id,
           team_name: row.team_name,
           participants: [],
-          total_penalties: 0,
-          total_time: 0
+          total_penalties: row.team_total_penalties,
+          total_time: row.team_total_time
         });
       }
       
       const team = stage.teams.get(row.team_id);
-      team.participants.push({
-        participant_id: row.participant_id,
-        full_name: row.full_name,
-        gender: row.gender,
-        age: row.age,
-        penalty_points: row.penalty_points,
-        time_seconds: row.time_seconds
-      });
-      
-      team.total_penalties += row.penalty_points;
-      team.total_time += row.time_seconds;
+      if (row.participant_id) {
+        team.participants.push({
+          participant_id: row.participant_id,
+          full_name: row.full_name,
+          gender: row.gender,
+          age: row.age,
+          penalty_points: row.penalty_points,
+          time_seconds: row.time_seconds
+        });
+      }
     });
 
     // Преобразуем Map в обычные объекты и добавляем ранги
@@ -597,8 +659,11 @@ class DatabaseManager {
     return stages;
   }
 
-  // ===== Личные результаты участников =====
-  async getParticipantResults(competitionId) {
+  // ===== Личные результаты участников (с пагинацией) =====
+  async getParticipantResults(competitionId, options = {}) {
+    const { page = 1, limit = 50, offset = null } = options;
+    const actualOffset = offset !== null ? offset : (page - 1) * limit;
+    
     const sql = `
       WITH participant_totals AS (
         SELECT p.id, p.full_name, p.gender, p.age, t.name AS team_name,
@@ -610,12 +675,73 @@ class DatabaseManager {
         WHERE t.competition_id = ?
         GROUP BY p.id
         ORDER BY total_penalties ASC, total_time ASC, p.age ASC
+      ),
+      ranked_participants AS (
+        SELECT *, ROW_NUMBER() OVER (ORDER BY total_penalties ASC, total_time ASC, age ASC) as rank
+        FROM participant_totals
       )
-      SELECT *, ROW_NUMBER() OVER (ORDER BY total_penalties ASC, total_time ASC, age ASC) as rank
-      FROM participant_totals
+      SELECT * FROM ranked_participants
+      LIMIT ? OFFSET ?
     `;
-    const rows = this.db.prepare(sql).all(competitionId);
-    return rows;
+    
+    return this.db.prepare(sql).all(competitionId, limit, actualOffset);
+  }
+
+  // ===== Подсчет общего количества участников =====
+  async getParticipantResultsCount(competitionId) {
+    const sql = `
+      SELECT COUNT(DISTINCT p.id) as count
+      FROM participants p
+      JOIN teams t ON t.id = p.team_id
+      WHERE t.competition_id = ?
+    `;
+    
+    const result = this.db.prepare(sql).get(competitionId);
+    return result.count;
+  }
+
+  // ===== Оптимизированная загрузка участников с результатами (решение N+1 проблемы) =====
+  async getParticipantsWithResults(competitionId, stageId = null) {
+    let sql, params;
+    
+    if (stageId) {
+      // Участники с результатами для конкретного этапа
+      sql = `
+        SELECT 
+          p.id AS participant_id,
+          p.full_name,
+          p.gender,
+          p.age,
+          t.id AS team_id,
+          t.name AS team_name,
+          COALESCE(sr.time_seconds, 0) AS time_seconds,
+          COALESCE(sr.penalty_points, 0) AS penalty_points
+        FROM participants p
+        JOIN teams t ON t.id = p.team_id
+        LEFT JOIN stage_results sr ON sr.participant_id = p.id AND sr.stage_id = ?
+        WHERE t.competition_id = ?
+        ORDER BY t.name, p.full_name
+      `;
+      params = [stageId, competitionId];
+    } else {
+      // Все участники соревнования
+      sql = `
+        SELECT 
+          p.id AS participant_id,
+          p.full_name,
+          p.gender,
+          p.age,
+          t.id AS team_id,
+          t.name AS team_name
+        FROM participants p
+        JOIN teams t ON t.id = p.team_id
+        WHERE t.competition_id = ?
+        ORDER BY t.name, p.full_name
+      `;
+      params = [competitionId];
+    }
+    
+    return this.db.prepare(sql).all(...params);
   }
 
   // ===== Детальные результаты участника по этапам =====

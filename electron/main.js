@@ -194,12 +194,15 @@ function setupIpcHandlers() {
   ipcMain.handle("db:getStageStandingsWithParticipants", async (e, competitionId) =>
     database.getStageStandingsWithParticipants(competitionId)
   );
+  ipcMain.handle("db:getParticipantsWithResults", async (e, competitionId, stageId) =>
+    database.getParticipantsWithResults(competitionId, stageId)
+  );
 }
 
 function createWindow() {
   // Создаем окно браузера
   mainWindow = new BrowserWindow({
-    width: 1150,
+    width: 1200,
     height: 700,
     resizable: false,
     webPreferences: {
