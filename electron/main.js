@@ -11,6 +11,9 @@ const { spawn } = require("child_process");
 const DatabaseManager = require("./database");
 const isDev = process.env.NODE_ENV === "development";
 
+// Импортируем fetch для Node.js
+const fetch = require("node-fetch");
+
 let mainWindow;
 let frontendProcess = null;
 let database = null;
@@ -40,6 +43,29 @@ function closeDatabase() {
     database.close();
     database = null;
   }
+}
+
+// Функция для проверки доступности сервера
+async function waitForServer(url, maxAttempts = 30, delay = 1000) {
+  console.log(`🔍 Ожидание готовности сервера ${url}...`);
+  
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        console.log(`✅ Сервер готов! (попытка ${i + 1}/${maxAttempts})`);
+        return true;
+      }
+    } catch (error) {
+      // Игнорируем ошибки соединения на ранних этапах
+    }
+    
+    console.log(`⏳ Попытка ${i + 1}/${maxAttempts} - сервер еще не готов, ждем ${delay}ms...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  
+  console.error(`❌ Сервер не отвечает после ${maxAttempts} попыток`);
+  return false;
 }
 
 // Функция для запуска фронтенда
@@ -185,10 +211,30 @@ function createWindow() {
 
   // Ждем пока фронтенд будет готов
   if (isDev) {
-    // В режиме разработки ждем немного перед загрузкой
-    setTimeout(() => {
-      mainWindow.loadURL(startUrl);
-    }, 2000);
+    // В режиме разработки ждем готовности сервера
+    waitForServer(startUrl).then((isReady) => {
+      if (isReady) {
+        console.log("🚀 Загружаем приложение...");
+        mainWindow.loadURL(startUrl);
+      } else {
+        console.error("❌ Не удалось подключиться к серверу разработки");
+        // Показываем страницу с ошибкой
+        mainWindow.loadURL(`data:text/html,
+        <html>
+          <body style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+            <h1>🚫 Ошибка подключения к серверу разработки</h1>
+            <p>Не удалось подключиться к Vite серверу на порту 3000</p>
+            <p>Попробуйте:</p>
+            <ul style="text-align: left; display: inline-block;">
+              <li>Перезапустить приложение</li>
+              <li>Проверить, что порт 3000 свободен</li>
+              <li>Запустить фронтенд вручную: <code>cd frontend && npm run dev</code></li>
+            </ul>
+          </body>
+        </html>
+      `);
+      }
+    });
   } else {
     // В продакшене загружаем сразу
     mainWindow.loadURL(startUrl);
