@@ -1,10 +1,17 @@
 <template>
   <div class="standings-container">
     <el-tabs v-model="activeTab" class="results-tabs">
-      <el-tab-pane label="Общие результаты" name="overall">
-        <div class="table-scroll">
-          <el-table :data="rows" style="width: 100%" :class="['modern-table', { 'empty-table': rows.length === 0 }]"
-            height="100%" empty-text="Нет данных для отображения">
+      <el-tab-pane name="overall">
+        <template #label>
+          <div class="tab-label">
+            <el-icon class="tab-icon"><Trophy /></el-icon>
+            <span>Общие результаты</span>
+            <el-badge v-if="rows.length > 0" :value="rows.length" class="tab-badge" />
+          </div>
+        </template>
+        <div class="table-container">
+          <el-table :data="paginatedRows" style="width: 100%" :class="['modern-table', { 'empty-table': rows.length === 0 }]"
+            height="435" empty-text="Нет данных для отображения">
             <el-table-column prop="rank" label="Место" :width="rows.length > 0 ? 100 : 0">
               <template #default="scope">
                 <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
@@ -45,14 +52,41 @@
               </template>
             </el-table-column>
           </el-table>
+          
+          <!-- Пагинация -->
+          <div v-if="rows.length > pageSize" class="pagination-container">
+            <el-pagination
+              :key="`pagination-${rows.length}-${pageSize}`"
+              v-model:current-page="currentPage"
+              :page-size="pageSize"
+              :total="rows.length"
+              layout="pager"
+              :page-sizes="[10, 20, 50, 100]"
+              @size-change="handleSizeChange"
+              @current-change="handleCurrentChange"
+              class="modern-pagination"
+            />
+          </div>
         </div>
       </el-tab-pane>
 
-      <el-tab-pane label="Результаты по этапам" name="stages">
+      <el-tab-pane name="stages">
+        <template #label>
+          <div class="tab-label">
+            <el-icon class="tab-icon"><List /></el-icon>
+            <span>Результаты по этапам</span>
+          </div>
+        </template>
         <StageResultsTable :competition-id="competitionId" />
       </el-tab-pane>
 
-      <el-tab-pane label="Личные результаты" name="participants">
+      <el-tab-pane name="participants">
+        <template #label>
+          <div class="tab-label">
+            <el-icon class="tab-icon"><User /></el-icon>
+            <span>Личные результаты</span>
+          </div>
+        </template>
         <ParticipantResultsTable :competition-id="competitionId" />
       </el-tab-pane>
     </el-tabs>
@@ -60,7 +94,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed, nextTick } from 'vue'
+import { Trophy, List, User } from '@element-plus/icons-vue'
 import StageResultsTable from './StageResultsTable.vue'
 import ParticipantResultsTable from './ParticipantResultsTable.vue'
 
@@ -69,6 +104,8 @@ const api = window.electronAPI?.database
 
 const rows = ref([])
 const activeTab = ref('overall')
+const currentPage = ref(1)
+const pageSize = ref(20) // Оптимальный размер страницы
 
 // Функция форматирования времени из секунд в формат ММ:СС
 const formatTime = (seconds) => {
@@ -80,9 +117,33 @@ const formatTime = (seconds) => {
   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
+// Вычисляемые свойства для пагинации
+const paginatedRows = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return rows.value.slice(start, end)
+})
+
+// Обработчики пагинации
+const handleSizeChange = async (newSize) => {
+  pageSize.value = newSize
+  currentPage.value = 1
+  await nextTick() // Ждем обновления DOM
+}
+
+const handleCurrentChange = async (newPage) => {
+  currentPage.value = newPage
+  await nextTick() // Ждем обновления DOM
+}
+
 const load = async () => {
-  if (!props.competitionId) { rows.value = []; return }
+  if (!props.competitionId) { 
+    rows.value = []
+    return 
+  }
   rows.value = await api.computeStandings(props.competitionId)
+  currentPage.value = 1 // Сбрасываем на первую страницу при загрузке новых данных
+  await nextTick() // Ждем обновления DOM
 }
 
 watch(() => props.competitionId, () => load(), { immediate: true })
@@ -332,10 +393,10 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
 .results-tabs :deep(.el-tabs__header) {
   margin: 0 0 20px 0;
-  background: #f8fafc;
-  border-radius: 0;
-  padding: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.05);
   overflow: visible;
 }
@@ -350,29 +411,35 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 }
 
 .results-tabs :deep(.el-tabs__item) {
-  padding: 8px 16px;
+  padding: 12px 20px;
   font-weight: 600;
   color: #64748b;
-  border-radius: 0;
-  transition: color 0.3s ease;
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   min-width: fit-content;
   position: relative;
   overflow: visible;
   font-size: 15px;
   letter-spacing: 0.025em;
+  margin: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .results-tabs :deep(.el-tabs__item.is-active) {
-  background: #ffffff;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   color: #1e40af;
-  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.15);
-  transform: translateY(-1px);
-  border: 1px solid rgba(30, 64, 175, 0.1);
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.2);
+  transform: translateY(-2px);
+  border: 1px solid rgba(30, 64, 175, 0.15);
 }
 
 .results-tabs :deep(.el-tabs__item:hover) {
   color: #1e40af;
+  background: rgba(30, 64, 175, 0.05);
+  transform: translateY(-1px);
 }
 
 .results-tabs :deep(.el-tabs__active-bar) {
@@ -384,17 +451,175 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   overflow: visible;
 }
 
+/* Стили для лейблов вкладок */
+.tab-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
 
-.table-scroll {
+.tab-icon {
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.results-tabs :deep(.el-tabs__item.is-active) .tab-icon {
+  color: #1e40af;
+  transform: scale(1.1);
+}
+
+.tab-badge {
+  margin-left: 4px;
+}
+
+.tab-badge :deep(.el-badge__content) {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  line-height: 16px;
+}
+
+/* Стили для пагинации */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.modern-pagination :deep(.el-pagination) {
+  --el-pagination-font-size: 14px;
+  --el-pagination-bg-color: transparent;
+  --el-pagination-text-color: #64748b;
+  --el-pagination-border-radius: 8px;
+  --el-pagination-button-color: #64748b;
+  --el-pagination-button-disabled-color: #d1d5db;
+  --el-pagination-hover-color: #3b82f6;
+}
+
+.modern-pagination :deep(.el-pagination .btn-prev),
+.modern-pagination :deep(.el-pagination .btn-next) {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0 4px;
+  transition: all 0.3s ease;
+}
+
+.modern-pagination :deep(.el-pagination .btn-prev:hover),
+.modern-pagination :deep(.el-pagination .btn-next:hover) {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li) {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin: 0 2px;
+  min-width: 36px;
+  height: 36px;
+  line-height: 34px;
+  transition: all 0.3s ease;
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li:hover) {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li.is-active) {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__total) {
+  color: #64748b;
+  font-weight: 500;
+  margin-right: 16px;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__jump) {
+  color: #64748b;
+  margin-left: 16px;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__sizes) {
+  margin-right: 16px;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__sizes .el-select) {
+  width: 100px;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__sizes .el-select .el-input__inner) {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  height: 36px;
+  line-height: 34px;
+}
+
+/* Русская локализация для пагинации */
+.modern-pagination :deep(.el-pagination .el-pagination__total) {
+  color: #64748b;
+  font-weight: 500;
+  margin-right: 16px;
+  white-space: nowrap;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__sizes .el-select .el-input__wrapper) {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  height: 36px;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__jump) {
+  color: #64748b;
+  margin-left: 16px;
+  white-space: nowrap;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__jump .el-input__wrapper) {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  height: 36px;
+  width: 60px;
+}
+
+
+.table-container {
   width: 100%;
   max-width: 100%;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  min-width: 800px;
   flex: 1;
-  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0; /* Позволяет контейнеру сжиматься */
+}
+
+.table-container .modern-table {
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  min-width: 800px;
 }
 
 /* Стилизация скроллбара */
@@ -431,18 +656,35 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 /* Адаптивность */
 @media (max-width: 768px) {
   .results-tabs :deep(.el-tabs__header) {
-    padding: 3px;
-    border-radius: 0;
+    padding: 4px;
+    border-radius: 8px;
+    margin: 0 0 16px 0;
   }
 
   .results-tabs :deep(.el-tabs__nav-wrap) {
-    padding: 0 6px;
+    padding: 0 4px;
   }
 
   .results-tabs :deep(.el-tabs__item) {
-    padding: 6px 12px;
+    padding: 8px 12px;
     font-size: 14px;
     font-weight: 500;
+    margin: 0 2px;
+  }
+
+  .tab-label {
+    gap: 6px;
+  }
+
+  .tab-icon {
+    font-size: 14px;
+  }
+
+  .tab-badge :deep(.el-badge__content) {
+    font-size: 10px;
+    min-width: 16px;
+    height: 16px;
+    line-height: 14px;
   }
 
   .modern-table :deep(.el-table__header th),
@@ -474,19 +716,87 @@ watch(() => props.competitionId, () => load(), { immediate: true })
     font-size: 12px;
   }
 
-  .table-scroll {
+  .table-container .modern-table {
     min-width: 100%;
+  }
+
+  .pagination-container {
+    padding: 12px 0;
+  }
+
+  .modern-pagination :deep(.el-pagination) {
+    --el-pagination-font-size: 13px;
+  }
+
+  .modern-pagination :deep(.el-pagination .btn-prev),
+  .modern-pagination :deep(.el-pagination .btn-next) {
+    padding: 6px 10px;
+    margin: 0 2px;
+  }
+
+  .modern-pagination :deep(.el-pagination .el-pager li) {
+    min-width: 32px;
+    height: 32px;
+    line-height: 30px;
+    margin: 0 1px;
   }
 }
 
 @media (max-width: 480px) {
+  .results-tabs :deep(.el-tabs__header) {
+    padding: 3px;
+    border-radius: 6px;
+  }
+
   .results-tabs :deep(.el-tabs__item) {
-    padding: 5px 10px;
+    padding: 6px 8px;
     font-size: 13px;
+    margin: 0 1px;
   }
 
   .results-tabs :deep(.el-tabs__nav-wrap) {
-    padding: 0 4px;
+    padding: 0 2px;
+  }
+
+  .tab-label {
+    gap: 4px;
+  }
+
+  .tab-icon {
+    font-size: 12px;
+  }
+
+  .tab-badge :deep(.el-badge__content) {
+    font-size: 9px;
+    min-width: 14px;
+    height: 14px;
+    line-height: 12px;
+  }
+
+  .pagination-container {
+    padding: 8px 0;
+  }
+
+  .modern-pagination :deep(.el-pagination) {
+    --el-pagination-font-size: 12px;
+  }
+
+  .modern-pagination :deep(.el-pagination .btn-prev),
+  .modern-pagination :deep(.el-pagination .btn-next) {
+    padding: 4px 8px;
+    margin: 0 1px;
+  }
+
+  .modern-pagination :deep(.el-pagination .el-pager li) {
+    min-width: 28px;
+    height: 28px;
+    line-height: 26px;
+    margin: 0 1px;
+  }
+
+  .modern-pagination :deep(.el-pagination .el-pagination__total),
+  .modern-pagination :deep(.el-pagination .el-pagination__jump) {
+    display: none;
   }
 }
 </style>

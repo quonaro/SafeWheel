@@ -52,10 +52,6 @@
           <div v-if="!selectedCompetitionId" class="competition-selector">
             <div class="selector-header">
               <div class="header-content">
-                <div class="header-text">
-                  <h1>Выберите конкурс</h1>
-                  <p>Для начала работы выберите существующий конкурс или создайте новый</p>
-                </div>
                 <div class="header-actions">
                   <el-button type="primary" @click="openCreateDialog" class="create-button" size="large">
                     <el-icon>
@@ -491,7 +487,7 @@ onMounted(() => {
   border-radius: 24px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  padding: 40px;
+  padding: 20px;
   height: 100%;
   overflow: visible;
   position: relative;
@@ -533,26 +529,6 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.3);
 }
 
-/* Скроллбар для списка конкурсов */
-.competition-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.competition-list::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
-  margin: 10px 0;
-}
-
-.competition-list::-webkit-scrollbar-thumb {
-  background: rgba(59, 130, 246, 0.3);
-  border-radius: 4px;
-  transition: background 0.3s ease;
-}
-
-.competition-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(59, 130, 246, 0.5);
-}
 
 /* Стили для селектора конкурсов */
 .competition-selector {
@@ -570,7 +546,7 @@ onMounted(() => {
 }
 
 .selector-header {
-  margin-bottom: 50px;
+  margin-bottom: 30px;
   position: relative;
   z-index: 1;
 }
@@ -639,8 +615,6 @@ onMounted(() => {
   z-index: 1;
   justify-content: flex-start;
   align-items: flex-start;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
   padding: 40px 20px;
   margin: 0;
 }
@@ -662,7 +636,6 @@ onMounted(() => {
   .competition-list {
     max-width: 100%;
     justify-content: center;
-    max-height: calc(100vh - 200px);
     padding: 30px 15px;
     margin: 0;
   }
@@ -703,7 +676,6 @@ onMounted(() => {
 @media (max-width: 600px) {
   .competition-list {
     justify-content: center;
-    max-height: calc(100vh - 180px);
     padding: 25px 10px;
     margin: 0;
   }
@@ -720,7 +692,6 @@ onMounted(() => {
 
 @media (max-width: 480px) {
   .competition-list {
-    max-height: calc(100vh - 160px);
     padding: 20px 8px;
     margin: 0;
   }
