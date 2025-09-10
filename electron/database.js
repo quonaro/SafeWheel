@@ -1,5 +1,4 @@
-
- const Database = require("better-sqlite3");
+const Database = require("better-sqlite3");
 const path = require("path");
 
 class DatabaseManager {
@@ -18,8 +17,27 @@ class DatabaseManager {
 
       // 2) Каталог рядом с исполняемым файлом
       try {
-        const exeDir = app ? path.dirname(app.getPath("exe")) : path.dirname(process.execPath);
-        // Проверим возможность записи: если нет — бросит исключение позже на mkdir
+        let exeDir;
+
+        // Для AppImage используем переменную окружения APPIMAGE
+        if (process.env.APPIMAGE) {
+          exeDir = path.dirname(process.env.APPIMAGE);
+          console.log("🔍 Найден AppImage путь:", process.env.APPIMAGE);
+        } else if (
+          process.env.ARGV0 &&
+          !process.env.ARGV0.includes("/tmp/.mount_")
+        ) {
+          // Fallback на ARGV0 если это не временный путь
+          exeDir = path.dirname(process.env.ARGV0);
+          console.log("🔍 Используем ARGV0 путь:", process.env.ARGV0);
+        } else {
+          // Обычный путь к исполняемому файлу
+          exeDir = app
+            ? path.dirname(app.getPath("exe"))
+            : path.dirname(process.execPath);
+          console.log("🔍 Используем стандартный путь:", exeDir);
+        }
+
         return exeDir;
       } catch (_) {
         // Игнорируем и откатываемся ниже
@@ -40,11 +58,18 @@ class DatabaseManager {
       fs.unlinkSync(testFile);
     } catch (e) {
       // Если не удалось — используем userData
-      const fallback = app ? app.getPath("userData") : path.join(__dirname, "../data");
+      const fallback = app
+        ? app.getPath("userData")
+        : path.join(__dirname, "../data");
       if (!fs.existsSync(fallback)) {
         fs.mkdirSync(fallback, { recursive: true });
       }
-      console.warn("⚠️ Каталог рядом с исполняемым файлом недоступен для записи, используем userData:", fallback, "Причина:", e.message);
+      console.warn(
+        "⚠️ Каталог рядом с исполняемым файлом недоступен для записи, используем userData:",
+        fallback,
+        "Причина:",
+        e.message
+      );
       dataDir = fallback;
     }
 
@@ -72,7 +97,7 @@ class DatabaseManager {
     } catch (error) {
       console.error("❌ Ошибка подключения к базе данных:", error.message);
       throw error;
-      }
+    }
   }
 
   // Создание таблиц
@@ -130,11 +155,21 @@ class DatabaseManager {
     try {
       console.log("🔄 Создание колеса с данными:", wheelData);
       const { name, diameter, width, material, condition } = wheelData;
-      
+
       // Валидация данных (разрешаем 0 как валидное значение)
-      const isEmptyString = (v) => typeof v === "string" && v.trim().length === 0;
+      const isEmptyString = (v) =>
+        typeof v === "string" && v.trim().length === 0;
       const isNil = (v) => v === null || v === undefined;
-      if (isEmptyString(name) || isNil(name) || isNil(diameter) || isNil(width) || isEmptyString(material) || isNil(material) || isEmptyString(condition) || isNil(condition)) {
+      if (
+        isEmptyString(name) ||
+        isNil(name) ||
+        isNil(diameter) ||
+        isNil(width) ||
+        isEmptyString(material) ||
+        isNil(material) ||
+        isEmptyString(condition) ||
+        isNil(condition)
+      ) {
         throw new Error("Не все обязательные поля заполнены");
       }
 
@@ -144,15 +179,21 @@ class DatabaseManager {
       if (Number.isNaN(numericDiameter) || Number.isNaN(numericWidth)) {
         throw new Error("Диаметр и ширина должны быть числами");
       }
-      
+
       const stmt = this.db.prepare(`
         INSERT INTO wheels (name, diameter, width, material, condition, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `);
 
-      const result = stmt.run(String(name).trim(), numericDiameter, numericWidth, String(material).trim(), String(condition).trim());
+      const result = stmt.run(
+        String(name).trim(),
+        numericDiameter,
+        numericWidth,
+        String(material).trim(),
+        String(condition).trim()
+      );
       console.log("✅ Колесо создано с ID:", result.lastInsertRowid);
-      
+
       const wheel = await this.getWheelById(result.lastInsertRowid);
       console.log("📋 Созданное колесо:", wheel);
       return wheel;
