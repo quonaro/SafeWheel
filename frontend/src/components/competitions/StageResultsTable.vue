@@ -1,15 +1,34 @@
 <template>
   <div>
     <div class="mb-12">
-      <h3 class="table-title">Результаты соревнования</h3>
+      <h3 class="table-title">Результаты по этапам</h3>
     </div>
 
-    <el-tabs v-model="activeTab" class="results-tabs">
-      <el-tab-pane label="Общие результаты" name="overall">
+    <div v-if="loading" class="loading-container">
+      <el-icon class="is-loading"><Loading /></el-icon>
+      <span>Загрузка результатов...</span>
+    </div>
+
+    <div v-else-if="stages.length === 0" class="empty-state">
+      <el-icon><TrophyBase /></el-icon>
+      <p>Нет данных для отображения</p>
+    </div>
+
+    <div v-else class="stages-container">
+      <div v-for="stage in stages" :key="stage.stage_id" class="stage-section">
+        <div class="stage-header">
+          <h4 class="stage-title">{{ stage.stage_name }}</h4>
+        </div>
+        
         <div class="table-scroll">
-          <el-table :data="rows" style="width: 100%" :class="['modern-table', { 'empty-table': rows.length === 0 }]"
-            :height="rows.length > 0 ? 'auto' : 200" empty-text="Нет данных для отображения">
-            <el-table-column prop="rank" label="Место" :width="rows.length > 0 ? 100 : 0">
+          <el-table 
+            :data="stage.results" 
+            style="width: 100%" 
+            :class="['modern-table', { 'empty-table': stage.results.length === 0 }]"
+            :height="stage.results.length > 0 ? 'auto' : 200" 
+            empty-text="Нет данных для отображения"
+          >
+            <el-table-column prop="rank" label="Место" :width="stage.results.length > 0 ? 100 : 0">
               <template #default="scope">
                 <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
                   <template v-if="scope.row.rank === 1">
@@ -27,56 +46,71 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="team_name" label="Команда" :min-width="rows.length > 0 ? 200 : 0">
+            <el-table-column prop="team_name" label="Команда" :min-width="stage.results.length > 0 ? 200 : 0">
               <template #default="scope">
                 <div class="team-cell">
                   <span class="team-name">{{ scope.row.team_name }}</span>
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="total_penalties" label="Штрафы" :width="rows.length > 0 ? 140 : 0">
+            <el-table-column prop="total_penalties" label="Штрафы" :width="stage.results.length > 0 ? 140 : 0">
               <template #default="scope">
                 <div class="penalty-cell">
                   <span class="penalty-value">{{ scope.row.total_penalties }}</span>
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="total_time" label="Время (сумма сек)" :width="rows.length > 0 ? 180 : 0">
+            <el-table-column prop="total_time" label="Время (сек)" :width="stage.results.length > 0 ? 180 : 0">
               <template #default="scope">
                 <div class="time-cell">
                   <span class="time-value">{{ scope.row.total_time }}</span>
                 </div>
               </template>
             </el-table-column>
+            <el-table-column prop="avg_age" label="Ср. возраст" :width="stage.results.length > 0 ? 120 : 0">
+              <template #default="scope">
+                <div class="age-cell">
+                  <span class="age-value">{{ scope.row.avg_age ? scope.row.avg_age.toFixed(1) : '—' }}</span>
+                </div>
+              </template>
+            </el-table-column>
           </el-table>
         </div>
-      </el-tab-pane>
-
-      <el-tab-pane label="Результаты по этапам" name="stages">
-        <StageResultsTable :competition-id="competitionId" />
-      </el-tab-pane>
-
-      <el-tab-pane label="Личные результаты" name="participants">
-        <ParticipantResultsTable :competition-id="competitionId" />
-      </el-tab-pane>
-    </el-tabs>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue'
-import StageResultsTable from './StageResultsTable.vue'
-import ParticipantResultsTable from './ParticipantResultsTable.vue'
+import { Loading, TrophyBase } from '@element-plus/icons-vue'
 
-const props = defineProps({ competitionId: { type: Number, required: false } })
+const props = defineProps({ 
+  competitionId: { 
+    type: Number, 
+    required: false 
+  } 
+})
+
 const api = window.electronAPI?.database
-
-const rows = ref([])
-const activeTab = ref('overall')
+const stages = ref([])
+const loading = ref(false)
 
 const load = async () => {
-  if (!props.competitionId) { rows.value = []; return }
-  rows.value = await api.computeStandings(props.competitionId)
+  if (!props.competitionId) { 
+    stages.value = []
+    return 
+  }
+  
+  loading.value = true
+  try {
+    stages.value = await api.getStageStandings(props.competitionId)
+  } catch (error) {
+    console.error('Ошибка загрузки результатов по этапам:', error)
+    stages.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 watch(() => props.competitionId, () => load(), { immediate: true })
@@ -306,45 +340,33 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   color: #1f2937;
 }
 
-/* Стили для вкладок */
-.results-tabs {
-  margin-top: 20px;
+/* Контейнер этапов */
+.stages-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.results-tabs :deep(.el-tabs__header) {
-  margin: 0 0 20px 0;
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 4px;
-}
-
-.results-tabs :deep(.el-tabs__nav-wrap) {
-  padding: 0 8px;
-}
-
-.results-tabs :deep(.el-tabs__item) {
-  padding: 12px 20px;
-  font-weight: 500;
-  color: #64748b;
-  border-radius: 6px;
-  transition: all 0.3s ease;
-}
-
-.results-tabs :deep(.el-tabs__item.is-active) {
+.stage-section {
   background: #ffffff;
-  color: #1e40af;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.results-tabs :deep(.el-tabs__item:hover) {
-  color: #1e40af;
-  background: rgba(30, 64, 175, 0.05);
+.stage-header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-.results-tabs :deep(.el-tabs__content) {
-  padding: 0;
+.stage-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
 }
-
 
 .table-scroll {
   width: 100%;
@@ -387,10 +409,35 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   word-break: break-word;
 }
 
+/* Состояния загрузки и пустого состояния */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 20px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.empty-state .el-icon {
+  font-size: 48px;
+  color: #d1d5db;
+}
 
 /* Адаптивность */
 @media (max-width: 768px) {
-
   .modern-table :deep(.el-table__header th),
   .modern-table :deep(.el-table__body td) {
     padding: 8px 6px;
@@ -422,6 +469,10 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
   .table-scroll {
     min-width: 100%;
+  }
+
+  .stage-section {
+    padding: 16px;
   }
 }
 </style>
