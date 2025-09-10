@@ -30,7 +30,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 </script>
 
 <style scoped>
-.mt-8 { margin-top: 8px; }
+/* Component-specific styles only */
 </style>
 
 

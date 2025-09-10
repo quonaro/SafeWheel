@@ -147,8 +147,7 @@ const removeParticipant = async (id) => {
 </script>
 
 <style scoped>
-.mb-12 { margin-bottom: 12px; }
-.mt-8 { margin-top: 8px; }
+/* Component-specific styles only */
 </style>
 
 
