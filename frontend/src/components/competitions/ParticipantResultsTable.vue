@@ -15,13 +15,14 @@
     </div>
 
     <div v-else class="table-scroll">
-      <el-table 
-        :data="participants" 
-        style="width: 100%" 
-        :class="['modern-table', { 'empty-table': participants.length === 0 }]"
-        :height="participants.length > 0 ? 'auto' : 200" 
-        empty-text="Нет данных для отображения"
-      >
+      <div class="table-container">
+        <el-table 
+          :data="participants" 
+          style="width: 100%" 
+          :class="['modern-table', { 'empty-table': participants.length === 0 }]"
+          :height="participants.length > 0 ? 'auto' : 200" 
+          empty-text="Нет данных для отображения"
+        >
         <el-table-column prop="rank" label="Место" :width="participants.length > 0 ? 100 : 0">
           <template #default="scope">
             <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
@@ -93,7 +94,8 @@
             </el-button>
           </template>
         </el-table-column>
-      </el-table>
+        </el-table>
+      </div>
     </div>
 
     <!-- Диалог с детальными результатами участника -->
@@ -162,9 +164,14 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
 <style scoped>
 /* Современные стили для таблицы результатов */
+.table-container {
+  padding: 4px;
+  overflow: visible;
+}
+
 .modern-table {
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.05);
   min-height: 200px;
@@ -265,6 +272,15 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+/* Убираем overflow: hidden для ячеек с медалями */
+.modern-table :deep(.el-table__body td:first-child) {
+  overflow: visible !important;
+}
+
+.modern-table :deep(.el-table__body tr) {
+  overflow: visible !important;
+}
+
 /* Стили для ячеек */
 .rank-cell {
   display: flex;
@@ -275,6 +291,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   width: 36px;
   height: 36px;
   margin: 0 auto;
+  background: #4b5563;
+  border: 2px solid #374151;
 }
 
 .rank-number {
@@ -288,7 +306,9 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   background: transparent;
   width: auto;
   height: auto;
-  padding: 0;
+  padding: 4px;
+  position: relative;
+  border: none;
 }
 
 .trophy {

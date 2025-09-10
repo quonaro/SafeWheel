@@ -124,7 +124,10 @@
               <el-table-column prop="rank" label="Место" width="60">
                 <template #default="scope">
                   <div class="participant-rank" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
-                    {{ scope.row.rank }}
+                    <template v-if="scope.row.rank === 1">🥇</template>
+                    <template v-else-if="scope.row.rank === 2">🥈</template>
+                    <template v-else-if="scope.row.rank === 3">🥉</template>
+                    <template v-else>{{ scope.row.rank }}</template>
                   </div>
                 </template>
               </el-table-column>
@@ -398,7 +401,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
 /* Контейнер команд */
 .teams-container {
-  padding: 20px;
+  padding: 20px 20px 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -697,7 +700,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   margin-bottom: 20px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
+  padding: 4px;
 }
 
 .team-section:last-child {
@@ -724,14 +728,20 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #6b7280;
+  background: #4b5563;
   color: white;
   font-weight: 700;
   font-size: 16px;
+  margin: 4px;
+  position: relative;
+  border: 2px solid #374151;
 }
 
 .rank-badge.is-top {
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.6);
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4));
+  border: none;
 }
 
 .team-info {
@@ -766,6 +776,15 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   background: white;
   max-height: 300px;
   overflow-y: auto;
+}
+
+/* Убираем overflow: hidden для ячеек с медалями */
+.participants-table :deep(.el-table__body td:first-child) {
+  overflow: visible !important;
+}
+
+.participants-table :deep(.el-table__body tr) {
+  overflow: visible !important;
 }
 
 /* Кастомный скроллбар для таблиц участников */
@@ -808,14 +827,20 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   height: 24px;
   border-radius: 50%;
   background: #e5e7eb;
-  color: #6b7280;
-  font-weight: 600;
+  color: #374151;
+  font-weight: 700;
   font-size: 12px;
+  margin: 2px;
+  position: relative;
+  border: 2px solid #d1d5db;
 }
 
 .participant-rank.is-top {
   background: #fbbf24;
   color: white;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.4));
+  border: none;
 }
 
 .participant-info {
