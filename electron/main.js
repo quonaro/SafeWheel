@@ -199,8 +199,9 @@ function setupIpcHandlers() {
 function createWindow() {
   // Создаем окно браузера
   mainWindow = new BrowserWindow({
-    minWidth: 1150,
-    minHeight: 700,
+    width: 1150,
+    height: 700,
+    resizable: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: true,

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="participant-results-container">
     <div v-if="loading" class="loading-container">
       <el-icon class="is-loading"><Loading /></el-icon>
       <span>Загрузка результатов...</span>
@@ -16,7 +16,7 @@
           :data="participants" 
           style="width: 100%" 
           :class="['modern-table', { 'empty-table': participants.length === 0 }]"
-          :height="participants.length > 0 ? 'auto' : 200" 
+          height="100%" 
           empty-text="Нет данных для отображения"
         >
         <el-table-column prop="rank" label="Место" :width="participants.length > 0 ? 100 : 0">
@@ -169,6 +169,13 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 </script>
 
 <style scoped>
+/* Контейнер для растягивания на всю высоту */
+.participant-results-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Современные стили для таблицы результатов */
 .table-container {
   padding: 4px;
@@ -449,7 +456,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   min-width: 1000px;
-  max-height: 600px;
+  flex: 1;
+  min-height: 400px;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
