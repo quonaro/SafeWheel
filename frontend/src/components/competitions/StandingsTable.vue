@@ -15,37 +15,37 @@
     </el-row>
 
     <div class="table-scroll">
-      <el-table :data="rows" style="width: 100%" class="modern-table" :height="rows.length > 0 ? 'auto' : 200"
-        empty-text="Нет данных для отображения">
-        <el-table-column prop="rank" label="Место" width="100">
+      <el-table :data="rows" style="width: 100%" :class="['modern-table', { 'empty-table': rows.length === 0 }]"
+        :height="rows.length > 0 ? 'auto' : 200" empty-text="Нет данных для отображения">
+        <el-table-column prop="rank" label="Место" :width="rows.length > 0 ? 100 : 0">
           <template #default="scope">
             <div class="rank-cell">
               <span class="rank-number">{{ scope.row.rank }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="team_name" label="Команда">
+        <el-table-column prop="team_name" label="Команда" :min-width="rows.length > 0 ? 200 : 0">
           <template #default="scope">
             <div class="team-cell">
               <span class="team-name">{{ scope.row.team_name }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="total_penalties" label="Штрафы" width="140">
+        <el-table-column prop="total_penalties" label="Штрафы" :width="rows.length > 0 ? 140 : 0">
           <template #default="scope">
             <div class="penalty-cell">
               <span class="penalty-value">{{ scope.row.total_penalties }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="total_time" label="Время (сумма сек)" width="180">
+        <el-table-column prop="total_time" label="Время (сумма сек)" :width="rows.length > 0 ? 180 : 0">
           <template #default="scope">
             <div class="time-cell">
               <span class="time-value">{{ scope.row.total_time }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="avg_age" label="Средний возраст" width="160">
+        <el-table-column prop="avg_age" label="Средний возраст" :width="rows.length > 0 ? 160 : 0">
           <template #default="scope">
             <div class="age-cell">
               <span class="age-value">{{ scope.row.avg_age }}</span>
@@ -90,11 +90,60 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .modern-table :deep(.el-table__empty-block) {
   height: 200px;
   width: 100%;
-  min-width: 800px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(248, 250, 252, 0.5);
+}
+
+/* Ограничиваем ширину таблицы когда нет данных */
+.empty-table {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table .table-scroll {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+/* Принудительно ограничиваем ширину через deep селекторы */
+.empty-table :deep(.el-table) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__header-wrapper) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__body-wrapper) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__header) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__body) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__empty-block) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: 100% !important;
 }
 
 .modern-table :deep(.el-table__empty-text) {
