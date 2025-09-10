@@ -24,7 +24,7 @@ install_and_build:
     - node --version
     - npm --version
     - echo "🔧 Устанавливаем зависимости корневого проекта..."
-    - npm ci
+    - npm install
     - echo "🔧 Устанавливаем зависимости фронтенда..."
     - cd frontend && npm ci && cd ..
     - echo "🔨 Собираем фронтенд..."
@@ -51,7 +51,7 @@ build_linux:
     - node --version
     - npm --version
     - echo "🔧 Устанавливаем зависимости корневого проекта..."
-    - npm ci
+    - npm install
     - echo "🔧 Устанавливаем зависимости фронтенда..."
     - cd frontend && npm ci && cd ..
     - echo "🔨 Собираем фронтенд..."
@@ -81,7 +81,7 @@ build_windows:
     - node --version
     - npm --version
     - echo "🔧 Устанавливаем зависимости корневого проекта..."
-    - npm ci
+    - npm install
     - echo "🔧 Устанавливаем зависимости фронтенда..."
     - cd frontend && npm ci && cd ..
     - echo "🔨 Собираем фронтенд..."
