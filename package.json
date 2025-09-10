@@ -31,10 +31,21 @@
       "category": "public.app-category.productivity"
     },
     "win": {
-      "target": "nsis"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "publisherName": "SafeWheel Team"
     },
     "linux": {
-      "target": "AppImage",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
       "executableArgs": [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -44,8 +55,22 @@
         "--no-zygote",
         "--single-process"
       ],
-      "category": "Utility"
-    }
+      "category": "Utility",
+      "desktop": {
+        "Name": "SafeWheel",
+        "Comment": "Desktop приложение SafeWheel",
+        "Keywords": "safewheel;competition;results;",
+        "StartupWMClass": "safewheel"
+      }
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SafeWheel"
+    },
+    "publish": null
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",

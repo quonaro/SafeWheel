@@ -60,3 +60,6 @@ venv.bak/
 
 # Electron
 out/
+
+# CI/CD cache
+.cache/
