@@ -15,9 +15,17 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
+:deep(.el-select .el-input__wrapper:hover) {
+  background: transparent !important;
+}
+
 :deep(.el-input__wrapper.is-focus) {
   border-color: #3b82f6 !important;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+:deep(.el-select .el-input__wrapper.is-focus) {
+  background: transparent !important;
 }
 
 :deep(.el-input__inner) {
@@ -142,7 +150,7 @@
 }
 
 :deep(.el-select .el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.8) !important;
+  background: transparent !important;
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
   border-radius: 8px !important;
 }
@@ -184,6 +192,45 @@
 
 :deep(.el-col) {
   padding: 0 8px !important;
+}
+
+/* Tabs styles - simplified */
+:deep(.el-tabs__nav-scroll) {
+  border-bottom: none !important;
+}
+
+:deep(.el-tabs__nav-wrap) {
+  padding: 0 12px !important;
+}
+
+:deep(.el-tabs__item) {
+  margin: 0 4px !important;
+  padding: 10px 16px !important;
+  border-radius: 6px !important;
+  transition: background-color 0.2s ease !important;
+  font-weight: 500 !important;
+}
+
+:deep(.el-tabs__header) {
+  border-bottom: none !important;
+  margin-bottom: 20px !important;
+  background: #f8fafc !important;
+  border-radius: 8px !important;
+  padding: 4px !important;
+}
+
+:deep(.el-tabs__active-bar) {
+  display: none !important;
+}
+
+:deep(.el-tabs__item.is-active) {
+  background: none !important;
+  color: #3b82f6 !important;
+  box-shadow: none !important;
+}
+
+:deep(.el-tabs__item:hover) {
+  background: rgba(59, 130, 246, 0.1) !important;
 }
 
 /* Utility classes */

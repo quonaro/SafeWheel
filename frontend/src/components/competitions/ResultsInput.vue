@@ -1,12 +1,45 @@
 <template>
   <div class="results-input-container">
-    <el-row :gutter="12" class="mb-12">
-      <el-col :span="8">
-        <el-select v-model="stageId" placeholder="Выберите этап" style="width: 100%">
-          <el-option v-for="s in stages" :key="s.id" :label="s.name" :value="s.id" />
+    <!-- Переключатель этапов -->
+    <div class="stages-navigation">
+      <div v-if="stages.length > 4" class="stage-selector">
+        <el-select 
+          v-model="stageId" 
+          placeholder="Выберите этап"
+          size="large"
+          style="width: 300px"
+        >
+          <el-option
+            v-for="stage in stages"
+            :key="stage.id"
+            :label="stage.name"
+            :value="stage.id"
+          />
         </el-select>
-      </el-col>
-      <el-col :span="8">
+      </div>
+      
+      <!-- Вкладки для небольшого количества этапов -->
+      <div v-else class="stages-tabs">
+        <div 
+          v-for="stage in stages" 
+          :key="stage.id"
+          class="stage-tab"
+          :class="{ 'is-active': stageId === stage.id }"
+          @click="stageId = stage.id"
+        >
+          <div class="tab-content">
+            <span class="tab-title">{{ stage.name }}</span>
+            <div class="tab-stats">
+              <span class="stage-info">Этап {{ stages.indexOf(stage) + 1 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Фильтры -->
+    <el-row :gutter="12" class="mb-12">
+      <el-col :span="12">
         <el-input v-model="searchQuery" placeholder="Поиск по участнику" style="width: 100%" clearable
           @input="filterResults">
           <template #prefix>
@@ -16,7 +49,7 @@
           </template>
         </el-input>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="12">
         <el-select v-model="selectedTeamId" placeholder="Все команды" style="width: 100%" @change="filterResults"
           clearable>
           <el-option label="Все команды" :value="null" />
@@ -241,6 +274,106 @@ const debouncedSave = (row) => {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* Навигация по этапам */
+.stages-navigation {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stage-selector {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+/* Вкладки для переключения между этапами */
+.stages-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex: 1;
+}
+
+/* Кастомный скроллбар для вкладок */
+.stages-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.stages-tabs::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 3px;
+}
+
+.stages-tabs::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 3px;
+}
+
+.stages-tabs::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.stage-tab {
+  flex: 1;
+  min-width: 200px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: 2px solid transparent;
+}
+
+.stage-tab:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.stage-tab.is-active {
+  background: #3b82f6;
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.tab-content {
+  padding: 12px 16px;
+  text-align: center;
+}
+
+.tab-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.stage-tab.is-active .tab-title {
+  color: white;
+}
+
+.tab-stats {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.stage-tab.is-active .tab-stats {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stage-info {
+  font-weight: 500;
 }
 
 /* Современные стили для таблицы результатов */
@@ -594,6 +727,21 @@ const debouncedSave = (row) => {
 
 /* Адаптивность */
 @media (max-width: 768px) {
+  .stages-navigation {
+    padding: 12px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .stages-tabs {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .stage-tab {
+    min-width: 150px;
+  }
+
   .teams-groups {
     gap: 16px;
   }
