@@ -75,7 +75,9 @@ build_windows:
   dependencies:
     - install_and_build
   before_script:
-    - apt-get update && apt-get install -y wine
+    - apt-get update && apt-get install -y wine xvfb
+    - export DISPLAY=:99
+    - Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
   script:
     - echo "🔍 Проверяем версии..."
     - node --version
@@ -88,8 +90,14 @@ build_windows:
     - cd frontend && npm run build && cd ..
     - echo "🔍 Проверяем, что фронтенд собран..."
     - ls -la frontend/dist/
+    - echo "🔍 Проверяем структуру проекта..."
+    - ls -la
+    - echo "🔍 Проверяем build директорию..."
+    - ls -la build/
     - echo "🔨 Собираем Electron приложение для Windows..."
-    - npm run build:electron -- --win nsis
+    - npm run build:electron -- --win nsis --x64
+    - echo "🔍 Проверяем результат сборки..."
+    - ls -la dist/
   artifacts:
     paths:
       - dist/*.exe

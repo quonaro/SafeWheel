@@ -77,7 +77,8 @@
       ],
       "publisherName": "SafeWheel Team",
       "icon": "build/icon.ico",
-      "requestedExecutionLevel": "asInvoker"
+      "requestedExecutionLevel": "asInvoker",
+      "verifyUpdateCodeSignature": false
     },
     "linux": {
       "target": [
@@ -104,26 +105,26 @@
         "StartupWMClass": "safewheel"
       }
     },
-        "nsis": {
-          "oneClick": false,
-          "allowToChangeInstallationDirectory": true,
-          "createDesktopShortcut": true,
-          "createStartMenuShortcut": true,
-          "shortcutName": "SafeWheel",
-          "artifactName": "SafeWheel Setup ${version}.${ext}",
-          "uninstallDisplayName": "SafeWheel ${version}",
-          "installerIcon": "build/icon.ico",
-          "uninstallerIcon": "build/icon.ico",
-          "installerHeaderIcon": "build/icon.ico",
-          "deleteAppDataOnUninstall": false,
-          "runAfterFinish": true,
-          "menuCategory": false,
-          "perMachine": false,
-          "allowElevation": true,
-          "warningsAsErrors": false,
-          "displayLanguageSelector": false,
-          "installerLanguages": ["en_US", "ru_RU"]
-        },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SafeWheel",
+      "artifactName": "SafeWheel Setup ${version}.${ext}",
+      "uninstallDisplayName": "SafeWheel ${version}",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "menuCategory": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "warningsAsErrors": false,
+      "displayLanguageSelector": false,
+      "installerLanguages": ["en_US", "ru_RU"]
+    },
     "publish": null
   },
   "dependencies": {
