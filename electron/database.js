@@ -111,6 +111,7 @@ class DatabaseManager {
         `CREATE TABLE IF NOT EXISTS competitions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
+          description TEXT DEFAULT '',
           emoji TEXT DEFAULT '🏆',
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -189,6 +190,22 @@ class DatabaseManager {
         }
       }
 
+      // Миграция: добавляем поле description если его нет
+      try {
+        this.db.exec(
+          "ALTER TABLE competitions ADD COLUMN description TEXT DEFAULT ''"
+        );
+        console.log("✅ Добавлено поле description в таблицу competitions");
+      } catch (e) {
+        // Поле уже существует, игнорируем ошибку
+        if (!e.message.includes("duplicate column name")) {
+          console.warn(
+            "⚠️ Предупреждение при добавлении поля description:",
+            e.message
+          );
+        }
+      }
+
       console.log("✅ Таблицы конкурсов созданы/проверены");
     } catch (error) {
       console.error("❌ Ошибка создания таблиц:", error.message);
@@ -211,11 +228,12 @@ class DatabaseManager {
 
   async createCompetition(data) {
     const stmt = this.db.prepare(`
-      INSERT INTO competitions (name, emoji, created_at, updated_at)
-      VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      INSERT INTO competitions (name, description, emoji, created_at, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `);
     const result = stmt.run(
       String(data.name || "").trim(),
+      String(data.description || "").trim(),
       String(data.emoji || "🏆")
     );
     return this.getCompetitionById(result.lastInsertRowid);
@@ -223,9 +241,14 @@ class DatabaseManager {
 
   async updateCompetition(id, data) {
     const stmt = this.db.prepare(`
-      UPDATE competitions SET name = ?, emoji = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+      UPDATE competitions SET name = ?, description = ?, emoji = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
     `);
-    stmt.run(String(data.name || "").trim(), String(data.emoji || "🏆"), id);
+    stmt.run(
+      String(data.name || "").trim(),
+      String(data.description || "").trim(),
+      String(data.emoji || "🏆"),
+      id
+    );
     return this.getCompetitionById(id);
   }
 
