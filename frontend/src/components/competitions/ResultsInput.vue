@@ -24,7 +24,8 @@
     </el-row>
 
     <div class="table-scroll">
-      <el-table :data="filteredRows" style="width:100%" class="modern-table">
+      <el-table :data="filteredRows" style="width:100%" class="modern-table"
+        :height="filteredRows.length > 0 ? 'auto' : 200" empty-text="Нет данных для отображения">
         <el-table-column prop="team_name" label="Команда" width="220">
           <template #default="scope">
             <div class="team-cell">
@@ -146,6 +147,26 @@ const debouncedSave = (row) => {
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.05);
+  min-height: 200px;
+  width: 100%;
+  min-width: 800px;
+}
+
+/* Стили для пустого состояния */
+.modern-table :deep(.el-table__empty-block) {
+  height: 200px;
+  width: 100%;
+  min-width: 800px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 250, 252, 0.5);
+}
+
+.modern-table :deep(.el-table__empty-text) {
+  color: #6b7280;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .modern-table :deep(.el-table__header) {
@@ -158,7 +179,7 @@ const debouncedSave = (row) => {
   color: #111827;
   font-weight: 600;
   font-size: 14px;
-  padding: 16px 12px;
+  padding: 10px 12px;
   border: none;
 }
 
@@ -171,7 +192,7 @@ const debouncedSave = (row) => {
 }
 
 .modern-table :deep(.el-table__body td) {
-  padding: 12px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -179,10 +200,11 @@ const debouncedSave = (row) => {
 .team-cell {
   display: flex;
   align-items: center;
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 6px;
   background: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.2);
+  min-height: 20px;
 }
 
 .team-name {
@@ -194,10 +216,11 @@ const debouncedSave = (row) => {
 .participant-cell {
   display: flex;
   align-items: center;
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 6px;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.2);
+  min-height: 20px;
 }
 
 .participant-name {
@@ -210,15 +233,43 @@ const debouncedSave = (row) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: 2px;
 }
 
 .table-scroll {
   width: 100%;
   max-width: 100%;
-  overflow-x: auto;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
   min-width: 800px;
+  max-height: 400px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Стилизация скроллбара */
+.table-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+.table-scroll::-webkit-scrollbar-corner {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .modern-table :deep(.cell) {

@@ -309,6 +309,26 @@ const handleAgeChange = async (teamId, participant) => {
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.05);
+  width: 100%;
+  min-width: 600px;
+  min-height: 200px;
+}
+
+/* Стили для пустого состояния */
+.modern-table :deep(.el-table__empty-block) {
+  height: 200px;
+  width: 100%;
+  min-width: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 250, 252, 0.5);
+}
+
+.modern-table :deep(.el-table__empty-text) {
+  color: #6b7280;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .modern-table :deep(.el-table__header) {
