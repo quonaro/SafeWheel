@@ -184,10 +184,10 @@ class DatabaseManager {
         `CREATE INDEX IF NOT EXISTS idx_results_participant ON stage_results(participant_id)`,
         
         // Составные индексы для оптимизации сложных запросов
-        `CREATE INDEX IF NOT EXISTS idx_stages_competition_order ON stages(competition_id, order_index)`,
-        `CREATE INDEX IF NOT EXISTS idx_participants_team_competition ON participants(team_id) INCLUDE (id, full_name, gender, age)`,
-        `CREATE INDEX IF NOT EXISTS idx_results_stage_participant ON stage_results(stage_id, participant_id) INCLUDE (time_seconds, penalty_points)`,
-        `CREATE INDEX IF NOT EXISTS idx_results_participant_stage ON stage_results(participant_id, stage_id) INCLUDE (time_seconds, penalty_points)`,
+        // idx_stages_competition_order будет создан после миграции
+        `CREATE INDEX IF NOT EXISTS idx_participants_team_competition ON participants(team_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_results_stage_participant ON stage_results(stage_id, participant_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_results_participant_stage ON stage_results(participant_id, stage_id)`,
         `CREATE INDEX IF NOT EXISTS idx_teams_competition_name ON teams(competition_id, name)`,
         
         // Индексы для сортировки и группировки
@@ -235,6 +235,9 @@ class DatabaseManager {
       
       // Выполняем миграции
       await this.migrateStagesTable();
+      
+      // Создаем индекс после миграции
+      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_stages_competition_order ON stages(competition_id, order_index)`);
       
       // Заполняем тестовыми данными если база пустая
       const existingCompetitions = this.db.prepare("SELECT COUNT(*) as count FROM competitions").get();
@@ -465,12 +468,14 @@ class DatabaseManager {
 
   // ===== Итоги по соревнованию (ОПТИМИЗИРОВАННАЯ ВЕРСИЯ) =====
   // Сумма штрафных баллов и времени по всем этапам; при равенстве — по среднему возрасту команды (меньше — выше)
+  // Команды с меньшим количеством участников ставятся на последние места
   async computeStandings(competitionId) {
     const sql = `
       WITH team_aggregates AS (
         SELECT 
           t.id AS team_id, 
           t.name AS team_name,
+          COUNT(p.id) AS participant_count,
           AVG(p.age) AS avg_age,
           COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
           COALESCE(SUM(sr.time_seconds), 0) AS total_time
@@ -479,15 +484,29 @@ class DatabaseManager {
         LEFT JOIN stage_results sr ON sr.participant_id = p.id
         WHERE t.competition_id = ?
         GROUP BY t.id, t.name
+      ),
+      max_participants AS (
+        SELECT MAX(participant_count) AS max_count
+        FROM team_aggregates
       )
       SELECT 
-        team_id, 
-        team_name,
-        total_penalties, 
-        total_time, 
-        avg_age
-      FROM team_aggregates
-      ORDER BY total_penalties ASC, total_time ASC, avg_age ASC
+        ta.team_id, 
+        ta.team_name,
+        ta.participant_count,
+        ta.total_penalties, 
+        ta.total_time, 
+        ta.avg_age,
+        CASE 
+          WHEN ta.participant_count < mp.max_count THEN 1 
+          ELSE 0 
+        END AS is_incomplete_team
+      FROM team_aggregates ta
+      CROSS JOIN max_participants mp
+      ORDER BY 
+        is_incomplete_team ASC,  -- Полные команды сначала
+        total_penalties ASC, 
+        total_time ASC, 
+        avg_age ASC
     `;
     const rows = this.db.prepare(sql).all(competitionId);
     // Добавим ранги
@@ -667,20 +686,38 @@ class DatabaseManager {
     const sql = `
       WITH participant_totals AS (
         SELECT p.id, p.full_name, p.gender, p.age, t.name AS team_name,
+               COUNT(p2.id) AS team_participant_count,
                COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
                COALESCE(SUM(sr.time_seconds), 0) AS total_time
         FROM participants p
         JOIN teams t ON t.id = p.team_id
+        LEFT JOIN participants p2 ON p2.team_id = t.id
         LEFT JOIN stage_results sr ON sr.participant_id = p.id
         WHERE t.competition_id = ?
-        GROUP BY p.id
-        ORDER BY total_penalties ASC, total_time ASC, p.age ASC
+        GROUP BY p.id, p.full_name, p.gender, p.age, t.name
+      ),
+      max_team_participants AS (
+        SELECT MAX(team_participant_count) AS max_count
+        FROM participant_totals
       ),
       ranked_participants AS (
-        SELECT *, ROW_NUMBER() OVER (ORDER BY total_penalties ASC, total_time ASC, age ASC) as rank
-        FROM participant_totals
+        SELECT pt.*, mp.max_count,
+               CASE 
+                 WHEN pt.team_participant_count < mp.max_count THEN 1 
+                 ELSE 0 
+               END AS is_incomplete_team,
+               ROW_NUMBER() OVER (
+                 ORDER BY 
+                   CASE WHEN pt.team_participant_count < mp.max_count THEN 1 ELSE 0 END ASC,
+                   total_penalties ASC, 
+                   total_time ASC, 
+                   age ASC
+               ) as rank
+        FROM participant_totals pt
+        CROSS JOIN max_team_participants mp
       )
-      SELECT * FROM ranked_participants
+      SELECT id, full_name, gender, age, team_name, total_penalties, total_time, rank
+      FROM ranked_participants
       LIMIT ? OFFSET ?
     `;
     
@@ -698,6 +735,31 @@ class DatabaseManager {
     
     const result = this.db.prepare(sql).get(competitionId);
     return result.count;
+  }
+
+  // ===== Отладочная функция для проверки результатов участника по этапам =====
+  async getParticipantStageResults(competitionId, participantName) {
+    const sql = `
+      SELECT 
+        p.full_name,
+        s.name as stage_name,
+        s.id as stage_id,
+        sr.time_seconds,
+        sr.penalty_points,
+        CASE 
+          WHEN sr.time_seconds IS NOT NULL 
+          THEN printf('%02d:%02d', sr.time_seconds / 60, sr.time_seconds % 60)
+          ELSE 'Нет результата'
+        END as time_display
+      FROM participants p
+      JOIN teams t ON t.id = p.team_id
+      LEFT JOIN stage_results sr ON sr.participant_id = p.id
+      LEFT JOIN stages s ON s.id = sr.stage_id
+      WHERE t.competition_id = ? AND p.full_name LIKE ?
+      ORDER BY s.id
+    `;
+    
+    return this.db.prepare(sql).all(competitionId, `%${participantName}%`);
   }
 
   // ===== Оптимизированная загрузка участников с результатами (решение N+1 проблемы) =====

@@ -51,6 +51,20 @@
                 </div>
               </template>
             </el-table-column>
+            <el-table-column prop="avg_age" label="Возраст" :width="rows.length > 0 ? 100 : 0">
+              <template #default="scope">
+                <div class="age-cell">
+                  <span class="age-value">{{ Math.round(scope.row.avg_age) }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="participant_count" label="Участников" :width="rows.length > 0 ? 100 : 0">
+              <template #default="scope">
+                <div class="participant-count-cell" :class="{ 'incomplete-team': scope.row.is_incomplete_team }">
+                  <span class="participant-count-value">{{ scope.row.participant_count }}</span>
+                </div>
+              </template>
+            </el-table-column>
           </el-table>
           
           <!-- Пагинация -->
@@ -88,6 +102,22 @@
           </div>
         </template>
         <ParticipantResultsTable :competition-id="competitionId" />
+        
+        <!-- Временная отладочная кнопка -->
+        <div style="margin-top: 20px; padding: 20px; background: #f0f0f0; border-radius: 8px;">
+          <h4>Отладка времени участника</h4>
+          <el-input v-model="debugParticipantName" placeholder="Введите имя участника" style="width: 300px; margin-right: 10px;" />
+          <el-button @click="debugParticipantTime" type="primary">Проверить результаты по этапам</el-button>
+          <div v-if="debugResults.length > 0" style="margin-top: 10px;">
+            <h5>Результаты по этапам:</h5>
+            <ul>
+              <li v-for="result in debugResults" :key="result.stage_id">
+                {{ result.stage_name }}: {{ result.time_display }} ({{ result.time_seconds }} сек)
+              </li>
+            </ul>
+            <p><strong>Общее время: {{ formatTime(debugResults.reduce((sum, r) => sum + (r.time_seconds || 0), 0)) }}</strong></p>
+          </div>
+        </div>
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -107,9 +137,13 @@ const activeTab = ref('overall')
 const currentPage = ref(1)
 const pageSize = ref(20) // Оптимальный размер страницы
 
+// Отладочные переменные
+const debugParticipantName = ref('')
+const debugResults = ref([])
+
 // Функция форматирования времени из секунд в формат ММ:СС
 const formatTime = (seconds) => {
-  if (!seconds || seconds === 0) return '00:00'
+  if (seconds === null || seconds === undefined || seconds === 0) return '00:00'
   
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = Math.floor(seconds % 60)
@@ -144,6 +178,19 @@ const load = async () => {
   rows.value = await api.computeStandings(props.competitionId)
   currentPage.value = 1 // Сбрасываем на первую страницу при загрузке новых данных
   await nextTick() // Ждем обновления DOM
+}
+
+// Отладочная функция для проверки результатов участника
+const debugParticipantTime = async () => {
+  if (!debugParticipantName.value || !props.competitionId) return
+  
+  try {
+    debugResults.value = await api.getParticipantStageResults(props.competitionId, debugParticipantName.value)
+    console.log('Результаты участника по этапам:', debugResults.value)
+  } catch (error) {
+    console.error('Ошибка загрузки результатов участника:', error)
+    debugResults.value = []
+  }
 }
 
 watch(() => props.competitionId, () => load(), { immediate: true })
@@ -276,7 +323,9 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 /* Центрирование ячеек данных */
 .modern-table :deep(.el-table__body td:nth-child(1)), /* Место */
 .modern-table :deep(.el-table__body td:nth-child(3)), /* Штрафы */
-.modern-table :deep(.el-table__body td:nth-child(4)) { /* Время */
+.modern-table :deep(.el-table__body td:nth-child(4)), /* Время */
+.modern-table :deep(.el-table__body td:nth-child(5)), /* Возраст */
+.modern-table :deep(.el-table__body td:nth-child(6)) { /* Участников */
   text-align: center;
 }
 
@@ -393,6 +442,32 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   font-weight: 600;
   color: #7c3aed;
   font-size: 14px;
+}
+
+.participant-count-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  min-height: 20px;
+}
+
+.participant-count-cell.incomplete-team {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.participant-count-value {
+  font-weight: 600;
+  color: #059669;
+  font-size: 14px;
+}
+
+.participant-count-cell.incomplete-team .participant-count-value {
+  color: #dc2626;
 }
 
 /* Заголовок таблицы */
