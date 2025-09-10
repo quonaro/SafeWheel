@@ -84,58 +84,78 @@ function stopAllProcesses() {
 
 // Настройка IPC обработчиков для работы с базой данных
 function setupIpcHandlers() {
-  // Получить все колеса
-  ipcMain.handle("db:getAllWheels", async () => {
-    try {
-      return await database.getAllWheels();
-    } catch (error) {
-      console.error("❌ Ошибка получения колес:", error);
-      throw error;
-    }
-  });
+  // ===== Competitions =====
+  ipcMain.handle("db:listCompetitions", async () =>
+    database.listCompetitions()
+  );
+  ipcMain.handle("db:getCompetitionById", async (e, id) =>
+    database.getCompetitionById(id)
+  );
+  ipcMain.handle("db:createCompetition", async (e, data) =>
+    database.createCompetition(data)
+  );
+  ipcMain.handle("db:updateCompetition", async (e, id, data) =>
+    database.updateCompetition(id, data)
+  );
+  ipcMain.handle("db:deleteCompetition", async (e, id) =>
+    database.deleteCompetition(id)
+  );
 
-  // Получить колесо по ID
-  ipcMain.handle("db:getWheelById", async (event, id) => {
-    try {
-      return await database.getWheelById(id);
-    } catch (error) {
-      console.error("❌ Ошибка получения колеса:", error);
-      throw error;
-    }
-  });
+  // ===== Teams =====
+  ipcMain.handle("db:listTeams", async (e, competitionId) =>
+    database.listTeams(competitionId)
+  );
+  ipcMain.handle("db:getTeamById", async (e, id) => database.getTeamById(id));
+  ipcMain.handle("db:createTeam", async (e, competitionId, name) =>
+    database.createTeam(competitionId, name)
+  );
+  ipcMain.handle("db:updateTeam", async (e, id, name) =>
+    database.updateTeam(id, name)
+  );
+  ipcMain.handle("db:deleteTeam", async (e, id) => database.deleteTeam(id));
 
-  // Создать новое колесо
-  ipcMain.handle("db:createWheel", async (event, wheelData) => {
-    try {
-      console.log("📨 IPC: Получен запрос на создание колеса:", wheelData);
-      const result = await database.createWheel(wheelData);
-      console.log("📤 IPC: Возвращаем результат:", result);
-      return result;
-    } catch (error) {
-      console.error("❌ IPC: Ошибка создания колеса:", error);
-      throw error;
-    }
-  });
+  // ===== Participants =====
+  ipcMain.handle("db:listParticipants", async (e, teamId) =>
+    database.listParticipants(teamId)
+  );
+  ipcMain.handle("db:getParticipantById", async (e, id) =>
+    database.getParticipantById(id)
+  );
+  ipcMain.handle("db:createParticipant", async (e, teamId, payload) =>
+    database.createParticipant(teamId, payload)
+  );
+  ipcMain.handle("db:updateParticipant", async (e, id, payload) =>
+    database.updateParticipant(id, payload)
+  );
+  ipcMain.handle("db:deleteParticipant", async (e, id) =>
+    database.deleteParticipant(id)
+  );
 
-  // Обновить колесо
-  ipcMain.handle("db:updateWheel", async (event, id, wheelData) => {
-    try {
-      return await database.updateWheel(id, wheelData);
-    } catch (error) {
-      console.error("❌ Ошибка обновления колеса:", error);
-      throw error;
-    }
-  });
+  // ===== Stages =====
+  ipcMain.handle("db:listStages", async (e, competitionId) =>
+    database.listStages(competitionId)
+  );
+  ipcMain.handle("db:getStageById", async (e, id) => database.getStageById(id));
+  ipcMain.handle("db:createStage", async (e, competitionId, payload) =>
+    database.createStage(competitionId, payload)
+  );
+  ipcMain.handle("db:updateStage", async (e, id, payload) =>
+    database.updateStage(id, payload)
+  );
+  ipcMain.handle("db:deleteStage", async (e, id) => database.deleteStage(id));
 
-  // Удалить колесо
-  ipcMain.handle("db:deleteWheel", async (event, id) => {
-    try {
-      return await database.deleteWheel(id);
-    } catch (error) {
-      console.error("❌ Ошибка удаления колеса:", error);
-      throw error;
-    }
-  });
+  // ===== Results =====
+  ipcMain.handle(
+    "db:upsertStageResult",
+    async (e, stageId, participantId, payload) =>
+      database.upsertStageResult(stageId, participantId, payload)
+  );
+  ipcMain.handle("db:getStageResults", async (e, stageId) =>
+    database.getStageResults(stageId)
+  );
+  ipcMain.handle("db:computeStandings", async (e, competitionId) =>
+    database.computeStandings(competitionId)
+  );
 }
 
 function createWindow() {

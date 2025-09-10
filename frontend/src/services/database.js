@@ -1,116 +1,143 @@
 // Сервис для работы с базой данных через Electron API
 class DatabaseService {
   constructor() {
-    // Проверяем, что мы в Electron окружении
-    if (typeof window !== 'undefined' && window.electronAPI) {
+    if (typeof window !== "undefined" && window.electronAPI) {
       this.api = window.electronAPI.database;
     } else {
-      console.warn('⚠️ Electron API недоступен, используем заглушки');
+      console.warn("⚠️ Electron API недоступен, используем заглушки");
       this.api = this.createMockAPI();
     }
   }
 
-  // Создаем заглушки для тестирования вне Electron
   createMockAPI() {
     return {
-      getAllWheels: async () => {
-        console.log('Mock: getAllWheels');
-        return [];
-      },
-      getWheelById: async (id) => {
-        console.log('Mock: getWheelById', id);
-        return null;
-      },
-      createWheel: async (wheelData) => {
-        console.log('Mock: createWheel', wheelData);
-        return { id: Date.now(), ...wheelData };
-      },
-      updateWheel: async (id, wheelData) => {
-        console.log('Mock: updateWheel', id, wheelData);
-        return { id, ...wheelData };
-      },
-      deleteWheel: async (id) => {
-        console.log('Mock: deleteWheel', id);
-        return { id };
-      }
+      // competitions
+      listCompetitions: async () => [],
+      getCompetitionById: async (id) => null,
+      createCompetition: async (data) => ({ id: Date.now(), ...data }),
+      updateCompetition: async (id, data) => ({ id, ...data }),
+      deleteCompetition: async (id) => ({ id }),
+      // teams
+      listTeams: async (competitionId) => [],
+      getTeamById: async (id) => null,
+      createTeam: async (competitionId, name) => ({
+        id: Date.now(),
+        competition_id: competitionId,
+        name,
+      }),
+      updateTeam: async (id, name) => ({ id, name }),
+      deleteTeam: async (id) => ({ id }),
+      // participants
+      listParticipants: async (teamId) => [],
+      getParticipantById: async (id) => null,
+      createParticipant: async (teamId, payload) => ({
+        id: Date.now(),
+        team_id: teamId,
+        ...payload,
+      }),
+      updateParticipant: async (id, payload) => ({ id, ...payload }),
+      deleteParticipant: async (id) => ({ id }),
+      // stages
+      listStages: async (competitionId) => [],
+      getStageById: async (id) => null,
+      createStage: async (competitionId, payload) => ({
+        id: Date.now(),
+        competition_id: competitionId,
+        ...payload,
+      }),
+      updateStage: async (id, payload) => ({ id, ...payload }),
+      deleteStage: async (id) => ({ id }),
+      // results
+      upsertStageResult: async (stageId, participantId, payload) => ({
+        id: Date.now(),
+        stage_id: stageId,
+        participant_id: participantId,
+        ...payload,
+      }),
+      getStageResults: async (stageId) => [],
+      computeStandings: async (competitionId) => [],
     };
   }
 
-  // Получить все колеса
-  async getAllWheels() {
-    try {
-      const wheels = await this.api.getAllWheels();
-      return wheels;
-    } catch (error) {
-      console.error('❌ Ошибка получения колес:', error);
-      throw error;
-    }
+  // competitions
+  listCompetitions() {
+    return this.api.listCompetitions();
+  }
+  getCompetitionById(id) {
+    return this.api.getCompetitionById(id);
+  }
+  createCompetition(data) {
+    return this.api.createCompetition(data);
+  }
+  updateCompetition(id, data) {
+    return this.api.updateCompetition(id, data);
+  }
+  deleteCompetition(id) {
+    return this.api.deleteCompetition(id);
   }
 
-  // Получить колесо по ID
-  async getWheelById(id) {
-    try {
-      const wheel = await this.api.getWheelById(id);
-      return wheel;
-    } catch (error) {
-      console.error('❌ Ошибка получения колеса:', error);
-      throw error;
-    }
+  // teams
+  listTeams(competitionId) {
+    return this.api.listTeams(competitionId);
+  }
+  getTeamById(id) {
+    return this.api.getTeamById(id);
+  }
+  createTeam(competitionId, name) {
+    return this.api.createTeam(competitionId, name);
+  }
+  updateTeam(id, name) {
+    return this.api.updateTeam(id, name);
+  }
+  deleteTeam(id) {
+    return this.api.deleteTeam(id);
   }
 
-  // Создать новое колесо
-  async createWheel(wheelData) {
-    try {
-      console.log('🔄 Frontend: Отправляем данные для создания колеса:', wheelData);
-      // Vue может передавать реактивные Proxy — их нельзя клонировать через IPC.
-      // Преобразуем в обычный плоский объект с нужными полями/типами.
-      const payload = {
-        name: String(wheelData.name ?? '').trim(),
-        diameter: Number(wheelData.diameter),
-        width: Number(wheelData.width),
-        material: String(wheelData.material ?? '').trim(),
-        condition: String(wheelData.condition ?? '').trim(),
-      };
-      const wheel = await this.api.createWheel(payload);
-      console.log('✅ Frontend: Получен результат создания колеса:', wheel);
-      return wheel;
-    } catch (error) {
-      console.error('❌ Frontend: Ошибка создания колеса:', error);
-      throw error;
-    }
+  // participants
+  listParticipants(teamId) {
+    return this.api.listParticipants(teamId);
+  }
+  getParticipantById(id) {
+    return this.api.getParticipantById(id);
+  }
+  createParticipant(teamId, payload) {
+    return this.api.createParticipant(teamId, payload);
+  }
+  updateParticipant(id, payload) {
+    return this.api.updateParticipant(id, payload);
+  }
+  deleteParticipant(id) {
+    return this.api.deleteParticipant(id);
   }
 
-  // Обновить колесо
-  async updateWheel(id, wheelData) {
-    try {
-      const payload = {
-        name: String(wheelData.name ?? '').trim(),
-        diameter: Number(wheelData.diameter),
-        width: Number(wheelData.width),
-        material: String(wheelData.material ?? '').trim(),
-        condition: String(wheelData.condition ?? '').trim(),
-      };
-      const wheel = await this.api.updateWheel(id, payload);
-      return wheel;
-    } catch (error) {
-      console.error('❌ Ошибка обновления колеса:', error);
-      throw error;
-    }
+  // stages
+  listStages(competitionId) {
+    return this.api.listStages(competitionId);
+  }
+  getStageById(id) {
+    return this.api.getStageById(id);
+  }
+  createStage(competitionId, payload) {
+    return this.api.createStage(competitionId, payload);
+  }
+  updateStage(id, payload) {
+    return this.api.updateStage(id, payload);
+  }
+  deleteStage(id) {
+    return this.api.deleteStage(id);
   }
 
-  // Удалить колесо
-  async deleteWheel(id) {
-    try {
-      const result = await this.api.deleteWheel(id);
-      return result;
-    } catch (error) {
-      console.error('❌ Ошибка удаления колеса:', error);
-      throw error;
-    }
+  // results
+  upsertStageResult(stageId, participantId, payload) {
+    return this.api.upsertStageResult(stageId, participantId, payload);
+  }
+  getStageResults(stageId) {
+    return this.api.getStageResults(stageId);
+  }
+  computeStandings(competitionId) {
+    return this.api.computeStandings(competitionId);
   }
 }
 
-// Создаем единственный экземпляр сервиса
 const databaseService = new DatabaseService();
-
 export default databaseService;
