@@ -2,24 +2,14 @@
   <div class="competitions">
     <div class="header-section">
       <div class="title">
-        <h1>Конкурсы</h1>
+        <h1>{{ currentCompetition?.name || 'Конкурс' }}</h1>
         <p>Управление соревнованиями "Безопасное колесо"</p>
       </div>
       
       <div class="controls">
-        <div class="select-wrapper">
-          <el-select 
-            v-model="currentCompetitionId" 
-            placeholder="Выберите конкурс" 
-            class="competition-select"
-            @change="loadAll"
-          >
-            <el-option v-for="c in competitions" :key="c.id" :label="c.name" :value="c.id" />
-          </el-select>
-        </div>
-        <el-button type="primary" class="add-button" @click="openCompetitionDialog()">
-          <el-icon><Plus /></el-icon>
-          Новый конкурс
+        <el-button class="back-button" @click="goBack">
+          <el-icon><ArrowLeft /></el-icon>
+          Назад к выбору
         </el-button>
       </div>
     </div>
@@ -31,48 +21,42 @@
       <StandingsTable v-if="activeTab === 'standings'" :competition-id="currentCompetitionId" />
     </div>
 
-    <el-dialog 
-      v-model="competitionDialogVisible" 
-      :title="editingCompetition ? 'Редактировать конкурс' : 'Новый конкурс'" 
-      width="520px"
-      class="custom-dialog"
-    >
-      <el-form :model="competitionForm" label-width="120px">
-        <el-form-item label="Название">
-          <el-input v-model="competitionForm.name" placeholder="Введите название конкурса" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="competitionDialogVisible = false">Отмена</el-button>
-        <el-button type="primary" @click="saveCompetition">Сохранить</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { ArrowLeft } from '@element-plus/icons-vue'
 
 const props = defineProps({
   activeTab: {
     type: String,
     default: 'teams'
+  },
+  competitionId: {
+    type: [String, Number],
+    required: true
   }
 })
 
-const emit = defineEmits(['tab-change'])
+const emit = defineEmits(['tab-change', 'back-to-selector'])
 
 const competitions = ref([])
-const currentCompetitionId = ref(null)
-const competitionDialogVisible = ref(false)
-const editingCompetition = ref(null)
-const competitionForm = reactive({ name: '' })
+const currentCompetitionId = ref(props.competitionId)
+
+const currentCompetition = computed(() => {
+  return competitions.value.find(c => c.id === currentCompetitionId.value)
+})
 
 // Следим за изменениями activeTab и уведомляем родительский компонент
 watch(() => props.activeTab, (newTab) => {
   // Можно добавить дополнительную логику при смене вкладки
+}, { immediate: true })
+
+// Следим за изменениями competitionId
+watch(() => props.competitionId, (newId) => {
+  currentCompetitionId.value = newId
 }, { immediate: true })
 
 const api = window.electronAPI?.database
@@ -80,40 +64,16 @@ const api = window.electronAPI?.database
 const loadCompetitions = async () => {
   if (!api) return
   competitions.value = await api.listCompetitions()
-  if (!currentCompetitionId.value && competitions.value.length) {
-    currentCompetitionId.value = competitions.value[0].id
-  }
+}
+
+const goBack = () => {
+  emit('back-to-selector')
 }
 
 const loadAll = async () => {
   // children react on prop
 }
 
-const openCompetitionDialog = (c = null) => {
-  editingCompetition.value = c
-  Object.assign(competitionForm, c || { name: '' })
-  competitionDialogVisible.value = true
-}
-
-const saveCompetition = async () => {
-  try {
-    if (!competitionForm.name?.trim()) throw new Error('Укажите название')
-    const payload = { name: String(competitionForm.name || '').trim() }
-    if (editingCompetition.value) {
-      const saved = await api.updateCompetition(editingCompetition.value.id, payload)
-      const idx = competitions.value.findIndex((x) => x.id === saved.id)
-      if (idx >= 0) competitions.value[idx] = saved
-    } else {
-      const created = await api.createCompetition(payload)
-      competitions.value.unshift(created)
-      currentCompetitionId.value = created.id
-    }
-    competitionDialogVisible.value = false
-    ElMessage.success('Сохранено')
-  } catch (e) {
-    ElMessage.error(e.message || 'Ошибка')
-  }
-}
 
 onMounted(() => {
   loadCompetitions()
@@ -192,19 +152,22 @@ export default {
   color: #9ca3af;
 }
 
-.add-button {
-  background: #3b82f6;
-  border: none;
+
+.back-button {
+  background: rgba(107, 114, 128, 0.1);
+  border: 1px solid rgba(107, 114, 128, 0.2);
+  color: #6b7280;
   border-radius: 12px;
   padding: 12px 24px;
   font-weight: 600;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
   transition: all 0.3s ease;
 }
 
-.add-button:hover {
+.back-button:hover {
+  background: rgba(107, 114, 128, 0.2);
+  color: #374151;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 16px rgba(107, 114, 128, 0.2);
 }
 
 .content-container {
@@ -212,50 +175,6 @@ export default {
   overflow: hidden;
 }
 
-.custom-dialog :deep(.el-dialog) {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-}
-
-.custom-dialog :deep(.el-dialog__header) {
-  color: white;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.custom-dialog :deep(.el-dialog__body) {
-  color: white;
-}
-
-.custom-dialog :deep(.el-form-item__label) {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.custom-dialog :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-}
-
-.custom-dialog :deep(.el-input__inner) {
-  color: white;
-}
-
-.custom-dialog :deep(.el-input__inner::placeholder) {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.custom-dialog :deep(.el-button) {
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.custom-dialog :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-}
 </style>
 
 
