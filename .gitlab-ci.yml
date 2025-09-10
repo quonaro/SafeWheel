@@ -15,29 +15,26 @@ cache:
     - frontend/node_modules/
     - .cache/
 
-# Установка зависимостей
-install_dependencies:
+# Установка зависимостей и сборка фронтенда
+install_and_build:
   stage: build
   image: node:${NODE_VERSION}
   script:
+    - echo "🔍 Проверяем версии..."
+    - node --version
+    - npm --version
+    - echo "🔧 Устанавливаем зависимости корневого проекта..."
     - npm ci
+    - echo "🔧 Устанавливаем зависимости фронтенда..."
     - cd frontend && npm ci
+    - echo "🔨 Собираем фронтенд..."
+    - cd frontend && npm run build
+    - echo "✅ Фронтенд собран успешно"
+    - ls -la frontend/dist/
   artifacts:
     paths:
       - node_modules/
       - frontend/node_modules/
-    expire_in: 1 hour
-
-# Сборка фронтенда
-build_frontend:
-  stage: build
-  image: node:${NODE_VERSION}
-  dependencies:
-    - install_dependencies
-  script:
-    - cd frontend && npm run build
-  artifacts:
-    paths:
       - frontend/dist/
     expire_in: 1 hour
 
@@ -46,8 +43,7 @@ build_linux:
   stage: build
   image: node:${NODE_VERSION}
   dependencies:
-    - install_dependencies
-    - build_frontend
+    - install_and_build
   before_script:
     - apt-get update && apt-get install -y libnss3-dev libatk-bridge2.0-dev libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libasound2
   script:
@@ -65,8 +61,7 @@ build_windows:
   stage: build
   image: node:${NODE_VERSION}
   dependencies:
-    - install_dependencies
-    - build_frontend
+    - install_and_build
   before_script:
     - apt-get update && apt-get install -y wine
   script:
