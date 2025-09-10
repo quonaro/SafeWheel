@@ -96,6 +96,7 @@
         "--single-process"
       ],
       "category": "Utility",
+      "icon": "build/icon.png",
       "desktop": {
         "Name": "SafeWheel",
         "Comment": "Desktop приложение SafeWheel",
@@ -120,7 +121,6 @@
           "perMachine": false,
           "allowElevation": true,
           "include": "build/installer.nsh",
-          "script": "build/installer.nsh",
           "warningsAsErrors": false,
           "displayLanguageSelector": false,
           "installerLanguages": ["en_US", "ru_RU"]
