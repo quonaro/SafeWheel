@@ -253,6 +253,9 @@ onMounted(() => {
   .sidebar {
     width: 60px;
     padding: 10px 0;
+    flex-shrink: 0;
+    min-width: 60px;
+    max-width: 60px;
   }
 
   .sidebar-content {
@@ -278,6 +281,9 @@ onMounted(() => {
   .sidebar {
     width: 50px;
     padding: 8px 0;
+    flex-shrink: 0;
+    min-width: 50px;
+    max-width: 50px;
   }
 
   .sidebar-content {
@@ -309,6 +315,9 @@ onMounted(() => {
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
+  min-width: 70px;
+  max-width: 70px;
 }
 
 .sidebar-content {
