@@ -3,7 +3,7 @@ stages:
   - release
 
 variables:
-  NODE_VERSION: "18"
+  NODE_VERSION: "20"
   ELECTRON_CACHE: "$CI_PROJECT_DIR/.cache/electron"
   ELECTRON_BUILDER_CACHE: "$CI_PROJECT_DIR/.cache/electron-builder"
 
@@ -50,8 +50,12 @@ build_linux:
     - echo "🔍 Проверяем версии..."
     - node --version
     - npm --version
-    - echo "🔧 Устанавливаем зависимости..."
+    - echo "🔧 Устанавливаем зависимости корневого проекта..."
     - npm ci
+    - echo "🔧 Устанавливаем зависимости фронтенда..."
+    - cd frontend && npm ci
+    - echo "🔨 Собираем фронтенд..."
+    - cd frontend && npm run build
     - echo "🔍 Проверяем, что фронтенд собран..."
     - ls -la frontend/dist/
     - echo "🔨 Собираем Electron приложение для Linux..."
@@ -76,8 +80,12 @@ build_windows:
     - echo "🔍 Проверяем версии..."
     - node --version
     - npm --version
-    - echo "🔧 Устанавливаем зависимости..."
+    - echo "🔧 Устанавливаем зависимости корневого проекта..."
     - npm ci
+    - echo "🔧 Устанавливаем зависимости фронтенда..."
+    - cd frontend && npm ci
+    - echo "🔨 Собираем фронтенд..."
+    - cd frontend && npm run build
     - echo "🔍 Проверяем, что фронтенд собран..."
     - ls -la frontend/dist/
     - echo "🔨 Собираем Electron приложение для Windows..."
