@@ -595,13 +595,13 @@ onMounted(() => {
 /* Адаптивность для разных экранов */
 @media (max-width: 1200px) {
   .competition-card {
-    width: clamp(240px, 18vw, 300px);
+    width: clamp(180px, 14vw, 240px);
   }
 }
 
 @media (max-width: 900px) {
   .competition-card {
-    width: clamp(220px, 16vw, 280px);
+    width: clamp(160px, 12vw, 200px);
   }
 }
 
@@ -615,7 +615,7 @@ onMounted(() => {
   }
 
   .competition-card {
-    width: clamp(200px, 14vw, 260px);
+    width: clamp(150px, 10vw, 180px);
   }
 
   .competition-selector {
@@ -656,7 +656,7 @@ onMounted(() => {
   }
 
   .competition-card {
-    width: clamp(180px, 12vw, 240px);
+    width: clamp(140px, 8vw, 160px);
   }
 
   .create-button {
@@ -691,27 +691,27 @@ onMounted(() => {
   }
 
   .competition-card {
-    padding: clamp(16px, 3vw, 24px);
+    padding: clamp(12px, 2.5vw, 18px);
   }
 
   .competition-icon {
-    width: clamp(50px, 8vw, 70px);
-    height: clamp(50px, 8vw, 70px);
-    font-size: clamp(28px, 4vw, 40px);
+    width: clamp(35px, 6vw, 50px);
+    height: clamp(35px, 6vw, 50px);
+    font-size: clamp(20px, 3vw, 28px);
   }
 
   .competition-info h3 {
-    font-size: clamp(16px, 2.5vw, 20px);
+    font-size: clamp(12px, 2vw, 16px);
   }
 
   .competition-info p {
-    font-size: clamp(11px, 1.5vw, 14px);
+    font-size: clamp(9px, 1.2vw, 12px);
   }
 }
 
 @media (min-width: 1400px) {
   .competition-card {
-    width: clamp(280px, 22vw, 340px);
+    width: clamp(220px, 18vw, 280px);
   }
 
   .competition-selector {
@@ -730,15 +730,15 @@ onMounted(() => {
 
 @media (min-width: 1800px) {
   .competition-card {
-    width: clamp(300px, 24vw, 360px);
+    width: clamp(240px, 20vw, 300px);
   }
 }
 
 .competition-card {
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: clamp(16px, 2vw, 24px);
-  padding: clamp(20px, 3vw, 40px);
+  border-radius: clamp(14px, 1.8vw, 20px);
+  padding: clamp(16px, 2.5vw, 28px);
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
@@ -748,8 +748,8 @@ onMounted(() => {
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  min-height: clamp(200px, 25vw, 280px);
-  width: clamp(250px, 20vw, 320px);
+  min-height: clamp(160px, 20vw, 220px);
+  width: clamp(200px, 16vw, 260px);
   flex: 0 0 auto;
 }
 
@@ -771,16 +771,16 @@ onMounted(() => {
 }
 
 .competition-icon {
-  font-size: clamp(32px, 4vw, 56px);
-  width: clamp(60px, 8vw, 90px);
-  height: clamp(60px, 8vw, 90px);
+  font-size: clamp(24px, 3vw, 40px);
+  width: clamp(45px, 6vw, 65px);
+  height: clamp(45px, 6vw, 65px);
   display: flex;
   align-items: center;
   justify-content: center;
   background: #3b82f6;
-  border-radius: clamp(12px, 1.5vw, 20px);
+  border-radius: clamp(10px, 1.2vw, 16px);
   color: white;
-  margin-bottom: clamp(12px, 2vw, 24px);
+  margin-bottom: clamp(8px, 1.5vw, 16px);
   box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
   transition: all 0.3s ease;
   position: relative;
@@ -812,9 +812,9 @@ onMounted(() => {
 }
 
 .competition-info h3 {
-  font-size: clamp(16px, 2.2vw, 24px);
+  font-size: clamp(14px, 1.8vw, 20px);
   font-weight: 700;
-  margin: 0 0 clamp(4px, 0.8vw, 12px) 0;
+  margin: 0 0 clamp(3px, 0.6vw, 8px) 0;
   color: #1f2937;
   transition: color 0.3s ease;
 }
@@ -824,18 +824,18 @@ onMounted(() => {
 }
 
 .competition-info p {
-  font-size: clamp(12px, 1.5vw, 16px);
+  font-size: clamp(10px, 1.2vw, 14px);
   color: #6b7280;
   margin: 0;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .competition-arrow {
-  font-size: clamp(18px, 2.5vw, 28px);
+  font-size: clamp(14px, 2vw, 22px);
   color: #9ca3af;
   transition: all 0.3s ease;
-  margin-top: clamp(8px, 1.5vw, 20px);
+  margin-top: clamp(6px, 1vw, 12px);
   position: relative;
   z-index: 1;
 }
