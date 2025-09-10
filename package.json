@@ -2,6 +2,7 @@
   "name": "safewheel",
   "version": "1.0.0",
   "description": "Desktop приложение SafeWheel с Electron, Vue и встроенным Node.js сервером",
+  "author": "SafeWheel Team",
   "main": "electron/main.js",
   "scripts": {
     "dev": "NODE_ENV=development electron . --no-sandbox",
@@ -9,10 +10,11 @@
     "build": "npm run build:frontend && npm run build:electron",
     "build:frontend": "cd frontend && npm run build",
     "build:electron": "electron-builder",
-    "start": "NODE_ENV=production electron . --no-sandbox"
+    "start": "NODE_ENV=production electron . --no-sandbox",
+    "postinstall": "electron-builder install-app-deps"
   },
   "devDependencies": {
-    "electron": "^28.0.0",
+    "electron": "^32.0.0",
     "electron-builder": "^24.6.4",
     "electron-rebuild": "^3.2.9"
   },
