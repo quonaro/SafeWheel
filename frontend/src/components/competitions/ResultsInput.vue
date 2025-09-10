@@ -504,26 +504,31 @@ const debouncedSave = (row) => {
 }
 
 /* Стилизация скроллбара */
+.results-container::-webkit-scrollbar,
 .table-scroll::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
+.results-container::-webkit-scrollbar-track,
 .table-scroll::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.05);
   border-radius: 4px;
 }
 
+.results-container::-webkit-scrollbar-thumb,
 .table-scroll::-webkit-scrollbar-thumb {
   background: rgba(59, 130, 246, 0.3);
   border-radius: 4px;
   transition: background 0.3s ease;
 }
 
+.results-container::-webkit-scrollbar-thumb:hover,
 .table-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(59, 130, 246, 0.5);
 }
 
+.results-container::-webkit-scrollbar-corner,
 .table-scroll::-webkit-scrollbar-corner {
   background: rgba(0, 0, 0, 0.05);
 }

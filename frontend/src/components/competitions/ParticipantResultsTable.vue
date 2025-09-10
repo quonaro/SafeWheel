@@ -10,15 +10,14 @@
       <p>Нет данных для отображения</p>
     </div>
 
-    <div v-else class="table-scroll">
-      <div class="table-container">
-        <el-table 
-          :data="participants" 
-          style="width: 100%" 
-          :class="['modern-table', { 'empty-table': participants.length === 0 }]"
-          height="100%" 
-          empty-text="Нет данных для отображения"
-        >
+    <div v-else class="table-container">
+      <el-table 
+        :data="paginatedParticipants" 
+        style="width: 100%" 
+        :class="['modern-table', { 'empty-table': participants.length === 0 }]"
+        height="435" 
+        empty-text="Нет данных для отображения"
+      >
         <el-table-column prop="rank" label="Место" :width="participants.length > 0 ? 100 : 0">
           <template #default="scope">
             <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
@@ -79,41 +78,30 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Действия" :width="participants.length > 0 ? 120 : 0">
-          <template #default="scope">
-            <el-button 
-              type="primary" 
-              size="small" 
-              @click="showParticipantDetails(scope.row)"
-            >
-              Детали
-            </el-button>
-          </template>
-        </el-table-column>
         </el-table>
-      </div>
+        
+        <!-- Пагинация -->
+        <div v-if="participants.length > pageSize" class="pagination-container">
+          <el-pagination
+            :key="`pagination-${participants.length}-${pageSize}`"
+            v-model:current-page="currentPage"
+            :page-size="pageSize"
+            :total="participants.length"
+            layout="pager"
+            :page-sizes="[10, 20, 50, 100]"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            class="modern-pagination"
+          />
+        </div>
     </div>
 
-    <!-- Диалог с детальными результатами участника -->
-    <el-dialog
-      v-model="detailsDialogVisible"
-      :title="`Результаты участника: ${selectedParticipant?.full_name || ''}`"
-      width="80%"
-      :before-close="closeDetailsDialog"
-    >
-      <ParticipantDetailsTable 
-        v-if="selectedParticipant"
-        :competition-id="competitionId"
-        :participant-id="selectedParticipant.participant_id"
-      />
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed, nextTick } from 'vue'
 import { Loading, UserFilled } from '@element-plus/icons-vue'
-import ParticipantDetailsTable from './ParticipantDetailsTable.vue'
 
 const props = defineProps({ 
   competitionId: { 
@@ -125,8 +113,8 @@ const props = defineProps({
 const api = window.electronAPI?.database
 const participants = ref([])
 const loading = ref(false)
-const detailsDialogVisible = ref(false)
-const selectedParticipant = ref(null)
+const currentPage = ref(1)
+const pageSize = ref(20) // Оптимальный размер страницы
 
 // Функция форматирования времени из секунд в формат ММ:СС
 const formatTime = (seconds) => {
@@ -136,6 +124,25 @@ const formatTime = (seconds) => {
   const remainingSeconds = Math.floor(seconds % 60)
   
   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
+}
+
+// Вычисляемые свойства для пагинации
+const paginatedParticipants = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return participants.value.slice(start, end)
+})
+
+// Обработчики пагинации
+const handleSizeChange = async (newSize) => {
+  pageSize.value = newSize
+  currentPage.value = 1
+  await nextTick() // Ждем обновления DOM
+}
+
+const handleCurrentChange = async (newPage) => {
+  currentPage.value = newPage
+  await nextTick() // Ждем обновления DOM
 }
 
 const load = async () => {
@@ -153,17 +160,10 @@ const load = async () => {
   } finally {
     loading.value = false
   }
+  currentPage.value = 1 // Сбрасываем на первую страницу при загрузке новых данных
+  await nextTick() // Ждем обновления DOM
 }
 
-const showParticipantDetails = (participant) => {
-  selectedParticipant.value = participant
-  detailsDialogVisible.value = true
-}
-
-const closeDetailsDialog = () => {
-  detailsDialogVisible.value = false
-  selectedParticipant.value = null
-}
 
 watch(() => props.competitionId, () => load(), { immediate: true })
 </script>
@@ -178,11 +178,16 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
 /* Современные стили для таблицы результатов */
 .table-container {
-  padding: 4px;
-  overflow: visible;
+  width: 100%;
+  max-width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0; /* Позволяет контейнеру сжиматься */
 }
 
-.modern-table {
+.table-container .modern-table {
   border-radius: 12px;
   overflow: visible;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -498,7 +503,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 40px;
+  padding: 20px;
   color: #6b7280;
   font-size: 16px;
 }
@@ -554,8 +559,151 @@ watch(() => props.competitionId, () => load(), { immediate: true })
     font-size: 12px;
   }
 
-  .table-scroll {
+  .table-container .modern-table {
     min-width: 100%;
   }
+
+  .pagination-container {
+    padding: 12px 0;
+  }
+
+  .modern-pagination :deep(.el-pagination) {
+    --el-pagination-font-size: 13px;
+  }
+
+  .modern-pagination :deep(.el-pagination .btn-prev),
+  .modern-pagination :deep(.el-pagination .btn-next) {
+    padding: 6px 10px;
+    margin: 0 2px;
+  }
+
+  .modern-pagination :deep(.el-pagination .el-pager li) {
+    min-width: 32px;
+    height: 32px;
+    line-height: 30px;
+    margin: 0 1px;
+  }
+}
+
+/* Стили для пагинации */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.modern-pagination :deep(.el-pagination) {
+  --el-pagination-font-size: 14px;
+  --el-pagination-bg-color: transparent;
+  --el-pagination-text-color: #64748b;
+  --el-pagination-border-radius: 8px;
+  --el-pagination-button-color: #64748b;
+  --el-pagination-button-disabled-color: #d1d5db;
+  --el-pagination-hover-color: #3b82f6;
+}
+
+.modern-pagination :deep(.el-pagination .btn-prev),
+.modern-pagination :deep(.el-pagination .btn-next) {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0 4px;
+  transition: all 0.3s ease;
+}
+
+.modern-pagination :deep(.el-pagination .btn-prev:hover),
+.modern-pagination :deep(.el-pagination .btn-next:hover) {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li) {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin: 0 2px;
+  min-width: 36px;
+  height: 36px;
+  line-height: 34px;
+  transition: all 0.3s ease;
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li:hover) {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li.is-active) {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__total) {
+  color: #64748b;
+  font-weight: 500;
+  margin-right: 16px;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__jump) {
+  color: #64748b;
+  margin-left: 16px;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__sizes) {
+  margin-right: 16px;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__sizes .el-select) {
+  width: 100px;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__sizes .el-select .el-input__inner) {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  height: 36px;
+  line-height: 34px;
+}
+
+/* Русская локализация для пагинации */
+.modern-pagination :deep(.el-pagination .el-pagination__total) {
+  color: #64748b;
+  font-weight: 500;
+  margin-right: 16px;
+  white-space: nowrap;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__sizes .el-select .el-input__wrapper) {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  height: 36px;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__jump) {
+  color: #64748b;
+  margin-left: 16px;
+  white-space: nowrap;
+}
+
+.modern-pagination :deep(.el-pagination .el-pagination__jump .el-input__wrapper) {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  height: 36px;
+  width: 60px;
 }
 </style>
