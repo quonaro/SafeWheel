@@ -84,7 +84,7 @@
         <template #label>
           <div class="tab-label">
             <el-icon class="tab-icon"><User /></el-icon>
-            <span>Личные результаты</span>
+            <span>Личностные</span>
           </div>
         </template>
         <ParticipantResultsTable :competition-id="competitionId" />
@@ -402,17 +402,17 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 }
 
 .results-tabs :deep(.el-tabs__header) {
-  margin: 0 0 12px 0;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  margin: 0 0 20px 0;
+  background: #f8fafc;
   border-radius: 8px;
   padding: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  border-bottom: none;
   overflow: visible;
 }
 
 .results-tabs :deep(.el-tabs__nav-wrap) {
-  padding: 0 4px;
+  padding: 0 8px;
   overflow: visible;
 }
 
@@ -421,35 +421,35 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 }
 
 .results-tabs :deep(.el-tabs__item) {
-  padding: 8px 16px;
-  font-weight: 600;
+  padding: 10px 16px;
+  font-weight: 500;
   color: #64748b;
   border-radius: 6px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.2s ease;
   white-space: nowrap;
   min-width: fit-content;
   position: relative;
   overflow: visible;
   font-size: 14px;
-  letter-spacing: 0.025em;
-  margin: 0 2px;
+  margin: 0 4px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .results-tabs :deep(.el-tabs__item.is-active) {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  color: #1e40af;
-  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.15);
-  transform: translateY(-1px);
-  border: 1px solid rgba(30, 64, 175, 0.15);
+  background: none;
+  color: #3b82f6;
+  box-shadow: none;
+}
+
+.el-tabs__nav-wrap:after{
+  background: none;
 }
 
 .results-tabs :deep(.el-tabs__item:hover) {
-  color: #1e40af;
-  background: rgba(30, 64, 175, 0.05);
-  transform: translateY(-1px);
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
 }
 
 .results-tabs :deep(.el-tabs__active-bar) {
@@ -471,12 +471,11 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
 .tab-icon {
   font-size: 14px;
-  transition: all 0.3s ease;
+  transition: color 0.2s ease;
 }
 
 .results-tabs :deep(.el-tabs__item.is-active) .tab-icon {
-  color: #1e40af;
-  transform: scale(1.1);
+  color: #3b82f6;
 }
 
 .tab-badge {
