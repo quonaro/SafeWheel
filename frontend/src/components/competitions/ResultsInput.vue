@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="results-input-container">
     <el-row :gutter="12" class="mb-12">
       <el-col :span="8">
         <el-select v-model="stageId" placeholder="Выберите этап" style="width: 100%">
@@ -236,6 +236,13 @@ const debouncedSave = (row) => {
 </script>
 
 <style scoped>
+/* Контейнер для растягивания на всю высоту */
+.results-input-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Современные стили для таблицы результатов */
 .modern-table {
   border-radius: 12px;
@@ -393,7 +400,8 @@ const debouncedSave = (row) => {
   max-width: 100%;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  max-height: 600px;
+  flex: 1;
+  min-height: 400px;
 }
 
 /* Группы команд */
@@ -547,32 +555,36 @@ const debouncedSave = (row) => {
 }
 
 .time-input :deep(.el-input__inner) {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: transparent;
+  border: none;
   border-radius: 6px;
   text-align: center;
   font-weight: 600;
   color: #059669;
   font-family: 'Courier New', monospace;
+  box-shadow: none;
 }
 
 .time-input :deep(.el-input__inner:focus) {
-  border-color: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  border: none;
+  box-shadow: none;
+  outline: none;
 }
 
 .penalty-input :deep(.el-input-number__input) {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: transparent;
+  border: none;
   border-radius: 6px;
   text-align: center;
   font-weight: 600;
   color: #dc2626;
+  box-shadow: none;
 }
 
 .penalty-input :deep(.el-input-number__input:focus) {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+  border: none;
+  box-shadow: none;
+  outline: none;
 }
 
 /* Адаптивность */

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="stage-results-container">
     <div v-if="loading" class="loading-container">
       <el-icon class="is-loading"><Loading /></el-icon>
       <span>Загрузка результатов...</span>
@@ -242,11 +242,20 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 </script>
 
 <style scoped>
+/* Контейнер для растягивания на всю высоту */
+.stage-results-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Контейнер результатов с вкладками */
 .results-container {
   display: flex;
   flex-direction: column;
   gap: 0;
+  flex: 1;
+  min-height: 400px;
 }
 
 /* Навигация по этапам */
@@ -400,8 +409,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .active-stage-content {
   background: white;
   border-radius: 0 0 12px 12px;
+  flex: 1;
   min-height: 400px;
-  max-height: 70vh;
   overflow-y: auto;
 }
 

@@ -1,10 +1,10 @@
 <template>
-  <div>
+  <div class="standings-container">
     <el-tabs v-model="activeTab" class="results-tabs">
       <el-tab-pane label="Общие результаты" name="overall">
         <div class="table-scroll">
           <el-table :data="rows" style="width: 100%" :class="['modern-table', { 'empty-table': rows.length === 0 }]"
-            :height="rows.length > 0 ? 'auto' : 200" empty-text="Нет данных для отображения">
+            height="100%" empty-text="Нет данных для отображения">
             <el-table-column prop="rank" label="Место" :width="rows.length > 0 ? 100 : 0">
               <template #default="scope">
                 <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
@@ -89,6 +89,13 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 </script>
 
 <style scoped>
+/* Контейнер для растягивания на всю высоту */
+.standings-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Современные стили для таблицы результатов */
 .modern-table {
   border-radius: 12px;
@@ -384,7 +391,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   min-width: 800px;
-  max-height: 400px;
+  flex: 1;
+  min-height: 400px;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }

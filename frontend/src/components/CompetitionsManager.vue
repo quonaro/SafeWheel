@@ -1,13 +1,11 @@
 <template>
   <div class="competitions">
-
     <div class="content-container">
       <TeamsParticipants v-if="activeTab === 'teams'" :competition-id="currentCompetitionId" />
       <StagesManager v-if="activeTab === 'stages'" :competition-id="currentCompetitionId" />
       <ResultsInput v-if="activeTab === 'results'" :competition-id="currentCompetitionId" />
       <StandingsTable v-if="activeTab === 'standings'" :competition-id="currentCompetitionId" />
     </div>
-
   </div>
 </template>
 

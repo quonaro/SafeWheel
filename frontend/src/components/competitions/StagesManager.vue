@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="stages-container">
     <el-row :gutter="12" class="mb-12">
       <el-col :span="18">
         <el-input v-model="stageForm.name" placeholder="Название этапа" />
@@ -11,7 +11,7 @@
 
     <div class="table-scroll">
       <el-table :data="stages" style="width: 100%" :class="['modern-table', { 'empty-table': stages.length === 0 }]"
-        :height="stages.length > 0 ? 'auto' : 200" empty-text="Нет данных для отображения">
+        height="100%" empty-text="Нет данных для отображения">
         <el-table-column type="index" label="#" :width="stages.length > 0 ? 80 : 0" />
         <el-table-column prop="name" label="Название" :min-width="stages.length > 0 ? 200 : 0">
           <template #default="scope">
@@ -143,6 +143,13 @@ const cancelEdit = (stage) => {
 </script>
 
 <style scoped>
+/* Контейнер для растягивания на всю высоту */
+.stages-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Современные стили для таблицы этапов */
 .modern-table {
   border-radius: 12px;
@@ -289,7 +296,8 @@ const cancelEdit = (stage) => {
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   min-width: 600px;
-  max-height: 400px;
+  flex: 1;
+  min-height: 400px;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
