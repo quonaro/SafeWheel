@@ -10,10 +10,10 @@
     </el-row>
 
     <div class="table-scroll">
-      <el-table :data="stages" style="width: 100%" class="modern-table" :height="stages.length > 0 ? 'auto' : 200"
-        empty-text="Нет данных для отображения">
-        <el-table-column type="index" label="#" width="80" />
-        <el-table-column prop="name" label="Название">
+      <el-table :data="stages" style="width: 100%" :class="['modern-table', { 'empty-table': stages.length === 0 }]"
+        :height="stages.length > 0 ? 'auto' : 200" empty-text="Нет данных для отображения">
+        <el-table-column type="index" label="#" :width="stages.length > 0 ? 80 : 0" />
+        <el-table-column prop="name" label="Название" :min-width="stages.length > 0 ? 200 : 0">
           <template #default="scope">
             <div class="editable-cell" @click="editStageInline(scope.row)">
               <span v-if="!scope.row.editing">{{ scope.row.name }}</span>
@@ -23,7 +23,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Действия" width="120">
+        <el-table-column label="Действия" :width="stages.length > 0 ? 120 : 0">
           <template #default="scope">
             <el-button size="small" type="danger" @click="removeStage(scope.row.id)" class="delete-btn">
               <el-icon>
@@ -158,11 +158,60 @@ const cancelEdit = (stage) => {
 .modern-table :deep(.el-table__empty-block) {
   height: 200px;
   width: 100%;
-  min-width: 600px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(248, 250, 252, 0.5);
+}
+
+/* Ограничиваем ширину таблицы когда нет данных */
+.empty-table {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table .table-scroll {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+/* Принудительно ограничиваем ширину через deep селекторы */
+.empty-table :deep(.el-table) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__header-wrapper) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__body-wrapper) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__header) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__body) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__empty-block) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: 100% !important;
 }
 
 .modern-table :deep(.el-table__empty-text) {

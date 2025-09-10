@@ -10,8 +10,9 @@
     </el-row>
 
     <div class="teams-table-scroll">
-      <el-table :data="teams" row-key="id" style="width: 100%" class="modern-table" :height="400">
-        <el-table-column prop="name" label="Команда" width="260">
+      <el-table :data="teams" row-key="id" style="width: 100%"
+        :class="['modern-table', { 'empty-table': teams.length === 0 }]" :height="400">
+        <el-table-column prop="name" label="Команда" :width="teams.length > 0 ? 260 : 0">
           <template #default="scope">
             <div class="editable-cell" @click="editTeam(scope.row)">
               <span v-if="!scope.row.editing">{{ scope.row.name }}</span>
@@ -318,11 +319,60 @@ const handleAgeChange = async (teamId, participant) => {
 .modern-table :deep(.el-table__empty-block) {
   height: 200px;
   width: 100%;
-  min-width: 600px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(248, 250, 252, 0.5);
+}
+
+/* Ограничиваем ширину таблицы когда нет данных */
+.empty-table {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table .teams-table-scroll {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+/* Принудительно ограничиваем ширину через deep селекторы */
+.empty-table :deep(.el-table) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__header-wrapper) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__body-wrapper) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__header) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__body) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__empty-block) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: 100% !important;
 }
 
 .modern-table :deep(.el-table__empty-text) {

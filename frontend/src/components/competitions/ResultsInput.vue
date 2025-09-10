@@ -2,9 +2,19 @@
   <div>
     <el-row :gutter="12" class="mb-12">
       <el-col :span="8">
-        <el-select v-model="stageId" placeholder="Выберите этап" style="width: 100%" @change="loadResults">
+        <el-select v-model="stageId" placeholder="Выберите этап" style="width: 100%">
           <el-option v-for="s in stages" :key="s.id" :label="s.name" :value="s.id" />
         </el-select>
+      </el-col>
+      <el-col :span="8">
+        <el-input v-model="searchQuery" placeholder="Поиск по участнику или команде" style="width: 100%" clearable
+          @input="filterResults">
+          <template #prefix>
+            <el-icon>
+              <Search />
+            </el-icon>
+          </template>
+        </el-input>
       </el-col>
       <el-col :span="8">
         <el-select v-model="selectedTeamId" placeholder="Все команды" style="width: 100%" @change="filterResults"
@@ -13,34 +23,34 @@
           <el-option v-for="t in teams" :key="t.id" :label="t.name" :value="t.id" />
         </el-select>
       </el-col>
-      <el-col :span="8" class="text-right">
-        <el-button type="primary" @click="loadResults">
-          <el-icon>
-            <Refresh />
-          </el-icon>
-          Обновить
-        </el-button>
-      </el-col>
     </el-row>
 
     <div class="table-scroll">
-      <el-table :data="filteredRows" style="width:100%" class="modern-table"
+      <el-table :data="filteredRows" style="width:100%"
+        :class="['modern-table', { 'empty-table': filteredRows.length === 0 }]"
         :height="filteredRows.length > 0 ? 'auto' : 200" empty-text="Нет данных для отображения">
-        <el-table-column prop="team_name" label="Команда" width="220">
+        <el-table-column prop="team_name" label="Команда" :min-width="filteredRows.length > 0 ? 150 : 0">
           <template #default="scope">
             <div class="team-cell">
               <span class="team-name">{{ scope.row.team_name }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="full_name" label="Участник">
+        <el-table-column prop="full_name" label="Участник" :min-width="filteredRows.length > 0 ? 150 : 0">
           <template #default="scope">
             <div class="participant-cell">
               <span class="participant-name">{{ scope.row.full_name }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Время (сек)" width="160">
+        <el-table-column prop="age" label="Возраст" :min-width="filteredRows.length > 0 ? 80 : 0">
+          <template #default="scope">
+            <div class="age-cell">
+              <span class="age-text">{{ scope.row.age || '—' }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="Время (сек)" :min-width="filteredRows.length > 0 ? 120 : 0">
           <template #default="scope">
             <div class="input-cell">
               <el-input-number v-model="scope.row.time_seconds" :min="0" :step="0.1" @change="debouncedSave(scope.row)"
@@ -48,7 +58,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Штрафные баллы" width="180">
+        <el-table-column label="Штрафные баллы" :min-width="filteredRows.length > 0 ? 140 : 0">
           <template #default="scope">
             <div class="input-cell">
               <el-input-number v-model="scope.row.penalty_points" :min="0" :step="1" @change="debouncedSave(scope.row)"
@@ -63,7 +73,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { Refresh } from '@element-plus/icons-vue'
+import { Search } from '@element-plus/icons-vue'
 
 const props = defineProps({ competitionId: { type: Number, required: false } })
 const api = window.electronAPI?.database
@@ -72,6 +82,7 @@ const stages = ref([])
 const teams = ref([])
 const stageId = ref(null)
 const selectedTeamId = ref(null)
+const searchQuery = ref('')
 const rows = ref([])
 
 const loadStages = async () => {
@@ -98,6 +109,7 @@ const loadRows = async () => {
         team_id: t.id,
         team_name: t.name,
         full_name: p.full_name,
+        age: p.age,
         time_seconds: 0,
         penalty_points: 0
       })
@@ -111,14 +123,26 @@ const loadRows = async () => {
   rows.value = participantRows
 }
 
-const loadResults = async () => {
-  await loadRows()
-}
 
-// Фильтрация результатов по команде
+// Фильтрация результатов по команде и поисковому запросу
 const filteredRows = computed(() => {
-  if (!selectedTeamId.value) return rows.value
-  return rows.value.filter(row => row.team_id === selectedTeamId.value)
+  let filtered = rows.value
+
+  // Фильтр по команде
+  if (selectedTeamId.value) {
+    filtered = filtered.filter(row => row.team_id === selectedTeamId.value)
+  }
+
+  // Фильтр по поисковому запросу
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(row =>
+      row.team_name.toLowerCase().includes(query) ||
+      row.full_name.toLowerCase().includes(query)
+    )
+  }
+
+  return filtered
 })
 
 const filterResults = () => {
@@ -149,18 +173,66 @@ const debouncedSave = (row) => {
   border: 1px solid rgba(0, 0, 0, 0.05);
   min-height: 200px;
   width: 100%;
-  min-width: 800px;
 }
 
 /* Стили для пустого состояния */
 .modern-table :deep(.el-table__empty-block) {
   height: 200px;
   width: 100%;
-  min-width: 800px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(248, 250, 252, 0.5);
+}
+
+/* Ограничиваем ширину таблицы когда нет данных */
+.empty-table {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table .table-scroll {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+/* Принудительно ограничиваем ширину через deep селекторы */
+.empty-table :deep(.el-table) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__header-wrapper) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__body-wrapper) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__header) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__body) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: auto !important;
+}
+
+.empty-table :deep(.el-table__empty-block) {
+  min-width: auto !important;
+  max-width: 100% !important;
+  width: 100% !important;
 }
 
 .modern-table :deep(.el-table__empty-text) {
@@ -201,15 +273,12 @@ const debouncedSave = (row) => {
   display: flex;
   align-items: center;
   padding: 2px 6px;
-  border-radius: 6px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
   min-height: 20px;
 }
 
 .team-name {
   font-weight: 600;
-  color: #1e40af;
+  color: #374151;
   font-size: 14px;
 }
 
@@ -217,15 +286,26 @@ const debouncedSave = (row) => {
   display: flex;
   align-items: center;
   padding: 2px 6px;
-  border-radius: 6px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
   min-height: 20px;
 }
 
 .participant-name {
   font-weight: 500;
-  color: #059669;
+  color: #374151;
+  font-size: 14px;
+}
+
+.age-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  min-height: 20px;
+}
+
+.age-text {
+  font-weight: 500;
+  color: #6b7280;
   font-size: 14px;
 }
 
@@ -241,7 +321,6 @@ const debouncedSave = (row) => {
   max-width: 100%;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  min-width: 800px;
   max-height: 400px;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -275,6 +354,27 @@ const debouncedSave = (row) => {
 .modern-table :deep(.cell) {
   white-space: normal;
   word-break: break-word;
+}
+
+/* Обеспечиваем растягивание таблицы по родительскому элементу */
+.modern-table :deep(.el-table) {
+  width: 100% !important;
+}
+
+.modern-table :deep(.el-table__header-wrapper) {
+  width: 100%;
+}
+
+.modern-table :deep(.el-table__body-wrapper) {
+  width: 100%;
+}
+
+.modern-table :deep(.el-table__header) {
+  width: 100%;
+}
+
+.modern-table :deep(.el-table__body) {
+  width: 100%;
 }
 
 .time-input :deep(.el-input-number__input) {
@@ -325,7 +425,7 @@ const debouncedSave = (row) => {
   }
 
   .table-scroll {
-    min-width: 100%;
+    width: 100%;
   }
 }
 </style>
