@@ -1,7 +1,8 @@
 <template>
   <div>
     <div class="table-scroll">
-      <el-table :data="rows" style="width: 100%" class="modern-table">
+      <el-table :data="rows" style="width: 100%" class="modern-table" :height="rows.length > 0 ? 'auto' : 200"
+        empty-text="Нет данных для отображения">
         <el-table-column prop="rank" label="Место" width="100">
           <template #default="scope">
             <div class="rank-cell">
@@ -68,6 +69,22 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.05);
+  min-height: 200px;
+}
+
+/* Стили для пустого состояния */
+.modern-table :deep(.el-table__empty-block) {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 250, 252, 0.5);
+}
+
+.modern-table :deep(.el-table__empty-text) {
+  color: #6b7280;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .modern-table :deep(.el-table__header) {
