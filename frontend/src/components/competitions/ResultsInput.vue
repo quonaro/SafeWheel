@@ -59,7 +59,13 @@
     </el-row>
 
     <div class="results-container">
-      <div v-if="groupedParticipants.length === 0" class="empty-state">
+      <div v-if="loading" class="loading-state">
+        <el-icon class="is-loading">
+          <Loading />
+        </el-icon>
+        <p>Загрузка данных...</p>
+      </div>
+      <div v-else-if="groupedParticipants.length === 0" class="empty-state">
         <p>Нет данных для отображения</p>
       </div>
       
@@ -113,8 +119,8 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
-import { Search } from '@element-plus/icons-vue'
+import { ref, watch, computed, reactive, shallowRef } from 'vue'
+import { Search, Loading } from '@element-plus/icons-vue'
 
 const props = defineProps({ competitionId: { type: Number, required: false } })
 const api = window.electronAPI?.database
@@ -126,10 +132,53 @@ const selectedTeamId = ref(null)
 const searchQuery = ref('')
 const rows = ref([])
 
+// Простое кэширование без нарушения реактивности
+const participantsCache = shallowRef(new Map())
+const loading = ref(false)
+
 const loadStages = async () => {
   if (!props.competitionId) { stages.value = []; return }
   stages.value = await api.listStages(props.competitionId)
   if (stages.value.length && !stageId.value) stageId.value = stages.value[0].id
+  
+  // Предзагружаем данные для всех этапов в фоне
+  preloadAllStages()
+}
+
+// Предзагрузка данных для всех этапов
+const preloadAllStages = async () => {
+  if (!props.competitionId || stages.value.length === 0) return
+  
+  // Загружаем данные для всех этапов параллельно
+  const loadPromises = stages.value.map(async (stage) => {
+    const cacheKey = `${props.competitionId}-${stage.id}`
+    if (!participantsCache.value.has(cacheKey)) {
+      try {
+        const participantsWithResults = await api.getParticipantsWithResults(props.competitionId, stage.id)
+        const participantRows = participantsWithResults.map(p => {
+          const timeSeconds = Number(p.time_seconds) || 0
+          return {
+            participant_id: p.participant_id,
+            team_id: p.team_id,
+            team_name: p.team_name,
+            full_name: p.full_name,
+            age: p.age || 0,
+            time_seconds: timeSeconds,
+            time_display: formatTime(timeSeconds),
+            penalty_points: Number(p.penalty_points) || 0
+          }
+        })
+        participantsCache.value.set(cacheKey, participantRows)
+      } catch (error) {
+        console.error(`Ошибка предзагрузки этапа ${stage.id}:`, error)
+      }
+    }
+  })
+  
+  // Выполняем загрузку в фоне
+  Promise.all(loadPromises).catch(error => {
+    console.error('Ошибка предзагрузки этапов:', error)
+  })
 }
 
 const loadTeams = async () => {
@@ -137,16 +186,30 @@ const loadTeams = async () => {
   teams.value = await api.listTeams(props.competitionId)
 }
 
-// Функция форматирования времени из секунд в формат ММ:СС
+// Кэш для форматирования времени (реактивный)
+const timeFormatCache = reactive({})
+
+// Функция форматирования времени из секунд в формат ММ:СС с мемоизацией
 const formatTime = (seconds) => {
   if (seconds === null || seconds === undefined || seconds === 0) return '00:00'
   
-  // Округляем до ближайшего целого числа секунд
   const totalSeconds = Math.round(Number(seconds))
+  
+  // Проверяем кэш
+  if (timeFormatCache[totalSeconds]) {
+    return timeFormatCache[totalSeconds]
+  }
+  
   const minutes = Math.floor(totalSeconds / 60)
   const remainingSeconds = totalSeconds % 60
+  const formatted = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
   
-  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
+  // Сохраняем в кэш (ограничиваем размер кэша)
+  if (Object.keys(timeFormatCache).length < 1000) {
+    timeFormatCache[totalSeconds] = formatted
+  }
+  
+  return formatted
 }
 
 // Функция парсинга времени из формата ММ:СС в секунды
@@ -165,26 +228,42 @@ const parseTimeToSeconds = (timeStr) => {
 const loadRows = async () => {
   if (!stageId.value) { rows.value = []; return }
   
+  // Проверяем кэш
+  const cacheKey = `${props.competitionId}-${stageId.value}`
+  if (participantsCache.value.has(cacheKey)) {
+    rows.value = participantsCache.value.get(cacheKey)
+    return
+  }
+  
+  loading.value = true
+  
   try {
     // Используем оптимизированный метод для загрузки участников с результатами
     const participantsWithResults = await api.getParticipantsWithResults(props.competitionId, stageId.value)
     
-    // Преобразуем данные в нужный формат
-    const participantRows = participantsWithResults.map(p => ({
-      participant_id: p.participant_id,
-      team_id: p.team_id,
-      team_name: p.team_name,
-      full_name: p.full_name,
-      age: p.age || 0,
-      time_seconds: Number(p.time_seconds) || 0,
-      time_display: formatTime(Number(p.time_seconds) || 0),
-      penalty_points: Number(p.penalty_points) || 0
-    }))
+    // Преобразуем данные в нужный формат с кэшированием форматирования
+    const participantRows = participantsWithResults.map(p => {
+      const timeSeconds = Number(p.time_seconds) || 0
+      return {
+        participant_id: p.participant_id,
+        team_id: p.team_id,
+        team_name: p.team_name,
+        full_name: p.full_name,
+        age: p.age || 0,
+        time_seconds: timeSeconds,
+        time_display: formatTime(timeSeconds),
+        penalty_points: Number(p.penalty_points) || 0
+      }
+    })
     
+    // Сохраняем в кэш
+    participantsCache.value.set(cacheKey, participantRows)
     rows.value = participantRows
   } catch (error) {
     console.error('Ошибка загрузки участников:', error)
     rows.value = []
+  } finally {
+    loading.value = false
   }
 }
 
@@ -236,6 +315,8 @@ const filterResults = () => {
 }
 
 watch(() => props.competitionId, () => {
+  // Очищаем кэш при смене соревнования
+  participantsCache.value.clear()
   loadStages()
   loadTeams()
 }, { immediate: true })
@@ -266,7 +347,30 @@ let timer = null
 const debouncedSave = (row) => {
   clearTimeout(timer)
   timer = setTimeout(async () => {
-    await api.upsertStageResult(stageId.value, row.participant_id, { time_seconds: row.time_seconds, penalty_points: row.penalty_points })
+    try {
+      await api.upsertStageResult(stageId.value, row.participant_id, { time_seconds: row.time_seconds, penalty_points: row.penalty_points })
+      
+      // Обновляем данные в кэше
+      const cacheKey = `${props.competitionId}-${stageId.value}`
+      if (participantsCache[cacheKey]) {
+        const updatedRow = participantsCache[cacheKey].find(r => r.participant_id === row.participant_id)
+        if (updatedRow) {
+          updatedRow.time_seconds = row.time_seconds
+          updatedRow.time_display = formatTime(row.time_seconds)
+          updatedRow.penalty_points = row.penalty_points
+        }
+      }
+      
+      // Обновляем текущие данные
+      const currentRow = rows.value.find(r => r.participant_id === row.participant_id)
+      if (currentRow) {
+        currentRow.time_seconds = row.time_seconds
+        currentRow.time_display = formatTime(row.time_seconds)
+        currentRow.penalty_points = row.penalty_points
+      }
+    } catch (error) {
+      console.error('Ошибка сохранения результата:', error)
+    }
   }, 300)
 }
 </script>
@@ -637,6 +741,32 @@ const debouncedSave = (row) => {
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Состояние загрузки */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #6b7280;
+  font-size: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  gap: 16px;
+}
+
+.loading-state .el-icon {
+  font-size: 32px;
+  color: #3b82f6;
+}
+
+.loading-state p {
+  margin: 0;
+  font-weight: 500;
 }
 
 /* Стилизация скроллбара */
