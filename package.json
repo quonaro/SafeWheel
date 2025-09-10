@@ -36,8 +36,15 @@
     "linux": {
       "target": "AppImage",
       "executableArgs": [
-        "--no-sandbox"
-      ]
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu-sandbox",
+        "--disable-software-rasterizer",
+        "--no-zygote",
+        "--single-process"
+      ],
+      "category": "Utility"
     }
   },
   "dependencies": {
