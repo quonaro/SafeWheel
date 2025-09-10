@@ -120,7 +120,6 @@
           "menuCategory": false,
           "perMachine": false,
           "allowElevation": true,
-          "include": "build/installer.nsh",
           "warningsAsErrors": false,
           "displayLanguageSelector": false,
           "installerLanguages": ["en_US", "ru_RU"]
