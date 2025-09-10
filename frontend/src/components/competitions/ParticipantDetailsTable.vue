@@ -45,10 +45,10 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="time_seconds" label="Время (сек)" :width="details.length > 0 ? 150 : 0">
+          <el-table-column prop="time_seconds" label="Время" :width="details.length > 0 ? 150 : 0">
             <template #default="scope">
               <div class="time-cell">
-                <span class="time-value">{{ scope.row.time_seconds }}</span>
+                <span class="time-value">{{ formatTime(scope.row.time_seconds) }}</span>
               </div>
             </template>
           </el-table-column>
@@ -74,7 +74,7 @@
         </div>
         <div class="summary-item">
           <span class="summary-label">Общее время:</span>
-          <span class="summary-value time">{{ totalTime }} сек</span>
+          <span class="summary-value time">{{ formatTime(totalTime) }}</span>
         </div>
         <div class="summary-item">
           <span class="summary-label">Завершенных этапов:</span>
@@ -107,6 +107,16 @@ const loading = ref(false)
 const totalPenalties = computed(() => {
   return details.value.reduce((sum, item) => sum + (item.penalty_points || 0), 0)
 })
+
+// Функция форматирования времени из секунд в формат ММ:СС
+const formatTime = (seconds) => {
+  if (!seconds || seconds === 0) return '00:00'
+  
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+  
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
+}
 
 const totalTime = computed(() => {
   return details.value.reduce((sum, item) => sum + (item.time_seconds || 0), 0)
