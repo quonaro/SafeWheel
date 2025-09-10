@@ -1,5 +1,19 @@
 <template>
   <div>
+    <el-row :gutter="12" class="mb-12">
+      <el-col :span="20">
+        <h3 class="table-title">Таблица результатов</h3>
+      </el-col>
+      <el-col :span="4" class="text-right">
+        <el-button type="primary" @click="load">
+          <el-icon>
+            <Refresh />
+          </el-icon>
+          Обновить
+        </el-button>
+      </el-col>
+    </el-row>
+
     <div class="table-scroll">
       <el-table :data="rows" style="width: 100%" class="modern-table" :height="rows.length > 0 ? 'auto' : 200"
         empty-text="Нет данных для отображения">
@@ -40,14 +54,12 @@
         </el-table-column>
       </el-table>
     </div>
-    <div class="mt-8">
-      <el-button type="primary" @click="load">Обновить</el-button>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue'
+import { Refresh } from '@element-plus/icons-vue'
 
 const props = defineProps({ competitionId: { type: Number, required: false } })
 const api = window.electronAPI?.database
@@ -204,18 +216,21 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   font-size: 14px;
 }
 
-/* Кнопка обновления */
-.mt-8 {
-  margin-top: 20px;
-  text-align: center;
+/* Заголовок таблицы */
+.table-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
 }
 
-.mt-8 .el-button {
+/* Кнопка обновления */
+.text-right .el-button {
   background: #1f2937;
   border: none;
   color: white;
   font-weight: 600;
-  padding: 12px 24px;
+  padding: 10px 20px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   transition: all 0.3s ease;
@@ -262,7 +277,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   word-break: break-word;
 }
 
-.mt-8 .el-button:hover {
+.text-right .el-button:hover {
+  background: #374151;
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
 }
