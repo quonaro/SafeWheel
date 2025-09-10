@@ -4,6 +4,13 @@
       <div class="sidebar">
         <div class="sidebar-content">
           <nav class="nav-menu">
+            <div class="nav-item back-item" :class="{
+              disabled: !selectedCompetitionId
+            }" @click="selectedCompetitionId && backToSelector()">
+              <el-icon>
+                <ArrowLeft />
+              </el-icon>
+            </div>
             <div class="nav-item" :class="{
               active: activeTab === 'teams' && selectedCompetitionId,
               disabled: !selectedCompetitionId
@@ -115,7 +122,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import CompetitionsManager from './components/CompetitionsManager.vue'
-import { UserFilled, List, Edit, TrophyBase, Plus } from '@element-plus/icons-vue'
+import { UserFilled, List, Edit, TrophyBase, Plus, ArrowLeft } from '@element-plus/icons-vue'
 
 const activeTab = ref('teams')
 const selectedCompetitionId = ref(null)
@@ -275,6 +282,10 @@ onMounted(() => {
   .nav-item .el-icon {
     font-size: 12px;
   }
+
+  .nav-item.back-item {
+    margin-bottom: 8px;
+  }
 }
 
 @media (max-width: 360px) {
@@ -302,6 +313,10 @@ onMounted(() => {
 
   .nav-item .el-icon {
     font-size: 10px;
+  }
+
+  .nav-item.back-item {
+    margin-bottom: 6px;
   }
 }
 
@@ -425,6 +440,44 @@ onMounted(() => {
 
 .nav-item.disabled::before {
   opacity: 0;
+}
+
+/* Стили для кнопки "назад" */
+.nav-item.back-item {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+  margin-bottom: 16px;
+}
+
+.nav-item.back-item:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #b91c1c;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.nav-item.back-item:hover::before {
+  background: rgba(239, 68, 68, 0.1);
+  opacity: 1;
+}
+
+.nav-item.back-item.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+  background: rgba(107, 114, 128, 0.1);
+  border-color: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+  box-shadow: none;
+}
+
+.nav-item.back-item.disabled:hover {
+  background: rgba(107, 114, 128, 0.1);
+  transform: none;
+  color: #6b7280;
+  box-shadow: none;
 }
 
 .main-content {

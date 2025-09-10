@@ -7,7 +7,7 @@
         </el-select>
       </el-col>
       <el-col :span="8">
-        <el-input v-model="searchQuery" placeholder="Поиск по участнику или команде" style="width: 100%" clearable
+        <el-input v-model="searchQuery" placeholder="Поиск по участнику" style="width: 100%" clearable
           @input="filterResults">
           <template #prefix>
             <el-icon>
@@ -25,48 +25,56 @@
       </el-col>
     </el-row>
 
-    <div class="table-scroll">
-      <el-table :data="filteredRows" style="width:100%"
-        :class="['modern-table', { 'empty-table': filteredRows.length === 0 }]"
-        :height="filteredRows.length > 0 ? 'auto' : 200" empty-text="Нет данных для отображения">
-        <el-table-column prop="team_name" label="Команда" :min-width="filteredRows.length > 0 ? 150 : 0">
-          <template #default="scope">
-            <div class="team-cell">
-              <span class="team-name">{{ scope.row.team_name }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="full_name" label="Участник" :min-width="filteredRows.length > 0 ? 150 : 0">
-          <template #default="scope">
-            <div class="participant-cell">
-              <span class="participant-name">{{ scope.row.full_name }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="age" label="Возраст" :min-width="filteredRows.length > 0 ? 80 : 0">
-          <template #default="scope">
-            <div class="age-cell">
-              <span class="age-text">{{ scope.row.age || '—' }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="Время (ММ:СС)" :min-width="filteredRows.length > 0 ? 120 : 0">
-          <template #default="scope">
-            <div class="input-cell">
-              <el-input v-model="scope.row.time_display" @change="handleTimeChange(scope.row)"
-                size="small" class="time-input" placeholder="00:00" />
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="Штрафные баллы" :min-width="filteredRows.length > 0 ? 140 : 0">
-          <template #default="scope">
-            <div class="input-cell">
-              <el-input-number v-model="scope.row.penalty_points" :min="0" :step="1" @change="debouncedSave(scope.row)"
-                size="small" class="penalty-input" />
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
+    <div class="results-container">
+      <div v-if="groupedParticipants.length === 0" class="empty-state">
+        <p>Нет данных для отображения</p>
+      </div>
+      
+      <div v-else class="teams-groups">
+        <div v-for="team in groupedParticipants" :key="team.teamId" class="team-group">
+          <div class="team-header">
+            <h3 class="team-title">{{ team.teamName }}</h3>
+            <span class="participants-count">{{ team.participants.length }} участников</span>
+          </div>
+          
+          <div class="team-participants">
+            <el-table :data="team.participants" style="width:100%"
+              :class="['modern-table', 'team-table']"
+              :show-header="true">
+              <el-table-column prop="full_name" label="Участник" :min-width="150">
+                <template #default="scope">
+                  <div class="participant-cell">
+                    <span class="participant-name">{{ scope.row.full_name }}</span>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column prop="age" label="Возраст" :width="100">
+                <template #default="scope">
+                  <div class="age-cell">
+                    <span class="age-text">{{ scope.row.age || '—' }}</span>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column label="Время" :width="120">
+                <template #default="scope">
+                  <div class="input-cell">
+                    <el-input v-model="scope.row.time_display" @change="handleTimeChange(scope.row)"
+                      size="small" class="time-input" placeholder="00:00" />
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column label="Штрафные баллы" :width="140">
+                <template #default="scope">
+                  <div class="input-cell">
+                    <el-input-number v-model="scope.row.penalty_points" :min="0" :step="1" @change="debouncedSave(scope.row)"
+                      size="small" class="penalty-input" />
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -161,16 +169,34 @@ const filteredRows = computed(() => {
     filtered = filtered.filter(row => row.team_id === selectedTeamId.value)
   }
 
-  // Фильтр по поисковому запросу
+  // Фильтр по поисковому запросу (только по участникам)
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(row =>
-      row.team_name.toLowerCase().includes(query) ||
       row.full_name.toLowerCase().includes(query)
     )
   }
 
   return filtered
+})
+
+// Группировка участников по командам
+const groupedParticipants = computed(() => {
+  const groups = new Map()
+  
+  filteredRows.value.forEach(participant => {
+    const teamName = participant.team_name
+    if (!groups.has(teamName)) {
+      groups.set(teamName, {
+        teamName: teamName,
+        teamId: participant.team_id,
+        participants: []
+      })
+    }
+    groups.get(teamName).participants.push(participant)
+  })
+  
+  return Array.from(groups.values())
 })
 
 const filterResults = () => {
@@ -361,14 +387,112 @@ const debouncedSave = (row) => {
   padding: 2px;
 }
 
-.table-scroll {
+/* Контейнер результатов */
+.results-container {
   width: 100%;
   max-width: 100%;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  max-height: 400px;
+  max-height: 600px;
+}
+
+/* Группы команд */
+.teams-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Группа команды */
+.team-group {
+  background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+/* Заголовок команды */
+.team-header {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.team-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+}
+
+.participants-count {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+/* Участники команды */
+.team-participants {
+  padding: 0;
+}
+
+.team-table {
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+}
+
+.team-table :deep(.el-table__header) {
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.team-table :deep(.el-table__header th) {
+  background: #f8fafc;
+  color: #374151;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 12px 16px;
+  border: none;
+}
+
+.team-table :deep(.el-table__body tr) {
+  transition: all 0.3s ease;
+}
+
+.team-table :deep(.el-table__body tr:hover) {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.team-table :deep(.el-table__body td) {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.team-table :deep(.el-table__body tr:last-child td) {
+  border-bottom: none;
+}
+
+/* Пустое состояние */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #6b7280;
+  font-size: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 /* Стилизация скроллбара */
@@ -453,25 +577,42 @@ const debouncedSave = (row) => {
 
 /* Адаптивность */
 @media (max-width: 768px) {
+  .teams-groups {
+    gap: 16px;
+  }
 
-  .modern-table :deep(.el-table__header th),
-  .modern-table :deep(.el-table__body td) {
+  .team-header {
+    padding: 12px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .team-title {
+    font-size: 16px;
+  }
+
+  .participants-count {
+    font-size: 12px;
+    padding: 3px 8px;
+  }
+
+  .team-table :deep(.el-table__header th),
+  .team-table :deep(.el-table__body td) {
     padding: 8px 6px;
     font-size: 13px;
   }
 
-  .team-cell,
   .participant-cell {
     padding: 2px 4px;
   }
 
-  .team-name,
   .participant-name {
     font-size: 12px;
   }
 
-  .table-scroll {
-    width: 100%;
+  .results-container {
+    max-height: 500px;
   }
 }
 </style>

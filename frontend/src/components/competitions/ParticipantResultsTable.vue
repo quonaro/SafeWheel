@@ -1,9 +1,5 @@
 <template>
   <div>
-    <div class="mb-12">
-      <h3 class="table-title">Личные результаты участников</h3>
-    </div>
-
     <div v-if="loading" class="loading-container">
       <el-icon class="is-loading"><Loading /></el-icon>
       <span>Загрузка результатов...</span>
