@@ -26,13 +26,11 @@ declare module 'vue' {
     ElTabPane: typeof import('element-plus/es')['ElTabPane']
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
-    ParticipantDetailsTable: typeof import('./src/components/competitions/ParticipantDetailsTable.vue')['default']
     ParticipantResultsTable: typeof import('./src/components/competitions/ParticipantResultsTable.vue')['default']
     ResultsInput: typeof import('./src/components/competitions/ResultsInput.vue')['default']
     StageResultsTable: typeof import('./src/components/competitions/StageResultsTable.vue')['default']
     StagesManager: typeof import('./src/components/competitions/StagesManager.vue')['default']
     StandingsTable: typeof import('./src/components/competitions/StandingsTable.vue')['default']
     TeamsParticipants: typeof import('./src/components/competitions/TeamsParticipants.vue')['default']
-    WheelManager: typeof import('./src/components/WheelManager.vue')['default']
   }
 }

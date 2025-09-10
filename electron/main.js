@@ -512,6 +512,13 @@ function createMenu() {
   Menu.setApplicationMenu(menu);
 }
 
+// Отключаем sandbox для Linux
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('--no-sandbox');
+  app.commandLine.appendSwitch('--disable-setuid-sandbox');
+  app.commandLine.appendSwitch('--disable-dev-shm-usage');
+}
+
 // Этот метод будет вызван когда Electron закончит инициализацию
 app.whenReady().then(async () => {
   createWindow();
