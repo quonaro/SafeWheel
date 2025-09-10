@@ -21,16 +21,13 @@ let database = null;
 // Функция для инициализации базы данных
 async function initDatabase() {
   if (database) {
-    console.log("🔄 База данных уже инициализирована");
     return;
   }
 
-  console.log("🚀 Инициализация базы данных...");
 
   try {
     database = new DatabaseManager();
     await database.init();
-    console.log("✅ База данных инициализирована успешно");
   } catch (error) {
     console.error("❌ Ошибка инициализации базы данных:", error);
   }
@@ -39,7 +36,6 @@ async function initDatabase() {
 // Функция для закрытия базы данных
 function closeDatabase() {
   if (database) {
-    console.log("🛑 Закрытие базы данных...");
     database.close();
     database = null;
   }
@@ -47,20 +43,17 @@ function closeDatabase() {
 
 // Функция для проверки доступности сервера
 async function waitForServer(url, maxAttempts = 30, delay = 1000) {
-  console.log(`🔍 Ожидание готовности сервера ${url}...`);
   
   for (let i = 0; i < maxAttempts; i++) {
     try {
       const response = await fetch(url);
       if (response.ok) {
-        console.log(`✅ Сервер готов! (попытка ${i + 1}/${maxAttempts})`);
         return true;
       }
     } catch (error) {
       // Игнорируем ошибки соединения на ранних этапах
     }
     
-    console.log(`⏳ Попытка ${i + 1}/${maxAttempts} - сервер еще не готов, ждем ${delay}ms...`);
     await new Promise(resolve => setTimeout(resolve, delay));
   }
   
@@ -71,11 +64,9 @@ async function waitForServer(url, maxAttempts = 30, delay = 1000) {
 // Функция для запуска фронтенда
 function startFrontend() {
   if (frontendProcess) {
-    console.log("🔄 Фронтенд уже запущен");
     return;
   }
 
-  console.log("🚀 Запуск фронтенда...");
   frontendProcess = spawn("npm", ["run", "dev"], {
     cwd: path.join(__dirname, "../frontend"),
     stdio: "inherit",
@@ -87,7 +78,6 @@ function startFrontend() {
   });
 
   frontendProcess.on("exit", (code) => {
-    console.log(`🛑 Фронтенд завершен с кодом ${code}`);
     frontendProcess = null;
   });
 }
@@ -95,7 +85,6 @@ function startFrontend() {
 // Функция для остановки фронтенда
 function stopFrontend() {
   if (frontendProcess) {
-    console.log("🛑 Остановка фронтенда...");
     frontendProcess.kill("SIGTERM");
     frontendProcess = null;
   }
@@ -103,7 +92,6 @@ function stopFrontend() {
 
 // Функция для остановки всех процессов
 function stopAllProcesses() {
-  console.log("🛑 Остановка всех процессов...");
   closeDatabase();
   stopFrontend();
 }
@@ -226,14 +214,12 @@ function createWindow() {
     ? "http://localhost:3000" // Фронтенд запускается на порту 3000
     : `file://${path.join(__dirname, "../frontend/dist/index.html")}`;
 
-  console.log("🔗 Загружаем URL:", startUrl);
 
   // Ждем пока фронтенд будет готов
   if (isDev) {
     // В режиме разработки ждем готовности сервера
     waitForServer(startUrl).then((isReady) => {
       if (isReady) {
-        console.log("🚀 Загружаем приложение...");
         mainWindow.loadURL(startUrl);
       } else {
         console.error("❌ Не удалось подключиться к серверу разработки");
@@ -506,7 +492,6 @@ function createMenu() {
           label: "О SafeWheel",
           click: () => {
             // Здесь можно добавить диалог "О программе"
-            console.log("SafeWheel v1.0.0");
           },
         },
       ],
@@ -556,19 +541,16 @@ app.on("window-all-closed", () => {
 
 // Обработка завершения приложения
 app.on("before-quit", () => {
-  console.log("🛑 Завершение приложения...");
   stopAllProcesses();
 });
 
 // Обработка принудительного завершения
 process.on("SIGINT", () => {
-  console.log("🛑 Получен SIGINT, завершаем все процессы...");
   stopAllProcesses();
   app.quit();
 });
 
 process.on("SIGTERM", () => {
-  console.log("🛑 Получен SIGTERM, завершаем все процессы...");
   stopAllProcesses();
   app.quit();
 });

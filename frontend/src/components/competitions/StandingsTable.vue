@@ -188,7 +188,6 @@ const debugParticipantTime = async () => {
   
   try {
     debugResults.value = await api.getParticipantStageResults(props.competitionId, debugParticipantName.value)
-    console.log('Результаты участника по этапам:', debugResults.value)
   } catch (error) {
     console.error('Ошибка загрузки результатов участника:', error)
     debugResults.value = []
