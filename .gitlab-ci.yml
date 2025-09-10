@@ -47,6 +47,14 @@ build_linux:
   before_script:
     - apt-get update && apt-get install -y libnss3-dev libatk-bridge2.0-dev libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libasound2
   script:
+    - echo "🔍 Проверяем версии..."
+    - node --version
+    - npm --version
+    - echo "🔧 Устанавливаем зависимости..."
+    - npm ci
+    - echo "🔍 Проверяем, что фронтенд собран..."
+    - ls -la frontend/dist/
+    - echo "🔨 Собираем Electron приложение для Linux..."
     - npm run build:electron -- --linux AppImage
   artifacts:
     paths:
@@ -65,6 +73,14 @@ build_windows:
   before_script:
     - apt-get update && apt-get install -y wine
   script:
+    - echo "🔍 Проверяем версии..."
+    - node --version
+    - npm --version
+    - echo "🔧 Устанавливаем зависимости..."
+    - npm ci
+    - echo "🔍 Проверяем, что фронтенд собран..."
+    - ls -la frontend/dist/
+    - echo "🔨 Собираем Electron приложение для Windows..."
     - npm run build:electron -- --win nsis
   artifacts:
     paths:
