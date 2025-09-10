@@ -81,13 +81,6 @@
       <!-- Контент активного этапа -->
       <div class="active-stage-content">
         <div v-if="activeStage" class="stage-section">
-          <div class="stage-header">
-            <h4 class="stage-title">{{ activeStage.stage_name }}</h4>
-            <div class="stage-stats">
-              <span class="teams-count">{{ activeStage.teams.length }} команд</span>
-              <span class="participants-count">{{ activeStage.teams.reduce((total, team) => total + team.participants.length, 0) }} участников</span>
-            </div>
-          </div>
           
           <div class="teams-container">
             <div v-for="team in activeStage.teams" :key="team.team_id" class="team-section">
@@ -256,6 +249,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   gap: 0;
   flex: 1;
   min-height: 400px;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Навигация по этапам */
@@ -412,6 +407,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   flex: 1;
   min-height: 400px;
   overflow-y: auto;
+  max-height: calc(100vh - 200px);
 }
 
 /* Контейнер команд */
@@ -664,6 +660,25 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   background: #a8a8a8;
 }
 
+/* Скроллбар для таблиц участников */
+.participants-table :deep(.el-table__body-wrapper)::-webkit-scrollbar {
+  width: 6px;
+}
+
+.participants-table :deep(.el-table__body-wrapper)::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 3px;
+}
+
+.participants-table :deep(.el-table__body-wrapper)::-webkit-scrollbar-thumb {
+  background: #dee2e6;
+  border-radius: 3px;
+}
+
+.participants-table :deep(.el-table__body-wrapper)::-webkit-scrollbar-thumb:hover {
+  background: #adb5bd;
+}
+
 .stage-section {
   background: transparent;
   border-radius: 0;
@@ -672,43 +687,6 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   border: none;
 }
 
-.stage-header {
-  margin-bottom: 20px;
-  padding: 16px 20px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.stage-title {
-  margin: 0 0 8px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #374151;
-}
-
-.stage-stats {
-  display: flex;
-  gap: 16px;
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.teams-count,
-.participants-count {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.teams-count::before {
-  content: "👥";
-}
-
-.participants-count::before {
-  content: "👤";
-}
 
 /* Секция команды */
 .team-section {
@@ -790,16 +768,26 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .participants-table {
   background: white;
   max-height: 300px;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
-/* Убираем overflow: hidden для ячеек с медалями */
+/* Убираем overflow: hidden для ячеек с медалями, но сохраняем скролл */
 .participants-table :deep(.el-table__body td:first-child) {
   overflow: visible !important;
 }
 
 .participants-table :deep(.el-table__body tr) {
   overflow: visible !important;
+}
+
+/* Обеспечиваем правильный скролл для таблицы */
+.participants-table :deep(.el-table) {
+  overflow: visible !important;
+}
+
+.participants-table :deep(.el-table__body-wrapper) {
+  overflow-y: auto !important;
+  max-height: 300px !important;
 }
 
 /* Кастомный скроллбар для таблиц участников */

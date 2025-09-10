@@ -11,8 +11,8 @@
         </template>
         <div class="table-container">
           <el-table :data="paginatedRows" style="width: 100%" :class="['modern-table', { 'empty-table': rows.length === 0 }]"
-            height="435" empty-text="Нет данных для отображения">
-            <el-table-column prop="rank" label="Место" :width="rows.length > 0 ? 100 : 0">
+            :max-height="470" empty-text="Нет данных для отображения">
+            <el-table-column prop="rank" label="Место" :width="rows.length > 0 ? 80 : 0">
               <template #default="scope">
                 <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
                   <template v-if="scope.row.rank === 1">
@@ -30,21 +30,21 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="team_name" label="Команда" :min-width="rows.length > 0 ? 200 : 0">
+            <el-table-column prop="team_name" label="Команда" :min-width="rows.length > 0 ? 150 : 0">
               <template #default="scope">
                 <div class="team-cell">
                   <span class="team-name">{{ scope.row.team_name }}</span>
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="total_penalties" label="Штрафы" :width="rows.length > 0 ? 140 : 0">
+            <el-table-column prop="total_penalties" label="Штрафы" :width="rows.length > 0 ? 100 : 0">
               <template #default="scope">
                 <div class="penalty-cell">
                   <span class="penalty-value">{{ scope.row.total_penalties }}</span>
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="total_time" label="Время" :width="rows.length > 0 ? 180 : 0">
+            <el-table-column prop="total_time" label="Время" :width="rows.length > 0 ? 120 : 0">
               <template #default="scope">
                 <div class="time-cell">
                   <span class="time-value">{{ formatTime(scope.row.total_time) }}</span>
@@ -168,6 +168,16 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   min-width: 800px;
 }
 
+/* Включаем скролл для таблицы */
+.modern-table :deep(.el-table__body-wrapper) {
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.modern-table :deep(.el-table__header-wrapper) {
+  overflow: hidden;
+}
+
 /* Стили для пустого состояния */
 .modern-table :deep(.el-table__empty-block) {
   height: 200px;
@@ -243,8 +253,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   background: #f3f4f6;
   color: #111827;
   font-weight: 600;
-  font-size: 14px;
-  padding: 10px 12px;
+  font-size: 13px;
+  padding: 8px 10px;
   border: none;
 }
 
@@ -257,7 +267,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 }
 
 .modern-table :deep(.el-table__body td) {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -266,10 +276,10 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
+  padding: 4px;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   margin: 0 auto;
   background: #4b5563;
   border: 2px solid #374151;
@@ -278,7 +288,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .rank-number {
   font-weight: 700;
   color: white;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 /* Выделение 1-3 мест трофеями и цветами */
@@ -292,7 +302,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 }
 
 .trophy {
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1;
   display: inline-block;
 }
@@ -312,51 +322,51 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .team-cell {
   display: flex;
   align-items: center;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: 1px 4px;
+  border-radius: 4px;
   background: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.2);
-  min-height: 20px;
+  min-height: 18px;
 }
 
 .team-name {
   font-weight: 600;
   color: #1e40af;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .penalty-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: 1px 4px;
+  border-radius: 4px;
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.2);
-  min-height: 20px;
+  min-height: 18px;
 }
 
 .penalty-value {
   font-weight: 600;
   color: #dc2626;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .time-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: 1px 4px;
+  border-radius: 4px;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.2);
-  min-height: 20px;
+  min-height: 18px;
 }
 
 .time-value {
   font-weight: 600;
   color: #059669;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .age-cell {
@@ -386,23 +396,23 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
 /* Стили для вкладок */
 .results-tabs {
-  margin-top: 20px;
+  margin-top: 12px;
   width: 100%;
   overflow: visible;
 }
 
 .results-tabs :deep(.el-tabs__header) {
-  margin: 0 0 20px 0;
+  margin: 0 0 12px 0;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-radius: 12px;
-  padding: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.05);
   overflow: visible;
 }
 
 .results-tabs :deep(.el-tabs__nav-wrap) {
-  padding: 0 8px;
+  padding: 0 4px;
   overflow: visible;
 }
 
@@ -411,18 +421,18 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 }
 
 .results-tabs :deep(.el-tabs__item) {
-  padding: 12px 20px;
+  padding: 8px 16px;
   font-weight: 600;
   color: #64748b;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   min-width: fit-content;
   position: relative;
   overflow: visible;
-  font-size: 15px;
+  font-size: 14px;
   letter-spacing: 0.025em;
-  margin: 0 4px;
+  margin: 0 2px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -431,8 +441,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .results-tabs :deep(.el-tabs__item.is-active) {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   color: #1e40af;
-  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.2);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.15);
+  transform: translateY(-1px);
   border: 1px solid rgba(30, 64, 175, 0.15);
 }
 
@@ -455,12 +465,12 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .tab-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   position: relative;
 }
 
 .tab-icon {
-  font-size: 16px;
+  font-size: 14px;
   transition: all 0.3s ease;
 }
 
@@ -487,18 +497,17 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .pagination-container {
   display: flex;
   justify-content: center;
-  padding: 16px 0;
   background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .modern-pagination :deep(.el-pagination) {
-  --el-pagination-font-size: 14px;
+  --el-pagination-font-size: 13px;
   --el-pagination-bg-color: transparent;
   --el-pagination-text-color: #64748b;
-  --el-pagination-border-radius: 8px;
+  --el-pagination-border-radius: 6px;
   --el-pagination-button-color: #64748b;
   --el-pagination-button-disabled-color: #d1d5db;
   --el-pagination-hover-color: #3b82f6;
@@ -508,9 +517,9 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .modern-pagination :deep(.el-pagination .btn-next) {
   background: #f8fafc;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 8px 12px;
-  margin: 0 4px;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin: 0 2px;
   transition: all 0.3s ease;
 }
 
@@ -526,11 +535,11 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .modern-pagination :deep(.el-pagination .el-pager li) {
   background: #f8fafc;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  margin: 0 2px;
-  min-width: 36px;
-  height: 36px;
-  line-height: 34px;
+  border-radius: 6px;
+  margin: 0 1px;
+  min-width: 32px;
+  height: 32px;
+  line-height: 30px;
   transition: all 0.3s ease;
 }
 
@@ -622,29 +631,35 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   min-width: 800px;
 }
 
-/* Стилизация скроллбара */
-.table-scroll::-webkit-scrollbar {
+/* Стилизация скроллбара для таблицы */
+.modern-table :deep(.el-table__body-wrapper)::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-.table-scroll::-webkit-scrollbar-track {
+.modern-table :deep(.el-table__body-wrapper)::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.05);
   border-radius: 4px;
 }
 
-.table-scroll::-webkit-scrollbar-thumb {
+.modern-table :deep(.el-table__body-wrapper)::-webkit-scrollbar-thumb {
   background: rgba(59, 130, 246, 0.3);
   border-radius: 4px;
   transition: background 0.3s ease;
 }
 
-.table-scroll::-webkit-scrollbar-thumb:hover {
+.modern-table :deep(.el-table__body-wrapper)::-webkit-scrollbar-thumb:hover {
   background: rgba(59, 130, 246, 0.5);
 }
 
-.table-scroll::-webkit-scrollbar-corner {
+.modern-table :deep(.el-table__body-wrapper)::-webkit-scrollbar-corner {
   background: rgba(0, 0, 0, 0.05);
+}
+
+/* Стили скроллбара для Firefox */
+.modern-table :deep(.el-table__body-wrapper) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.3) rgba(0, 0, 0, 0.05);
 }
 
 .modern-table :deep(.cell) {
@@ -720,9 +735,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
     min-width: 100%;
   }
 
-  .pagination-container {
-    padding: 12px 0;
-  }
+
 
   .modern-pagination :deep(.el-pagination) {
     --el-pagination-font-size: 13px;
@@ -773,9 +786,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
     line-height: 12px;
   }
 
-  .pagination-container {
-    padding: 8px 0;
-  }
+ 
 
   .modern-pagination :deep(.el-pagination) {
     --el-pagination-font-size: 12px;

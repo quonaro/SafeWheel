@@ -439,7 +439,7 @@ watch(() => [props.competitionId, props.participantId], () => load(), { immediat
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 40px;
+  padding: 2                                                                                                                                                                                                                                                                                                                                                                                                                                            0px;
   color: #6b7280;
   font-size: 16px;
 }

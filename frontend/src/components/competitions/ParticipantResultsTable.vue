@@ -15,7 +15,7 @@
         :data="paginatedParticipants" 
         style="width: 100%" 
         :class="['modern-table', { 'empty-table': participants.length === 0 }]"
-        height="435" 
+        height="470px" 
         empty-text="Нет данных для отображения"
       >
         <el-table-column prop="rank" label="Место" :width="participants.length > 0 ? 100 : 0">
@@ -563,9 +563,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
     min-width: 100%;
   }
 
-  .pagination-container {
-    padding: 12px 0;
-  }
+
 
   .modern-pagination :deep(.el-pagination) {
     --el-pagination-font-size: 13px;
@@ -589,7 +587,6 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .pagination-container {
   display: flex;
   justify-content: center;
-  padding: 16px 0;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
