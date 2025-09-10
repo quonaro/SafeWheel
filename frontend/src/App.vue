@@ -440,7 +440,7 @@ onMounted(() => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   padding: 40px;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
@@ -449,6 +449,7 @@ onMounted(() => {
   .content-card {
     padding: 24px;
     border-radius: 16px;
+    overflow: visible;
   }
 }
 
@@ -456,6 +457,7 @@ onMounted(() => {
   .content-card {
     padding: 16px;
     border-radius: 12px;
+    overflow: visible;
   }
 }
 
@@ -510,7 +512,7 @@ onMounted(() => {
   background: #ffffff;
   border-radius: 20px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -586,8 +588,8 @@ onMounted(() => {
   align-items: flex-start;
   max-height: calc(100vh - 200px);
   overflow-y: auto;
-  padding: 20px 0;
-  margin: -20px 0;
+  padding: 40px 20px;
+  margin: 0;
 }
 
 /* Адаптивность для разных экранов */
@@ -608,8 +610,8 @@ onMounted(() => {
     max-width: 100%;
     justify-content: center;
     max-height: calc(100vh - 200px);
-    padding: 15px 0;
-    margin: -15px 0;
+    padding: 30px 15px;
+    margin: 0;
   }
 
   .competition-card {
@@ -618,6 +620,7 @@ onMounted(() => {
 
   .competition-selector {
     padding: clamp(30px, 5vw, 50px) clamp(16px, 4vw, 30px);
+    overflow: visible;
   }
 
   .header-content {
@@ -648,8 +651,8 @@ onMounted(() => {
   .competition-list {
     justify-content: center;
     max-height: calc(100vh - 180px);
-    padding: 10px 0;
-    margin: -10px 0;
+    padding: 25px 10px;
+    margin: 0;
   }
 
   .competition-card {
@@ -665,12 +668,13 @@ onMounted(() => {
 @media (max-width: 480px) {
   .competition-list {
     max-height: calc(100vh - 160px);
-    padding: 8px 0;
-    margin: -8px 0;
+    padding: 20px 8px;
+    margin: 0;
   }
 
   .competition-selector {
     padding: clamp(20px, 4vw, 30px) clamp(12px, 3vw, 20px);
+    overflow: visible;
   }
 
   .header-text h1 {
@@ -712,6 +716,7 @@ onMounted(() => {
 
   .competition-selector {
     padding: clamp(60px, 8vw, 100px) clamp(40px, 6vw, 80px);
+    overflow: visible;
   }
 
   .selector-header h1 {
