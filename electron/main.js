@@ -207,6 +207,11 @@ function createWindow() {
     icon: path.join(__dirname, "../assets/icon.png"),
     titleBarStyle: "default",
     show: false,
+    // Отключаем системные горячие клавиши для предотвращения SIGSEGV
+    autoHideMenuBar: true,
+    // Дополнительные настройки для предотвращения SIGSEGV
+    focusable: true,
+    alwaysOnTop: false,
   });
 
   // Загружаем приложение
@@ -244,6 +249,7 @@ function createWindow() {
     // В продакшене загружаем сразу
     mainWindow.loadURL(startUrl);
   }
+
 
   // Обработка ошибок загрузки
   mainWindow.webContents.on(
@@ -316,9 +322,22 @@ function createWindow() {
     }
   );
 
-  // Добавляем горячие клавиши для разработки
-  if (isDev) {
-    mainWindow.webContents.on("before-input-event", (event, input) => {
+  // Обработка клавиатурных событий для предотвращения SIGSEGV и горячие клавиши
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    // Блокируем системные горячие клавиши, которые могут вызывать SIGSEGV
+    if (input.alt && !input.control && !input.shift && !input.meta) {
+      // Блокируем одиночное нажатие ALT
+      event.preventDefault();
+      return;
+    }
+    
+    // Разрешаем ALT в комбинациях (Alt+Tab, Alt+F4 и т.д.)
+    if (input.alt && (input.control || input.shift || input.meta)) {
+      return; // Разрешаем комбинации с ALT
+    }
+
+    // Горячие клавиши для разработки
+    if (isDev) {
       // F12 - открыть/закрыть DevTools
       if (input.key === "F12") {
         mainWindow.webContents.toggleDevTools();
@@ -335,17 +354,8 @@ function createWindow() {
       if (input.control && input.shift && input.key === "R") {
         mainWindow.webContents.reloadIgnoringCache();
       }
-      // Alt - показать/скрыть меню
-      if (input.alt && input.key === "Alt") {
-        const menu = Menu.getApplicationMenu();
-        if (menu) {
-          Menu.setApplicationMenu(null);
-        } else {
-          createMenu();
-        }
-      }
-    });
-  }
+    }
+  });
 
   // Настраиваем контекстное меню
   mainWindow.webContents.on("context-menu", (event, params) => {
