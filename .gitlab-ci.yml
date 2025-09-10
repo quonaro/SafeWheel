@@ -26,9 +26,9 @@ install_and_build:
     - echo "🔧 Устанавливаем зависимости корневого проекта..."
     - npm ci
     - echo "🔧 Устанавливаем зависимости фронтенда..."
-    - cd frontend && npm ci
+    - cd frontend && npm ci && cd ..
     - echo "🔨 Собираем фронтенд..."
-    - cd frontend && npm run build
+    - cd frontend && npm run build && cd ..
     - echo "✅ Фронтенд собран успешно"
     - ls -la frontend/dist/
   artifacts:
@@ -53,9 +53,9 @@ build_linux:
     - echo "🔧 Устанавливаем зависимости корневого проекта..."
     - npm ci
     - echo "🔧 Устанавливаем зависимости фронтенда..."
-    - cd frontend && npm ci
+    - cd frontend && npm ci && cd ..
     - echo "🔨 Собираем фронтенд..."
-    - cd frontend && npm run build
+    - cd frontend && npm run build && cd ..
     - echo "🔍 Проверяем, что фронтенд собран..."
     - ls -la frontend/dist/
     - echo "🔨 Собираем Electron приложение для Linux..."
@@ -83,9 +83,9 @@ build_windows:
     - echo "🔧 Устанавливаем зависимости корневого проекта..."
     - npm ci
     - echo "🔧 Устанавливаем зависимости фронтенда..."
-    - cd frontend && npm ci
+    - cd frontend && npm ci && cd ..
     - echo "🔨 Собираем фронтенд..."
-    - cd frontend && npm run build
+    - cd frontend && npm run build && cd ..
     - echo "🔍 Проверяем, что фронтенд собран..."
     - ls -la frontend/dist/
     - echo "🔨 Собираем Electron приложение для Windows..."
