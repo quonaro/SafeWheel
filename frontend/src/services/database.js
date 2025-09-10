@@ -56,6 +56,7 @@ class DatabaseService {
       }),
       getStageResults: async (stageId) => [],
       computeStandings: async (competitionId) => [],
+      getParticipantsWithResults: async (competitionId, stageId) => [],
     };
   }
 
@@ -136,6 +137,9 @@ class DatabaseService {
   }
   computeStandings(competitionId) {
     return this.api.computeStandings(competitionId);
+  }
+  getParticipantsWithResults(competitionId, stageId) {
+    return this.api.getParticipantsWithResults(competitionId, stageId);
   }
 }
 

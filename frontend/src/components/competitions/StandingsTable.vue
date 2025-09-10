@@ -11,8 +11,8 @@
         </template>
         <div class="table-container">
           <el-table :data="paginatedRows" style="width: 100%" :class="['modern-table', { 'empty-table': rows.length === 0 }]"
-            :max-height="480" empty-text="Нет данных для отображения">
-            <el-table-column prop="rank" label="Место" :width="rows.length > 0 ? 80 : 0">
+            :max-height="460" empty-text="Нет данных для отображения">
+            <el-table-column prop="rank" label="Место" :width="rows.length > 0 ? 100 : 0">
               <template #default="scope">
                 <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
                   <template v-if="scope.row.rank === 1">
@@ -253,9 +253,11 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   background: #f3f4f6;
   color: #111827;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   padding: 8px 10px;
   border: none;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .modern-table :deep(.el-table__body tr) {
@@ -269,6 +271,13 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .modern-table :deep(.el-table__body td) {
   padding: 6px 10px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Центрирование ячеек данных */
+.modern-table :deep(.el-table__body td:nth-child(1)), /* Место */
+.modern-table :deep(.el-table__body td:nth-child(3)), /* Штрафы */
+.modern-table :deep(.el-table__body td:nth-child(4)) { /* Время */
+  text-align: center;
 }
 
 /* Стили для ячеек */

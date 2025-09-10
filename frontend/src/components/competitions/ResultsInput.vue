@@ -162,34 +162,28 @@ const parseTimeToSeconds = (timeStr) => {
 
 const loadRows = async () => {
   if (!stageId.value) { rows.value = []; return }
-  // Все участники соревнования по командам
-  const teamsData = await api.listTeams(props.competitionId)
-  const participantRows = []
-  for (const t of teamsData) {
-    const participants = await api.listParticipants(t.id)
-    for (const p of participants) {
-      participantRows.push({
-        participant_id: p.id,
-        team_id: t.id,
-        team_name: t.name,
-        full_name: p.full_name,
-        age: p.age,
-        time_seconds: 0,
-        time_display: '00:00',
-        penalty_points: 0
-      })
-    }
+  
+  try {
+    // Используем оптимизированный метод для загрузки участников с результатами
+    const participantsWithResults = await api.getParticipantsWithResults(props.competitionId, stageId.value)
+    
+    // Преобразуем данные в нужный формат
+    const participantRows = participantsWithResults.map(p => ({
+      participant_id: p.participant_id,
+      team_id: p.team_id,
+      team_name: p.team_name,
+      full_name: p.full_name,
+      age: p.age,
+      time_seconds: p.time_seconds || 0,
+      time_display: formatTime(p.time_seconds || 0),
+      penalty_points: p.penalty_points || 0
+    }))
+    
+    rows.value = participantRows
+  } catch (error) {
+    console.error('Ошибка загрузки участников:', error)
+    rows.value = []
   }
-  const existing = await api.getStageResults(stageId.value)
-  for (const r of existing) {
-    const idx = participantRows.findIndex(x => x.participant_id === r.participant_id)
-    if (idx >= 0) {
-      participantRows[idx].time_seconds = r.time_seconds
-      participantRows[idx].time_display = formatTime(r.time_seconds)
-      participantRows[idx].penalty_points = r.penalty_points
-    }
-  }
-  rows.value = participantRows
 }
 
 
