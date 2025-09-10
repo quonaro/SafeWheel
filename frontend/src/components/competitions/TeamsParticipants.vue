@@ -26,7 +26,7 @@
             <div class="table-scroll">
               <el-table :data="participantsByTeam[scope.row.id] || []" size="small" style="width: 100%"
                 class="nested-table">
-                <el-table-column prop="full_name" label="ФИО" width="180">
+                <el-table-column prop="full_name" label="ФИО" width="350">
                   <template #default="p">
                     <div class="editable-cell" @click="editParticipant(scope.row.id, p.row)">
                       <span v-if="!p.row.editing" class="name-text">{{ p.row.full_name }}</span>
@@ -462,7 +462,7 @@ const handleAgeChange = async (teamId, participant) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 160px;
+  max-width: 230px;
 }
 
 .editable-cell:hover {
