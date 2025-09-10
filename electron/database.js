@@ -207,6 +207,16 @@ class DatabaseManager {
       }
 
       console.log("✅ Таблицы конкурсов созданы/проверены");
+      
+      // Выполняем миграции
+      await this.migrateStagesTable();
+      
+      // Заполняем тестовыми данными если база пустая
+      const existingCompetitions = this.db.prepare("SELECT COUNT(*) as count FROM competitions").get();
+      if (existingCompetitions.count === 0) {
+        console.log("🌱 База данных пустая, загружаем тестовые данные...");
+        await this.seedTestData();
+      }
     } catch (error) {
       console.error("❌ Ошибка создания таблиц:", error.message);
       throw error;
@@ -460,10 +470,388 @@ class DatabaseManager {
     return rows.map((r, idx) => ({ ...r, rank: idx + 1 }));
   }
 
+  // ===== Результаты по этапам =====
+  async getStageStandings(competitionId) {
+    const sql = `
+      WITH stage_team_results AS (
+        SELECT s.id AS stage_id, s.name AS stage_name, s.order_index,
+               t.id AS team_id, t.name AS team_name,
+               COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
+               COALESCE(SUM(sr.time_seconds), 0) AS total_time,
+               AVG(p.age) AS avg_age
+        FROM stages s
+        CROSS JOIN teams t
+        LEFT JOIN participants p ON p.team_id = t.id
+        LEFT JOIN stage_results sr ON sr.stage_id = s.id AND sr.participant_id = p.id
+        WHERE s.competition_id = ? AND t.competition_id = ?
+        GROUP BY s.id, t.id
+        ORDER BY s.order_index, total_penalties ASC, total_time ASC, avg_age ASC
+      )
+      SELECT * FROM stage_team_results
+    `;
+    const rows = this.db.prepare(sql).all(competitionId, competitionId);
+    
+    // Группируем по этапам и добавляем ранги
+    const stagesMap = new Map();
+    rows.forEach(row => {
+      if (!stagesMap.has(row.stage_id)) {
+        stagesMap.set(row.stage_id, {
+          stage_id: row.stage_id,
+          stage_name: row.stage_name,
+          order_index: row.order_index,
+          results: []
+        });
+      }
+      stagesMap.get(row.stage_id).results.push(row);
+    });
+
+    // Добавляем ранги для каждого этапа
+    const stages = Array.from(stagesMap.values()).sort((a, b) => a.order_index - b.order_index);
+    stages.forEach(stage => {
+      stage.results.forEach((result, idx) => {
+        result.rank = idx + 1;
+      });
+    });
+
+    return stages;
+  }
+
+  // ===== Детальные результаты по этапам с личным прогрессом =====
+  async getStageStandingsWithParticipants(competitionId) {
+    const sql = `
+      WITH stage_participant_results AS (
+        SELECT s.id AS stage_id, s.name AS stage_name, s.order_index,
+               t.id AS team_id, t.name AS team_name,
+               p.id AS participant_id, p.full_name, p.gender, p.age,
+               COALESCE(sr.penalty_points, 0) AS penalty_points,
+               COALESCE(sr.time_seconds, 0) AS time_seconds
+        FROM stages s
+        CROSS JOIN teams t
+        LEFT JOIN participants p ON p.team_id = t.id
+        LEFT JOIN stage_results sr ON sr.stage_id = s.id AND sr.participant_id = p.id
+        WHERE s.competition_id = ? AND t.competition_id = ?
+        ORDER BY s.order_index, t.name, p.full_name
+      )
+      SELECT * FROM stage_participant_results
+    `;
+    const rows = this.db.prepare(sql).all(competitionId, competitionId);
+    
+    // Группируем по этапам и командам
+    const stagesMap = new Map();
+    rows.forEach(row => {
+      if (!stagesMap.has(row.stage_id)) {
+        stagesMap.set(row.stage_id, {
+          stage_id: row.stage_id,
+          stage_name: row.stage_name,
+          order_index: row.order_index,
+          teams: new Map()
+        });
+      }
+      
+      const stage = stagesMap.get(row.stage_id);
+      if (!stage.teams.has(row.team_id)) {
+        stage.teams.set(row.team_id, {
+          team_id: row.team_id,
+          team_name: row.team_name,
+          participants: [],
+          total_penalties: 0,
+          total_time: 0
+        });
+      }
+      
+      const team = stage.teams.get(row.team_id);
+      team.participants.push({
+        participant_id: row.participant_id,
+        full_name: row.full_name,
+        gender: row.gender,
+        age: row.age,
+        penalty_points: row.penalty_points,
+        time_seconds: row.time_seconds
+      });
+      
+      team.total_penalties += row.penalty_points;
+      team.total_time += row.time_seconds;
+    });
+
+    // Преобразуем Map в обычные объекты и добавляем ранги
+    const stages = Array.from(stagesMap.values())
+      .sort((a, b) => a.order_index - b.order_index)
+      .map(stage => ({
+        stage_id: stage.stage_id,
+        stage_name: stage.stage_name,
+        order_index: stage.order_index,
+        teams: Array.from(stage.teams.values())
+          .sort((a, b) => a.total_penalties - b.total_penalties || a.total_time - b.total_time)
+          .map((team, teamIdx) => ({
+            ...team,
+            rank: teamIdx + 1,
+            participants: team.participants
+              .sort((a, b) => a.penalty_points - b.penalty_points || a.time_seconds - b.time_seconds)
+              .map((participant, partIdx) => ({
+                ...participant,
+                rank: partIdx + 1
+              }))
+          }))
+      }));
+
+    return stages;
+  }
+
+  // ===== Личные результаты участников =====
+  async getParticipantResults(competitionId) {
+    const sql = `
+      WITH participant_totals AS (
+        SELECT p.id, p.full_name, p.gender, p.age, t.name AS team_name,
+               COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
+               COALESCE(SUM(sr.time_seconds), 0) AS total_time
+        FROM participants p
+        JOIN teams t ON t.id = p.team_id
+        LEFT JOIN stage_results sr ON sr.participant_id = p.id
+        WHERE t.competition_id = ?
+        GROUP BY p.id
+        ORDER BY total_penalties ASC, total_time ASC, p.age ASC
+      )
+      SELECT *, ROW_NUMBER() OVER (ORDER BY total_penalties ASC, total_time ASC, age ASC) as rank
+      FROM participant_totals
+    `;
+    const rows = this.db.prepare(sql).all(competitionId);
+    return rows;
+  }
+
+  // ===== Детальные результаты участника по этапам =====
+  async getParticipantStageDetails(competitionId, participantId = null) {
+    let sql, params;
+    
+    if (participantId) {
+      // Результаты конкретного участника
+      sql = `
+        SELECT s.id AS stage_id, s.name AS stage_name, s.order_index,
+               p.id AS participant_id, p.full_name, p.gender, p.age,
+               t.name AS team_name,
+               COALESCE(sr.penalty_points, 0) AS penalty_points,
+               COALESCE(sr.time_seconds, 0) AS time_seconds
+        FROM stages s
+        CROSS JOIN participants p
+        JOIN teams t ON t.id = p.team_id
+        LEFT JOIN stage_results sr ON sr.stage_id = s.id AND sr.participant_id = p.id
+        WHERE s.competition_id = ? AND p.id = ?
+        ORDER BY s.order_index
+      `;
+      params = [competitionId, participantId];
+    } else {
+      // Результаты всех участников
+      sql = `
+        SELECT s.id AS stage_id, s.name AS stage_name, s.order_index,
+               p.id AS participant_id, p.full_name, p.gender, p.age,
+               t.name AS team_name,
+               COALESCE(sr.penalty_points, 0) AS penalty_points,
+               COALESCE(sr.time_seconds, 0) AS time_seconds
+        FROM stages s
+        CROSS JOIN participants p
+        JOIN teams t ON t.id = p.team_id
+        LEFT JOIN stage_results sr ON sr.stage_id = s.id AND sr.participant_id = p.id
+        WHERE s.competition_id = ?
+        ORDER BY s.order_index, t.name, p.full_name
+      `;
+      params = [competitionId];
+    }
+    
+    const rows = this.db.prepare(sql).all(...params);
+    return rows;
+  }
+
+  // Миграция таблицы stages - добавление колонки order_index
+  async migrateStagesTable() {
+    try {
+      const tableInfo = this.db.prepare("PRAGMA table_info(stages)").all();
+      const hasOrderIndex = tableInfo.some(col => col.name === 'order_index');
+
+      if (!hasOrderIndex) {
+        console.log("🔄 Добавляем колонку order_index в таблицу stages...");
+        this.db.prepare("ALTER TABLE stages ADD COLUMN order_index INTEGER DEFAULT 0").run();
+        this.db.prepare("UPDATE stages SET order_index = id WHERE order_index = 0").run();
+        console.log("✅ Колонка order_index добавлена в таблицу stages");
+      }
+    } catch (error) {
+      console.error("❌ Ошибка миграции таблицы stages:", error.message);
+    }
+  }
+
   // Миграция данных из JSON файла (если существует) — отключено для конкурсов
   async migrateFromJson() {
     // Зарезервировано под будущую миграцию, сейчас не используется
     return;
+  }
+
+  // Заполнение тестовыми данными из testing.json
+  async seedTestData() {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Путь к файлу testing.json
+      const testingDataPath = path.join(__dirname, '..', 'testing.json');
+      
+      if (!fs.existsSync(testingDataPath)) {
+        console.log('📄 Файл testing.json не найден, пропускаем заполнение тестовыми данными');
+        return;
+      }
+
+      const testingData = JSON.parse(fs.readFileSync(testingDataPath, 'utf8'));
+      
+      // Создаем тестовое соревнование
+      const competition = await this.createCompetition({
+        name: 'Областной конкурс "Безопасное колесо - 2024"',
+        description: 'Тестовые данные из testing.json',
+        emoji: '🏆'
+      });
+
+      console.log(`✅ Создано соревнование: ${competition.name}`);
+
+      // Создаем этапы на основе ключей из JSON
+      const stages = Object.keys(testingData);
+      const createdStages = [];
+      
+      for (let i = 0; i < stages.length; i++) {
+        const stage = await this.createStage(competition.id, {
+          name: stages[i],
+          order_index: i + 1
+        });
+        createdStages.push(stage);
+        console.log(`✅ Создан этап: ${stage.name}`);
+      }
+
+      // Сначала собираем все команды и участников из всех этапов
+      const allTeamsData = {};
+      const allParticipants = {};
+
+      for (let stageIndex = 0; stageIndex < stages.length; stageIndex++) {
+        const stageName = stages[stageIndex];
+        const stageData = testingData[stageName];
+        const currentStage = createdStages[stageIndex];
+
+        // Группируем участников по командам для текущего этапа
+        const teamsData = {};
+        let currentTeam = null;
+
+        for (const row of stageData) {
+          const firstColumnKey = Object.keys(row)[0];
+          const firstColumnValue = row[firstColumnKey];
+          
+          // Если есть название команды в первой колонке (не заголовок и не пустое)
+          if (firstColumnValue && 
+              firstColumnValue !== 'Команда' && 
+              firstColumnValue !== 'ФИ участника' &&
+              (firstColumnValue.includes('ГО') || firstColumnValue.includes('МО'))) {
+            currentTeam = firstColumnValue;
+            if (!teamsData[currentTeam]) {
+              teamsData[currentTeam] = [];
+            }
+            console.log(`🔍 Найдена команда: ${currentTeam}`);
+          }
+          // Если есть данные участника (есть Column2 с именем)
+          else if (row['Column2'] && 
+                   row['Column2'] !== 'ФИ участника' && 
+                   row['Column2'] !== 'Команда' &&
+                   currentTeam) {
+            teamsData[currentTeam].push({
+              name: row['Column2'],
+              gender: row['Column3'],
+              time: row['Column4'],
+              penalties: row['Column5'],
+              stage_id: currentStage.id
+            });
+            console.log(`  👤 Участник: ${row['Column2']} (${row['Column3']}, ${row['Column4']}, ${row['Column5']} штрафов)`);
+          }
+        }
+
+        // Объединяем данные команд
+        for (const [teamName, participants] of Object.entries(teamsData)) {
+          if (participants.length === 0) continue;
+
+          if (!allTeamsData[teamName]) {
+            allTeamsData[teamName] = [];
+          }
+
+          // Добавляем участников команды для текущего этапа
+          for (const participant of participants) {
+            if (participant.name === 'ОТСУТСТВУЕТ') continue;
+
+            const participantKey = `${teamName}_${participant.name}`;
+            if (!allParticipants[participantKey]) {
+              allParticipants[participantKey] = {
+                name: participant.name,
+                gender: participant.gender,
+                teamName: teamName,
+                results: {}
+              };
+            }
+
+            // Добавляем результат для текущего этапа
+            allParticipants[participantKey].results[participant.stage_id] = {
+              time: participant.time,
+              penalties: participant.penalties
+            };
+          }
+        }
+      }
+
+      // Создаем команды
+      const createdTeams = {};
+      for (const teamName of Object.keys(allTeamsData)) {
+        const team = await this.createTeam(competition.id, teamName);
+        createdTeams[teamName] = team;
+        console.log(`✅ Создана команда: ${team.name}`);
+      }
+
+      // Создаем участников и их результаты
+      for (const [participantKey, participantData] of Object.entries(allParticipants)) {
+        const team = createdTeams[participantData.teamName];
+        if (!team) continue;
+
+        // Создаем участника
+        const createdParticipant = await this.createParticipant(team.id, {
+          full_name: participantData.name.trim(),
+          gender: participantData.gender === 'м' ? 'М' : 'Ж',
+          age: Math.floor(Math.random() * 3) + 10 // Случайный возраст 10-12 лет
+        });
+
+        console.log(`✅ Создан участник: ${createdParticipant.full_name}`);
+
+        // Создаем результаты для каждого этапа
+        for (const [stageId, result] of Object.entries(participantData.results)) {
+          const timeInSeconds = this.parseTimeToSeconds(result.time);
+          
+          if (timeInSeconds > 0 || result.penalties > 0) {
+            await this.upsertStageResult(parseInt(stageId), createdParticipant.id, {
+              time_seconds: timeInSeconds,
+              penalty_points: result.penalties || 0
+            });
+            console.log(`  📊 Результат для этапа ${stageId}: ${result.time}, ${result.penalties} штрафов`);
+          }
+        }
+      }
+
+      console.log('🎉 Тестовые данные успешно загружены!');
+      return competition.id;
+    } catch (error) {
+      console.error('❌ Ошибка загрузки тестовых данных:', error.message);
+      throw error;
+    }
+  }
+
+  // Парсинг времени из формата "00:14:54" в секунды
+  parseTimeToSeconds(timeStr) {
+    if (!timeStr || timeStr === '00:00:00') return 0;
+    
+    const parts = timeStr.split(':');
+    if (parts.length !== 3) return 0;
+    
+    const hours = parseInt(parts[0]) || 0;
+    const minutes = parseInt(parts[1]) || 0;
+    const seconds = parseInt(parts[2]) || 0;
+    
+    return hours * 3600 + minutes * 60 + seconds;
   }
 
   // Закрытие соединения
