@@ -22,13 +22,15 @@
     "appId": "com.safewheel.app",
     "productName": "SafeWheel",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "electron/**/*",
       "frontend/dist/**/*",
       "node_modules/better-sqlite3/**/*"
     ],
+    "icon": "build/icon.png",
     "mac": {
       "category": "public.app-category.productivity"
     },
@@ -65,13 +67,15 @@
         "StartupWMClass": "safewheel"
       }
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "SafeWheel"
-    },
+        "nsis": {
+          "oneClick": false,
+          "allowToChangeInstallationDirectory": true,
+          "createDesktopShortcut": true,
+          "createStartMenuShortcut": true,
+          "shortcutName": "SafeWheel",
+          "artifactName": "SafeWheel Setup ${version}.${ext}",
+          "uninstallDisplayName": "SafeWheel ${version}"
+        },
     "publish": null
   },
   "dependencies": {

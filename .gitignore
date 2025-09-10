@@ -63,3 +63,7 @@ out/
 
 # CI/CD cache
 .cache/
+
+# Build resources (keep icons)
+build/*
+!build/icon.*
