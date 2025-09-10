@@ -76,10 +76,10 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="total_time" label="Время (сек)" :width="participants.length > 0 ? 150 : 0">
+        <el-table-column prop="total_time" label="Время" :width="participants.length > 0 ? 150 : 0">
           <template #default="scope">
             <div class="time-cell">
-              <span class="time-value">{{ scope.row.total_time }}</span>
+              <span class="time-value">{{ formatTime(scope.row.total_time) }}</span>
             </div>
           </template>
         </el-table-column>
@@ -131,6 +131,16 @@ const participants = ref([])
 const loading = ref(false)
 const detailsDialogVisible = ref(false)
 const selectedParticipant = ref(null)
+
+// Функция форматирования времени из секунд в формат ММ:СС
+const formatTime = (seconds) => {
+  if (!seconds || seconds === 0) return '00:00'
+  
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+  
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
+}
 
 const load = async () => {
   if (!props.competitionId) { 

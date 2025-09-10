@@ -50,11 +50,11 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Время (сек)" :min-width="filteredRows.length > 0 ? 120 : 0">
+        <el-table-column label="Время (ММ:СС)" :min-width="filteredRows.length > 0 ? 120 : 0">
           <template #default="scope">
             <div class="input-cell">
-              <el-input-number v-model="scope.row.time_seconds" :min="0" :step="0.1" @change="debouncedSave(scope.row)"
-                size="small" class="time-input" />
+              <el-input v-model="scope.row.time_display" @change="handleTimeChange(scope.row)"
+                size="small" class="time-input" placeholder="00:00" />
             </div>
           </template>
         </el-table-column>
@@ -96,6 +96,29 @@ const loadTeams = async () => {
   teams.value = await api.listTeams(props.competitionId)
 }
 
+// Функция форматирования времени из секунд в формат ММ:СС
+const formatTime = (seconds) => {
+  if (!seconds || seconds === 0) return '00:00'
+  
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+  
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
+}
+
+// Функция парсинга времени из формата ММ:СС в секунды
+const parseTimeToSeconds = (timeStr) => {
+  if (!timeStr || timeStr === '00:00') return 0
+  
+  const parts = timeStr.split(':')
+  if (parts.length !== 2) return 0
+  
+  const minutes = parseInt(parts[0]) || 0
+  const seconds = parseInt(parts[1]) || 0
+  
+  return minutes * 60 + seconds
+}
+
 const loadRows = async () => {
   if (!stageId.value) { rows.value = []; return }
   // Все участники соревнования по командам
@@ -111,6 +134,7 @@ const loadRows = async () => {
         full_name: p.full_name,
         age: p.age,
         time_seconds: 0,
+        time_display: '00:00',
         penalty_points: 0
       })
     }
@@ -118,7 +142,11 @@ const loadRows = async () => {
   const existing = await api.getStageResults(stageId.value)
   for (const r of existing) {
     const idx = participantRows.findIndex(x => x.participant_id === r.participant_id)
-    if (idx >= 0) Object.assign(participantRows[idx], { time_seconds: r.time_seconds, penalty_points: r.penalty_points })
+    if (idx >= 0) {
+      participantRows[idx].time_seconds = r.time_seconds
+      participantRows[idx].time_display = formatTime(r.time_seconds)
+      participantRows[idx].penalty_points = r.penalty_points
+    }
   }
   rows.value = participantRows
 }
@@ -154,6 +182,23 @@ watch(() => props.competitionId, () => {
   loadTeams()
 }, { immediate: true })
 watch(stageId, () => loadRows(), { immediate: true })
+
+// Обработка изменения времени
+const handleTimeChange = (row) => {
+  // Валидация формата ММ:СС
+  const timeRegex = /^([0-5]?[0-9]):([0-5][0-9])$/
+  if (!timeRegex.test(row.time_display)) {
+    // Если формат неверный, возвращаем к предыдущему значению
+    row.time_display = formatTime(row.time_seconds)
+    return
+  }
+  
+  // Конвертируем в секунды
+  row.time_seconds = parseTimeToSeconds(row.time_display)
+  
+  // Сохраняем
+  debouncedSave(row)
+}
 
 let timer = null
 const debouncedSave = (row) => {
@@ -377,18 +422,19 @@ const debouncedSave = (row) => {
   width: 100%;
 }
 
-.time-input :deep(.el-input-number__input) {
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+.time-input :deep(.el-input__inner) {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
   border-radius: 6px;
   text-align: center;
   font-weight: 600;
-  color: #1e40af;
+  color: #059669;
+  font-family: 'Courier New', monospace;
 }
 
-.time-input :deep(.el-input-number__input:focus) {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+.time-input :deep(.el-input__inner:focus) {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .penalty-input :deep(.el-input-number__input) {

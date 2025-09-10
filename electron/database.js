@@ -840,18 +840,27 @@ class DatabaseManager {
     }
   }
 
-  // Парсинг времени из формата "00:14:54" в секунды
+  // Парсинг времени из формата "14:54" (минуты:секунды) в секунды
   parseTimeToSeconds(timeStr) {
-    if (!timeStr || timeStr === '00:00:00') return 0;
+    if (!timeStr || timeStr === '00:00') return 0;
     
     const parts = timeStr.split(':');
-    if (parts.length !== 3) return 0;
+    if (parts.length !== 2) return 0;
     
-    const hours = parseInt(parts[0]) || 0;
-    const minutes = parseInt(parts[1]) || 0;
-    const seconds = parseInt(parts[2]) || 0;
+    const minutes = parseInt(parts[0]) || 0;
+    const seconds = parseInt(parts[1]) || 0;
     
-    return hours * 3600 + minutes * 60 + seconds;
+    return minutes * 60 + seconds;
+  }
+
+  // Форматирование времени из секунд в формат "ММ:СС"
+  formatTime(seconds) {
+    if (!seconds || seconds === 0) return '00:00';
+    
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 
   // Закрытие соединения

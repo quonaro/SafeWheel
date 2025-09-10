@@ -108,7 +108,7 @@
               <h4 class="team-name">{{ team.team_name }}</h4>
               <div class="team-stats">
                 <span class="stat-item">Штрафы: {{ team.total_penalties }}</span>
-                <span class="stat-item">Время: {{ team.total_time }}с</span>
+                <span class="stat-item">Время: {{ formatTime(team.total_time) }}</span>
                 <span class="stat-item participants-count">Участников: {{ team.participants.length }}</span>
               </div>
             </div>
@@ -149,7 +149,7 @@
               <el-table-column prop="time_seconds" label="Время" width="100">
                 <template #default="scope">
                   <div class="time-cell">
-                    <span class="time-value">{{ scope.row.time_seconds }}с</span>
+                    <span class="time-value">{{ formatTime(scope.row.time_seconds) }}</span>
                   </div>
                 </template>
               </el-table-column>
@@ -213,6 +213,16 @@ const prevStage = () => {
   if (activeStageIndex.value > 0) {
     setActiveStage(activeStageIndex.value - 1)
   }
+}
+
+// Функция форматирования времени из секунд в формат ММ:СС
+const formatTime = (seconds) => {
+  if (!seconds || seconds === 0) return '00:00'
+  
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+  
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
 const load = async () => {
