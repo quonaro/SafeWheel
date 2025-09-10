@@ -9,8 +9,8 @@
       </el-col>
     </el-row>
 
-    <div class="table-scroll">
-      <el-table :data="teams" row-key="id" style="width: 100%" class="modern-table">
+    <div class="teams-table-scroll">
+      <el-table :data="teams" row-key="id" style="width: 100%" class="modern-table" :height="400">
         <el-table-column prop="name" label="Команда" width="260">
           <template #default="scope">
             <div class="editable-cell" @click="editTeam(scope.row)">
@@ -25,10 +25,10 @@
             <div class="table-scroll">
               <el-table :data="participantsByTeam[scope.row.id] || []" size="small" style="width: 100%"
                 class="nested-table">
-                <el-table-column prop="full_name" label="ФИО">
+                <el-table-column prop="full_name" label="ФИО" width="180">
                   <template #default="p">
                     <div class="editable-cell" @click="editParticipant(scope.row.id, p.row)">
-                      <span v-if="!p.row.editing">{{ p.row.full_name }}</span>
+                      <span v-if="!p.row.editing" class="name-text">{{ p.row.full_name }}</span>
                       <el-input v-else v-model="p.row.full_name" @blur="saveParticipantInline(scope.row.id, p.row)"
                         @keyup.enter="saveParticipantInline(scope.row.id, p.row)" @keyup.escape="cancelEdit(p.row)"
                         size="small" />
@@ -321,7 +321,7 @@ const handleAgeChange = async (teamId, participant) => {
   color: #111827;
   font-weight: 600;
   font-size: 14px;
-  padding: 16px 12px;
+  padding: 10px 12px;
   border: none;
 }
 
@@ -334,7 +334,7 @@ const handleAgeChange = async (teamId, participant) => {
 }
 
 .modern-table :deep(.el-table__body td) {
-  padding: 12px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -354,7 +354,7 @@ const handleAgeChange = async (teamId, participant) => {
   color: #374151;
   font-weight: 600;
   font-size: 13px;
-  padding: 12px 8px;
+  padding: 8px 6px;
   border: none;
 }
 
@@ -363,19 +363,29 @@ const handleAgeChange = async (teamId, participant) => {
 }
 
 .nested-table :deep(.el-table__body td) {
-  padding: 8px;
+  padding: 6px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 /* Редактируемые ячейки */
 .editable-cell {
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 6px;
   transition: all 0.2s ease;
-  min-height: 24px;
+  min-height: 20px;
   display: flex;
   align-items: center;
+}
+
+/* Стили для текста ФИО с ellipsis */
+.name-text {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
 }
 
 .editable-cell:hover {
@@ -430,9 +440,9 @@ const handleAgeChange = async (teamId, participant) => {
 /* Кнопки действий */
 .table-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 12px;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px;
   background: rgba(248, 250, 252, 0.5);
   border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.05);
@@ -442,6 +452,44 @@ const handleAgeChange = async (teamId, participant) => {
   flex-shrink: 0;
 }
 
+/* Скролл для таблицы команд */
+.teams-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 600px;
+  max-height: 400px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Стилизация скроллбара для таблицы команд */
+.teams-table-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.teams-table-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.teams-table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.teams-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+.teams-table-scroll::-webkit-scrollbar-corner {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Скролл для вложенной таблицы участников */
 .table-scroll {
   width: 100%;
   max-width: 100%;
