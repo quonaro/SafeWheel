@@ -475,13 +475,14 @@ class DatabaseManager {
         SELECT 
           t.id AS team_id, 
           t.name AS team_name,
-          COUNT(p.id) AS participant_count,
-          AVG(p.age) AS avg_age,
+          (SELECT COUNT(*) FROM participants p WHERE p.team_id = t.id) AS participant_count,
+          (SELECT AVG(p.age) FROM participants p WHERE p.team_id = t.id) AS avg_age,
           COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
           COALESCE(SUM(sr.time_seconds), 0) AS total_time
         FROM teams t
         LEFT JOIN participants p ON p.team_id = t.id
         LEFT JOIN stage_results sr ON sr.participant_id = p.id
+        LEFT JOIN stages s ON s.id = sr.stage_id AND s.competition_id = ?
         WHERE t.competition_id = ?
         GROUP BY t.id, t.name
       ),
@@ -508,7 +509,7 @@ class DatabaseManager {
         total_time ASC, 
         avg_age ASC
     `;
-    const rows = this.db.prepare(sql).all(competitionId);
+    const rows = this.db.prepare(sql).all(competitionId, competitionId);
     // Добавим ранги
     return rows.map((r, idx) => ({ ...r, rank: idx + 1 }));
   }
@@ -686,13 +687,13 @@ class DatabaseManager {
     const sql = `
       WITH participant_totals AS (
         SELECT p.id, p.full_name, p.gender, p.age, t.name AS team_name,
-               COUNT(p2.id) AS team_participant_count,
+               (SELECT COUNT(*) FROM participants p2 WHERE p2.team_id = t.id) AS team_participant_count,
                COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
                COALESCE(SUM(sr.time_seconds), 0) AS total_time
         FROM participants p
         JOIN teams t ON t.id = p.team_id
-        LEFT JOIN participants p2 ON p2.team_id = t.id
         LEFT JOIN stage_results sr ON sr.participant_id = p.id
+        LEFT JOIN stages s ON s.id = sr.stage_id AND s.competition_id = ?
         WHERE t.competition_id = ?
         GROUP BY p.id, p.full_name, p.gender, p.age, t.name
       ),
@@ -721,7 +722,7 @@ class DatabaseManager {
       LIMIT ? OFFSET ?
     `;
     
-    return this.db.prepare(sql).all(competitionId, limit, actualOffset);
+    return this.db.prepare(sql).all(competitionId, competitionId, limit, actualOffset);
   }
 
   // ===== Подсчет общего количества участников =====

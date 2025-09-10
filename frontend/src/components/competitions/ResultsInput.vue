@@ -141,8 +141,10 @@ const loadTeams = async () => {
 const formatTime = (seconds) => {
   if (seconds === null || seconds === undefined || seconds === 0) return '00:00'
   
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = Math.floor(seconds % 60)
+  // Округляем до ближайшего целого числа секунд
+  const totalSeconds = Math.round(Number(seconds))
+  const minutes = Math.floor(totalSeconds / 60)
+  const remainingSeconds = totalSeconds % 60
   
   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
 }
