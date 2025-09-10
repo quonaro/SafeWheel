@@ -44,8 +44,20 @@
         <div class="content-card">
           <div v-if="!selectedCompetitionId" class="competition-selector">
             <div class="selector-header">
-              <h1>Выберите конкурс</h1>
-              <p>Для начала работы выберите существующий конкурс или создайте новый</p>
+              <div class="header-content">
+                <div class="header-text">
+                  <h1>Выберите конкурс</h1>
+                  <p>Для начала работы выберите существующий конкурс или создайте новый</p>
+                </div>
+                <div class="header-actions">
+                  <el-button type="primary" @click="openCreateDialog" class="create-button" size="large">
+                    <el-icon>
+                      <Plus />
+                    </el-icon>
+                    Создать конкурс
+                  </el-button>
+                </div>
+              </div>
             </div>
 
             <div class="competition-list">
@@ -55,15 +67,6 @@
                 <div class="competition-info">
                   <h3>{{ competition.name }}</h3>
                   <p>Конкурс "Безопасное колесо"</p>
-                </div>
-                <div class="competition-arrow">→</div>
-              </div>
-
-              <div class="competition-card new-competition" @click="openCreateDialog">
-                <div class="competition-icon">+</div>
-                <div class="competition-info">
-                  <h3>Создать новый конкурс</h3>
-                  <p>Добавить новый конкурс в систему</p>
                 </div>
                 <div class="competition-arrow">→</div>
               </div>
@@ -108,7 +111,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import CompetitionsManager from './components/CompetitionsManager.vue'
-import { UserFilled, List, Edit, TrophyBase } from '@element-plus/icons-vue'
+import { UserFilled, List, Edit, TrophyBase, Plus } from '@element-plus/icons-vue'
 
 const activeTab = ref('teams')
 const selectedCompetitionId = ref(null)
@@ -242,25 +245,51 @@ onMounted(() => {
   }
 
   .sidebar {
-    padding: 12px 0;
+    width: 60px;
+    padding: 10px 0;
   }
 
   .sidebar-content {
-    padding: 0 16px;
-    gap: 8px;
+    padding: 0 12px;
+    gap: 6px;
   }
 
   .nav-menu {
-    gap: 8px;
+    gap: 6px;
   }
 
   .nav-item {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
   }
 
   .nav-item .el-icon {
-    font-size: 16px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .sidebar {
+    width: 50px;
+    padding: 8px 0;
+  }
+
+  .sidebar-content {
+    padding: 0 8px;
+    gap: 4px;
+  }
+
+  .nav-menu {
+    gap: 4px;
+  }
+
+  .nav-item {
+    width: 32px;
+    height: 32px;
+  }
+
+  .nav-item .el-icon {
+    font-size: 10px;
   }
 }
 
@@ -471,24 +500,63 @@ onMounted(() => {
 }
 
 .selector-header {
-  text-align: center;
   margin-bottom: 50px;
   position: relative;
   z-index: 1;
 }
 
-.selector-header h1 {
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 30px;
+}
+
+.header-text {
+  flex: 1;
+  text-align: left;
+}
+
+.header-text h1 {
   font-size: 42px;
   font-weight: 800;
   margin: 0 0 16px 0;
   color: #1f2937;
 }
 
-.selector-header p {
+.header-text p {
   color: #6b7280;
   font-size: 18px;
   margin: 0;
   font-weight: 400;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.create-button {
+  background: #3b82f6;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 600;
+  font-size: 16px;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+  transition: all 0.3s ease;
+}
+
+.create-button:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+}
+
+.create-button .el-icon {
+  margin-right: 8px;
+  font-size: 18px;
 }
 
 .competition-list {
@@ -524,7 +592,7 @@ onMounted(() => {
   .competition-list {
     max-width: 100%;
     justify-content: center;
-    max-height: calc(100vh - 150px);
+    max-height: calc(100vh - 200px);
     padding: 15px 0;
     margin: -15px 0;
   }
@@ -537,19 +605,34 @@ onMounted(() => {
     padding: clamp(30px, 5vw, 50px) clamp(16px, 4vw, 30px);
   }
 
-  .selector-header h1 {
+  .header-content {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+
+  .header-text {
+    text-align: center;
+  }
+
+  .header-text h1 {
     font-size: clamp(28px, 4vw, 36px);
   }
 
-  .selector-header p {
+  .header-text p {
     font-size: clamp(14px, 2vw, 18px);
+  }
+
+  .create-button {
+    padding: 10px 20px;
+    font-size: 14px;
   }
 }
 
 @media (max-width: 600px) {
   .competition-list {
     justify-content: center;
-    max-height: calc(100vh - 120px);
+    max-height: calc(100vh - 180px);
     padding: 10px 0;
     margin: -10px 0;
   }
@@ -557,11 +640,16 @@ onMounted(() => {
   .competition-card {
     width: clamp(180px, 12vw, 240px);
   }
+
+  .create-button {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
 }
 
 @media (max-width: 480px) {
   .competition-list {
-    max-height: calc(100vh - 100px);
+    max-height: calc(100vh - 160px);
     padding: 8px 0;
     margin: -8px 0;
   }
@@ -570,12 +658,17 @@ onMounted(() => {
     padding: clamp(20px, 4vw, 30px) clamp(12px, 3vw, 20px);
   }
 
-  .selector-header h1 {
+  .header-text h1 {
     font-size: clamp(24px, 3.5vw, 32px);
   }
 
-  .selector-header p {
+  .header-text p {
     font-size: clamp(12px, 1.8vw, 16px);
+  }
+
+  .create-button {
+    padding: 6px 12px;
+    font-size: 12px;
   }
 
   .competition-card {
