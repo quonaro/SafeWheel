@@ -66,7 +66,7 @@
                 <div class="competition-icon">{{ competition.emoji || '🏆' }}</div>
                 <div class="competition-info">
                   <h3>{{ competition.name }}</h3>
-                  <p>Конкурс "Безопасное колесо"</p>
+                  <p>{{ competition.description || 'Конкурс "Безопасное колесо"' }}</p>
                 </div>
                 <div class="competition-arrow">→</div>
               </div>
@@ -84,6 +84,10 @@
       <el-form :model="competitionForm" label-width="120px">
         <el-form-item label="Название">
           <el-input v-model="competitionForm.name" placeholder="Введите название конкурса" />
+        </el-form-item>
+        <el-form-item label="Описание">
+          <el-input v-model="competitionForm.description" type="textarea" :rows="3"
+            placeholder="Введите описание конкурса (необязательно)" maxlength="500" show-word-limit />
         </el-form-item>
         <el-form-item label="Эмодзи">
           <div class="emoji-selector">
@@ -117,7 +121,7 @@ const activeTab = ref('teams')
 const selectedCompetitionId = ref(null)
 const competitions = ref([])
 const createDialogVisible = ref(false)
-const competitionForm = reactive({ name: '', emoji: '🏆' })
+const competitionForm = reactive({ name: '', description: '', emoji: '🏆' })
 
 // Список доступных эмодзи для выбора
 const availableEmojis = [
@@ -152,6 +156,7 @@ const backToSelector = () => {
 
 const openCreateDialog = () => {
   competitionForm.name = ''
+  competitionForm.description = ''
   competitionForm.emoji = '🏆'
   createDialogVisible.value = true
 }
@@ -161,6 +166,7 @@ const createCompetition = async () => {
     if (!competitionForm.name?.trim()) throw new Error('Укажите название')
     const payload = {
       name: String(competitionForm.name || '').trim(),
+      description: String(competitionForm.description || '').trim(),
       emoji: String(competitionForm.emoji || '🏆')
     }
     const created = await api.createCompetition(payload)
@@ -887,6 +893,34 @@ onMounted(() => {
 }
 
 .custom-dialog :deep(.el-input__inner::placeholder) {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.custom-dialog :deep(.el-textarea__inner) {
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  color: #374151;
+  font-size: 16px;
+  padding: 12px 16px;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.custom-dialog :deep(.el-textarea__inner:hover) {
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+.custom-dialog :deep(.el-textarea__inner:focus) {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+}
+
+.custom-dialog :deep(.el-textarea__inner::placeholder) {
   color: #9ca3af;
   font-weight: 400;
 }
