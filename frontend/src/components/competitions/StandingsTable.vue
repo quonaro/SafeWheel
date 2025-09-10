@@ -11,7 +11,7 @@
         </template>
         <div class="table-container">
           <el-table :data="paginatedRows" style="width: 100%" :class="['modern-table', { 'empty-table': rows.length === 0 }]"
-            :max-height="470" empty-text="Нет данных для отображения">
+            :max-height="480" empty-text="Нет данных для отображения">
             <el-table-column prop="rank" label="Место" :width="rows.length > 0 ? 80 : 0">
               <template #default="scope">
                 <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
@@ -445,6 +445,16 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
 .el-tabs__nav-wrap:after{
   background: none;
+}
+.results-tabs :deep(.el-tabs__item:last-child) {
+  padding-right: 12px !important;
+}
+
+.results-tabs :deep(.el-tabs__item:nth-child(2)) {
+  padding-left: 12px !important;
+}
+.results-tabs :deep(.el-tabs__nav.is-top) {
+  gap: 5px;
 }
 
 .results-tabs :deep(.el-tabs__item:hover) {

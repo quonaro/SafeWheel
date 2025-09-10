@@ -15,7 +15,7 @@
         :data="paginatedParticipants" 
         style="width: 100%" 
         :class="['modern-table', { 'empty-table': participants.length === 0 }]"
-        height="470px" 
+        height="480px" 
         empty-text="Нет данных для отображения"
       >
         <el-table-column prop="rank" label="Место" :width="participants.length > 0 ? 100 : 0">
