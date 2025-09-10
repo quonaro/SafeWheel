@@ -197,6 +197,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   width: 36px;
   height: 36px;
   margin: 0 auto;
+  background: #4b5563;
+  border: 2px solid #374151;
 }
 
 .rank-number {
@@ -210,7 +212,9 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   background: transparent;
   width: auto;
   height: auto;
-  padding: 0;
+  padding: 4px;
+  position: relative;
+  border: none;
 }
 
 .trophy {
