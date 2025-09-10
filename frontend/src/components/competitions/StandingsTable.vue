@@ -1,26 +1,27 @@
 <template>
   <div>
-    <el-row :gutter="12" class="mb-12">
-      <el-col :span="20">
-        <h3 class="table-title">Таблица результатов</h3>
-      </el-col>
-      <el-col :span="4" class="text-right">
-        <el-button type="primary" @click="load">
-          <el-icon>
-            <Refresh />
-          </el-icon>
-          Обновить
-        </el-button>
-      </el-col>
-    </el-row>
+    <div class="mb-12">
+      <h3 class="table-title">Таблица результатов</h3>
+    </div>
 
     <div class="table-scroll">
       <el-table :data="rows" style="width: 100%" :class="['modern-table', { 'empty-table': rows.length === 0 }]"
         :height="rows.length > 0 ? 'auto' : 200" empty-text="Нет данных для отображения">
         <el-table-column prop="rank" label="Место" :width="rows.length > 0 ? 100 : 0">
           <template #default="scope">
-            <div class="rank-cell">
-              <span class="rank-number">{{ scope.row.rank }}</span>
+            <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
+              <template v-if="scope.row.rank === 1">
+                <span class="trophy gold">🥇</span>
+              </template>
+              <template v-else-if="scope.row.rank === 2">
+                <span class="trophy silver">🥈</span>
+              </template>
+              <template v-else-if="scope.row.rank === 3">
+                <span class="trophy bronze">🥉</span>
+              </template>
+              <template v-else>
+                <span class="rank-number">{{ scope.row.rank }}</span>
+              </template>
             </div>
           </template>
         </el-table-column>
@@ -45,13 +46,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="avg_age" label="Средний возраст" :width="rows.length > 0 ? 160 : 0">
-          <template #default="scope">
-            <div class="age-cell">
-              <span class="age-value">{{ scope.row.avg_age }}</span>
-            </div>
-          </template>
-        </el-table-column>
+
       </el-table>
     </div>
   </div>
@@ -59,7 +54,6 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import { Refresh } from '@element-plus/icons-vue'
 
 const props = defineProps({ competitionId: { type: Number, required: false } })
 const api = window.electronAPI?.database
@@ -186,7 +180,6 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   justify-content: center;
   padding: 6px;
   border-radius: 50%;
-  background: #f59e0b;
   width: 36px;
   height: 36px;
   margin: 0 auto;
@@ -196,6 +189,32 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   font-weight: 700;
   color: white;
   font-size: 14px;
+}
+
+/* Выделение 1-3 мест трофеями и цветами */
+.rank-cell.is-top {
+  background: transparent;
+  width: auto;
+  height: auto;
+  padding: 0;
+}
+
+.trophy {
+  font-size: 22px;
+  line-height: 1;
+  display: inline-block;
+}
+
+.trophy.gold {
+  filter: drop-shadow(0 0 6px rgba(234, 179, 8, 0.45));
+}
+
+.trophy.silver {
+  filter: drop-shadow(0 0 6px rgba(156, 163, 175, 0.45));
+}
+
+.trophy.bronze {
+  filter: drop-shadow(0 0 6px rgba(217, 119, 6, 0.45));
 }
 
 .team-cell {
@@ -273,17 +292,6 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   color: #1f2937;
 }
 
-/* Кнопка обновления */
-.text-right .el-button {
-  background: #1f2937;
-  border: none;
-  color: white;
-  font-weight: 600;
-  padding: 10px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  transition: all 0.3s ease;
-}
 
 .table-scroll {
   width: 100%;
@@ -326,11 +334,6 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   word-break: break-word;
 }
 
-.text-right .el-button:hover {
-  background: #374151;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-}
 
 /* Адаптивность */
 @media (max-width: 768px) {
