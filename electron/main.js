@@ -182,6 +182,15 @@ function setupIpcHandlers() {
   ipcMain.handle("db:computeStandings", async (e, competitionId) =>
     database.computeStandings(competitionId)
   );
+  ipcMain.handle("db:getStageStandings", async (e, competitionId) =>
+    database.getStageStandings(competitionId)
+  );
+  ipcMain.handle("db:getParticipantResults", async (e, competitionId) =>
+    database.getParticipantResults(competitionId)
+  );
+  ipcMain.handle("db:getParticipantStageDetails", async (e, competitionId, participantId) =>
+    database.getParticipantStageDetails(competitionId, participantId)
+  );
 }
 
 function createWindow() {
