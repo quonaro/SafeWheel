@@ -1,9 +1,5 @@
 <template>
   <div>
-    <div class="mb-12">
-      <h3 class="table-title">Результаты соревнования</h3>
-    </div>
-
     <el-tabs v-model="activeTab" class="results-tabs">
       <el-tab-pane label="Общие результаты" name="overall">
         <div class="table-scroll">
@@ -323,40 +319,62 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 /* Стили для вкладок */
 .results-tabs {
   margin-top: 20px;
+  width: 100%;
+  overflow: visible;
 }
 
 .results-tabs :deep(.el-tabs__header) {
   margin: 0 0 20px 0;
   background: #f8fafc;
-  border-radius: 8px;
+  border-radius: 0;
   padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: visible;
 }
 
 .results-tabs :deep(.el-tabs__nav-wrap) {
   padding: 0 8px;
+  overflow: visible;
+}
+
+.results-tabs :deep(.el-tabs__nav) {
+  overflow: visible;
 }
 
 .results-tabs :deep(.el-tabs__item) {
-  padding: 12px 20px;
-  font-weight: 500;
+  padding: 8px 16px;
+  font-weight: 600;
   color: #64748b;
-  border-radius: 6px;
-  transition: all 0.3s ease;
+  border-radius: 0;
+  transition: color 0.3s ease;
+  white-space: nowrap;
+  min-width: fit-content;
+  position: relative;
+  overflow: visible;
+  font-size: 15px;
+  letter-spacing: 0.025em;
 }
 
 .results-tabs :deep(.el-tabs__item.is-active) {
   background: #ffffff;
   color: #1e40af;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.15);
+  transform: translateY(-1px);
+  border: 1px solid rgba(30, 64, 175, 0.1);
 }
 
 .results-tabs :deep(.el-tabs__item:hover) {
   color: #1e40af;
-  background: rgba(30, 64, 175, 0.05);
+}
+
+.results-tabs :deep(.el-tabs__active-bar) {
+  display: none;
 }
 
 .results-tabs :deep(.el-tabs__content) {
   padding: 0;
+  overflow: visible;
 }
 
 
@@ -404,6 +422,20 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
 /* Адаптивность */
 @media (max-width: 768px) {
+  .results-tabs :deep(.el-tabs__header) {
+    padding: 3px;
+    border-radius: 0;
+  }
+
+  .results-tabs :deep(.el-tabs__nav-wrap) {
+    padding: 0 6px;
+  }
+
+  .results-tabs :deep(.el-tabs__item) {
+    padding: 6px 12px;
+    font-size: 14px;
+    font-weight: 500;
+  }
 
   .modern-table :deep(.el-table__header th),
   .modern-table :deep(.el-table__body td) {
@@ -436,6 +468,17 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
   .table-scroll {
     min-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .results-tabs :deep(.el-tabs__item) {
+    padding: 5px 10px;
+    font-size: 13px;
+  }
+
+  .results-tabs :deep(.el-tabs__nav-wrap) {
+    padding: 0 4px;
   }
 }
 </style>
