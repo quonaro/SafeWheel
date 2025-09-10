@@ -62,12 +62,16 @@
         </el-table-column>
         <el-table-column prop="total_penalties" label="Штрафы" :width="participants.length > 0 ? 120 : 0">
           <template #default="scope">
-            <span>{{ scope.row.total_penalties }}</span>
+            <div class="penalty-cell">
+              <span class="penalty-value">{{ scope.row.total_penalties }}</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="total_time" label="Время" :width="participants.length > 0 ? 120 : 0">
           <template #default="scope">
-            <span>{{ formatTime(scope.row.total_time) }}</span>
+            <div class="time-cell">
+              <span class="time-value">{{ formatTime(scope.row.total_time) }}</span>
+            </div>
           </template>
         </el-table-column>
         </el-table>
@@ -369,6 +373,40 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   font-weight: 600;
   color: #1e40af;
   font-size: 14px;
+}
+
+.penalty-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  min-height: 18px;
+}
+
+.penalty-value {
+  font-weight: 600;
+  color: #dc2626;
+  font-size: 13px;
+}
+
+.time-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  min-height: 18px;
+}
+
+.time-value {
+  font-weight: 600;
+  color: #059669;
+  font-size: 13px;
 }
 
 
