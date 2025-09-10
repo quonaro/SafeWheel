@@ -14,13 +14,87 @@
       <p>Нет данных для отображения</p>
     </div>
 
-    <div v-else class="stages-container">
-      <div v-for="stage in stages" :key="stage.stage_id" class="stage-section">
-        <div class="stage-header">
-          <h4 class="stage-title">{{ stage.stage_name }}</h4>
+    <div v-else class="results-container">
+      <!-- Навигация по этапам -->
+      <div class="stages-navigation">
+        <!-- Выпадающий список для большого количества этапов -->
+        <div v-if="stages.length > 4" class="stage-selector">
+          <el-select 
+            v-model="activeStageIndex" 
+            placeholder="Выберите этап"
+            size="large"
+            style="width: 300px"
+            @change="setActiveStage(activeStageIndex)"
+          >
+            <el-option
+              v-for="(stage, index) in stages"
+              :key="stage.stage_id"
+              :label="`${stage.stage_name} (${stage.teams.length} команд, ${stage.teams.reduce((total, team) => total + team.participants.length, 0)} участников)`"
+              :value="index"
+            />
+          </el-select>
         </div>
         
-        <div v-for="team in stage.teams" :key="team.team_id" class="team-section">
+        <!-- Вкладки для небольшого количества этапов -->
+        <div v-else class="stages-tabs">
+          <div 
+            v-for="(stage, index) in stages" 
+            :key="stage.stage_id"
+            class="stage-tab"
+            :class="{ 'is-active': activeStageIndex === index }"
+            @click="setActiveStage(index)"
+          >
+            <div class="tab-content">
+              <span class="tab-title">{{ stage.stage_name }}</span>
+              <div class="tab-stats">
+                <span class="teams-count">{{ stage.teams.length }}</span>
+                <span class="participants-count">{{ stage.teams.reduce((total, team) => total + team.participants.length, 0) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Навигационные стрелки -->
+        <div class="navigation-controls">
+          <el-button 
+            :disabled="activeStageIndex === 0"
+            @click="prevStage"
+            size="small"
+            circle
+            title="Предыдущий этап"
+          >
+            <el-icon><ArrowLeft /></el-icon>
+          </el-button>
+          
+          <span class="stage-counter">
+            {{ activeStageIndex + 1 }} из {{ stages.length }}
+          </span>
+          
+          <el-button 
+            :disabled="activeStageIndex === stages.length - 1"
+            @click="nextStage"
+            size="small"
+            circle
+            title="Следующий этап"
+          >
+            <el-icon><ArrowRight /></el-icon>
+          </el-button>
+        </div>
+      </div>
+      
+      <!-- Контент активного этапа -->
+      <div class="active-stage-content">
+        <div v-if="activeStage" class="stage-section">
+          <div class="stage-header">
+            <h4 class="stage-title">{{ activeStage.stage_name }}</h4>
+            <div class="stage-stats">
+              <span class="teams-count">{{ activeStage.teams.length }} команд</span>
+              <span class="participants-count">{{ activeStage.teams.reduce((total, team) => total + team.participants.length, 0) }} участников</span>
+            </div>
+          </div>
+          
+          <div class="teams-container">
+            <div v-for="team in activeStage.teams" :key="team.team_id" class="team-section">
           <div class="team-header">
             <div class="team-rank">
               <span class="rank-badge" :class="{ 'is-top': [1, 2, 3].includes(team.rank) }">
@@ -35,6 +109,7 @@
               <div class="team-stats">
                 <span class="stat-item">Штрафы: {{ team.total_penalties }}</span>
                 <span class="stat-item">Время: {{ team.total_time }}с</span>
+                <span class="stat-item participants-count">Участников: {{ team.participants.length }}</span>
               </div>
             </div>
           </div>
@@ -87,6 +162,8 @@
               </el-table-column>
             </el-table>
           </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -94,8 +171,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-import { Loading, TrophyBase } from '@element-plus/icons-vue'
+import { ref, watch, computed } from 'vue'
+import { Loading, TrophyBase, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 
 const props = defineProps({ 
   competitionId: { 
@@ -107,6 +184,33 @@ const props = defineProps({
 const api = window.electronAPI?.database
 const stages = ref([])
 const loading = ref(false)
+const activeStageIndex = ref(0)
+
+// Computed свойство для активного этапа
+const activeStage = computed(() => {
+  return stages.value[activeStageIndex.value] || null
+})
+
+// Функция переключения этапа
+const setActiveStage = (index) => {
+  if (index >= 0 && index < stages.value.length) {
+    activeStageIndex.value = index
+  }
+}
+
+// Функция переключения на следующий этап
+const nextStage = () => {
+  if (activeStageIndex.value < stages.value.length - 1) {
+    setActiveStage(activeStageIndex.value + 1)
+  }
+}
+
+// Функция переключения на предыдущий этап
+const prevStage = () => {
+  if (activeStageIndex.value > 0) {
+    setActiveStage(activeStageIndex.value - 1)
+  }
+}
 
 const load = async () => {
   if (!props.competitionId) { 
@@ -129,6 +233,177 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 </script>
 
 <style scoped>
+/* Контейнер результатов с вкладками */
+.results-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Навигация по этапам */
+.stages-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border-radius: 12px 12px 0 0;
+  padding: 16px 20px;
+  border-bottom: 2px solid #e5e7eb;
+  gap: 20px;
+}
+
+/* Селектор этапов */
+.stage-selector {
+  flex: 1;
+  max-width: 400px;
+}
+
+/* Навигационные контролы */
+.navigation-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.stage-counter {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: center;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .stages-navigation {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .stage-selector {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .navigation-controls {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .stages-tabs {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .stage-tab {
+    min-width: 150px;
+  }
+}
+
+/* Вкладки для переключения между этапами */
+.stages-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex: 1;
+}
+
+/* Кастомный скроллбар для вкладок */
+.stages-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.stages-tabs::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 3px;
+}
+
+.stages-tabs::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 3px;
+}
+
+.stages-tabs::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.stage-tab {
+  flex: 1;
+  min-width: 200px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: 2px solid transparent;
+}
+
+.stage-tab:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.stage-tab.is-active {
+  background: #3b82f6;
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.tab-content {
+  padding: 12px 16px;
+  text-align: center;
+}
+
+.tab-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.stage-tab.is-active .tab-title {
+  color: white;
+}
+
+.tab-stats {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.stage-tab.is-active .tab-stats {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.tab-stats .teams-count::before {
+  content: "👥 ";
+}
+
+.tab-stats .participants-count::before {
+  content: "👤 ";
+}
+
+/* Контент активного этапа */
+.active-stage-content {
+  background: white;
+  border-radius: 0 0 12px 12px;
+  min-height: 400px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Контейнер команд */
+.teams-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 /* Современные стили для таблицы результатов */
 .modern-table {
   border-radius: 12px;
@@ -352,32 +627,69 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   color: #1f2937;
 }
 
-/* Контейнер этапов */
-.stages-container {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+/* Кастомный скроллбар для контента этапа */
+.active-stage-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.active-stage-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.active-stage-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.active-stage-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .stage-section {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  border: none;
 }
 
 .stage-header {
   margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #e5e7eb;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .stage-title {
-  margin: 0;
+  margin: 0 0 8px 0;
   font-size: 18px;
   font-weight: 600;
   color: #374151;
+}
+
+.stage-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.teams-count,
+.participants-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.teams-count::before {
+  content: "👥";
+}
+
+.participants-count::before {
+  content: "👤";
 }
 
 /* Секция команды */
@@ -444,9 +756,35 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   font-weight: 500;
 }
 
+.stat-item.participants-count {
+  color: #059669;
+  font-weight: 600;
+}
+
 /* Таблица участников */
 .participants-table {
   background: white;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Кастомный скроллбар для таблиц участников */
+.participants-table::-webkit-scrollbar {
+  width: 6px;
+}
+
+.participants-table::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 3px;
+}
+
+.participants-table::-webkit-scrollbar-thumb {
+  background: #dee2e6;
+  border-radius: 3px;
+}
+
+.participants-table::-webkit-scrollbar-thumb:hover {
+  background: #adb5bd;
 }
 
 .participants-table :deep(.el-table__body tr) {
