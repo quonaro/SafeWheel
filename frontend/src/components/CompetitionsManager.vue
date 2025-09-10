@@ -1,38 +1,45 @@
 <template>
   <div class="competitions">
-    <el-row :gutter="12" class="mb-12">
-      <el-col :span="16">
-        <el-select v-model="currentCompetitionId" placeholder="Выберите конкурс" style="width: 100%" @change="loadAll">
-          <el-option v-for="c in competitions" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
-      </el-col>
-      <el-col :span="8" class="text-right">
-        <el-button type="primary" @click="openCompetitionDialog()">
+    <div class="header-section">
+      <div class="title">
+        <h1>Конкурсы</h1>
+        <p>Управление соревнованиями "Безопасное колесо"</p>
+      </div>
+      
+      <div class="controls">
+        <div class="select-wrapper">
+          <el-select 
+            v-model="currentCompetitionId" 
+            placeholder="Выберите конкурс" 
+            class="competition-select"
+            @change="loadAll"
+          >
+            <el-option v-for="c in competitions" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </div>
+        <el-button type="primary" class="add-button" @click="openCompetitionDialog()">
           <el-icon><Plus /></el-icon>
           Новый конкурс
         </el-button>
-      </el-col>
-    </el-row>
+      </div>
+    </div>
 
-    <el-tabs v-model="activeTab">
-      <el-tab-pane label="Команды и участники" name="teams">
-        <TeamsParticipants :competition-id="currentCompetitionId" />
-      </el-tab-pane>
-      <el-tab-pane label="Этапы" name="stages">
-        <StagesManager :competition-id="currentCompetitionId" />
-      </el-tab-pane>
-      <el-tab-pane label="Результаты" name="results">
-        <ResultsInput :competition-id="currentCompetitionId" />
-      </el-tab-pane>
-      <el-tab-pane label="Итоги" name="standings">
-        <StandingsTable :competition-id="currentCompetitionId" />
-      </el-tab-pane>
-    </el-tabs>
+    <div class="content-container">
+      <TeamsParticipants v-if="activeTab === 'teams'" :competition-id="currentCompetitionId" />
+      <StagesManager v-if="activeTab === 'stages'" :competition-id="currentCompetitionId" />
+      <ResultsInput v-if="activeTab === 'results'" :competition-id="currentCompetitionId" />
+      <StandingsTable v-if="activeTab === 'standings'" :competition-id="currentCompetitionId" />
+    </div>
 
-    <el-dialog v-model="competitionDialogVisible" :title="editingCompetition ? 'Редактировать конкурс' : 'Новый конкурс'" width="520px">
+    <el-dialog 
+      v-model="competitionDialogVisible" 
+      :title="editingCompetition ? 'Редактировать конкурс' : 'Новый конкурс'" 
+      width="520px"
+      class="custom-dialog"
+    >
       <el-form :model="competitionForm" label-width="120px">
         <el-form-item label="Название">
-          <el-input v-model="competitionForm.name" />
+          <el-input v-model="competitionForm.name" placeholder="Введите название конкурса" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -41,20 +48,32 @@
       </template>
     </el-dialog>
   </div>
-  
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 
-const activeTab = ref('teams')
+const props = defineProps({
+  activeTab: {
+    type: String,
+    default: 'teams'
+  }
+})
+
+const emit = defineEmits(['tab-change'])
+
 const competitions = ref([])
 const currentCompetitionId = ref(null)
 const competitionDialogVisible = ref(false)
 const editingCompetition = ref(null)
 const competitionForm = reactive({ name: '' })
+
+// Следим за изменениями activeTab и уведомляем родительский компонент
+watch(() => props.activeTab, (newTab) => {
+  // Можно добавить дополнительную логику при смене вкладки
+}, { immediate: true })
 
 const api = window.electronAPI?.database
 
@@ -113,8 +132,130 @@ export default {
 </script>
 
 <style scoped>
-.mb-12 { margin-bottom: 12px; }
-.text-right { text-align: right; }
+.competitions {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: #374151;
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.title h1 {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: #1f2937;
+}
+
+.title p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}
+
+.controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.select-wrapper {
+  min-width: 280px;
+}
+
+.competition-select {
+  width: 100%;
+}
+
+.competition-select :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  color: #374151;
+}
+
+.competition-select :deep(.el-input__inner) {
+  color: #374151;
+}
+
+.competition-select :deep(.el-input__inner::placeholder) {
+  color: #9ca3af;
+}
+
+.add-button {
+  background: #3b82f6;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.add-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+}
+
+.content-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+.custom-dialog :deep(.el-dialog) {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.custom-dialog :deep(.el-dialog__header) {
+  color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.custom-dialog :deep(.el-dialog__body) {
+  color: white;
+}
+
+.custom-dialog :deep(.el-form-item__label) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.custom-dialog :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+}
+
+.custom-dialog :deep(.el-input__inner) {
+  color: white;
+}
+
+.custom-dialog :deep(.el-input__inner::placeholder) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.custom-dialog :deep(.el-button) {
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.custom-dialog :deep(.el-button--primary) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+}
 </style>
 
 

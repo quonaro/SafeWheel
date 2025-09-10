@@ -91,7 +91,7 @@ const removeStage = async (id) => {
 </script>
 
 <style scoped>
-.mb-12 { margin-bottom: 12px; }
+/* Component-specific styles only */
 </style>
 
 
