@@ -111,6 +111,7 @@ class DatabaseManager {
         `CREATE TABLE IF NOT EXISTS competitions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
+          emoji TEXT DEFAULT '🏆',
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`,
@@ -171,6 +172,23 @@ class DatabaseManager {
       ];
 
       this.db.exec(ddl.join(";"));
+
+      // Миграция: добавляем поле emoji если его нет
+      try {
+        this.db.exec(
+          "ALTER TABLE competitions ADD COLUMN emoji TEXT DEFAULT '🏆'"
+        );
+        console.log("✅ Добавлено поле emoji в таблицу competitions");
+      } catch (e) {
+        // Поле уже существует, игнорируем ошибку
+        if (!e.message.includes("duplicate column name")) {
+          console.warn(
+            "⚠️ Предупреждение при добавлении поля emoji:",
+            e.message
+          );
+        }
+      }
+
       console.log("✅ Таблицы конкурсов созданы/проверены");
     } catch (error) {
       console.error("❌ Ошибка создания таблиц:", error.message);
@@ -193,18 +211,21 @@ class DatabaseManager {
 
   async createCompetition(data) {
     const stmt = this.db.prepare(`
-      INSERT INTO competitions (name, created_at, updated_at)
-      VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      INSERT INTO competitions (name, emoji, created_at, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `);
-    const result = stmt.run(String(data.name || "").trim());
+    const result = stmt.run(
+      String(data.name || "").trim(),
+      String(data.emoji || "🏆")
+    );
     return this.getCompetitionById(result.lastInsertRowid);
   }
 
   async updateCompetition(id, data) {
     const stmt = this.db.prepare(`
-      UPDATE competitions SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+      UPDATE competitions SET name = ?, emoji = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
     `);
-    stmt.run(String(data.name || "").trim(), id);
+    stmt.run(String(data.name || "").trim(), String(data.emoji || "🏆"), id);
     return this.getCompetitionById(id);
   }
 
