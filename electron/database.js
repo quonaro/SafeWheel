@@ -103,206 +103,323 @@ class DatabaseManager {
   // Создание таблиц
   async createTables() {
     try {
-      const createWheelsTable = `
-        CREATE TABLE IF NOT EXISTS wheels (
+      // Включаем внешние ключи
+      this.db.pragma("foreign_keys = ON");
+
+      const ddl = [
+        // Конкурсы
+        `CREATE TABLE IF NOT EXISTS competitions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
-          diameter REAL NOT NULL,
-          width REAL NOT NULL,
-          material TEXT NOT NULL,
-          condition TEXT NOT NULL,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `;
+        )`,
 
-      this.db.exec(createWheelsTable);
-      console.log("✅ Таблица wheels создана/проверена");
-    } catch (error) {
-      console.error("❌ Ошибка создания таблицы wheels:", error.message);
-      throw error;
-    }
-  }
+        // Команды
+        `CREATE TABLE IF NOT EXISTS teams (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          competition_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (competition_id) REFERENCES competitions(id) ON DELETE CASCADE
+        )`,
 
-  // Получить все колеса
-  async getAllWheels() {
-    try {
-      const stmt = this.db.prepare(
-        "SELECT * FROM wheels ORDER BY created_at DESC"
-      );
-      const rows = stmt.all();
-      return rows;
-    } catch (error) {
-      console.error("❌ Ошибка получения колес:", error.message);
-      throw error;
-    }
-  }
+        // Участники (max 4 на команду будет контролироваться на уровне приложений/триггеров)
+        `CREATE TABLE IF NOT EXISTS participants (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          team_id INTEGER NOT NULL,
+          full_name TEXT NOT NULL,
+          gender TEXT CHECK (gender IN ('М','Ж')),
+          age INTEGER NOT NULL CHECK(age >= 0),
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+        )`,
 
-  // Получить колесо по ID
-  async getWheelById(id) {
-    try {
-      const stmt = this.db.prepare("SELECT * FROM wheels WHERE id = ?");
-      const row = stmt.get(id);
-      return row;
-    } catch (error) {
-      console.error("❌ Ошибка получения колеса:", error.message);
-      throw error;
-    }
-  }
+        // Этапы соревнования
+        `CREATE TABLE IF NOT EXISTS stages (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          competition_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(competition_id, name),
+          FOREIGN KEY (competition_id) REFERENCES competitions(id) ON DELETE CASCADE
+        )`,
 
-  // Создать новое колесо
-  async createWheel(wheelData) {
-    try {
-      console.log("🔄 Создание колеса с данными:", wheelData);
-      const { name, diameter, width, material, condition } = wheelData;
+        // Результаты по участнику на этапе
+        `CREATE TABLE IF NOT EXISTS stage_results (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          stage_id INTEGER NOT NULL,
+          participant_id INTEGER NOT NULL,
+          time_seconds REAL NOT NULL DEFAULT 0,
+          penalty_points INTEGER NOT NULL DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(stage_id, participant_id),
+          FOREIGN KEY (stage_id) REFERENCES stages(id) ON DELETE CASCADE,
+          FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
+        )`,
 
-      // Валидация данных (разрешаем 0 как валидное значение)
-      const isEmptyString = (v) =>
-        typeof v === "string" && v.trim().length === 0;
-      const isNil = (v) => v === null || v === undefined;
-      if (
-        isEmptyString(name) ||
-        isNil(name) ||
-        isNil(diameter) ||
-        isNil(width) ||
-        isEmptyString(material) ||
-        isNil(material) ||
-        isEmptyString(condition) ||
-        isNil(condition)
-      ) {
-        throw new Error("Не все обязательные поля заполнены");
-      }
-
-      // Приведение типов
-      const numericDiameter = Number(diameter);
-      const numericWidth = Number(width);
-      if (Number.isNaN(numericDiameter) || Number.isNaN(numericWidth)) {
-        throw new Error("Диаметр и ширина должны быть числами");
-      }
-
-      const stmt = this.db.prepare(`
-        INSERT INTO wheels (name, diameter, width, material, condition, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      `);
-
-      const result = stmt.run(
-        String(name).trim(),
-        numericDiameter,
-        numericWidth,
-        String(material).trim(),
-        String(condition).trim()
-      );
-      console.log("✅ Колесо создано с ID:", result.lastInsertRowid);
-
-      const wheel = await this.getWheelById(result.lastInsertRowid);
-      console.log("📋 Созданное колесо:", wheel);
-      return wheel;
-    } catch (error) {
-      console.error("❌ Ошибка создания колеса:", error.message);
-      console.error("❌ Стек ошибки:", error.stack);
-      throw error;
-    }
-  }
-
-  // Обновить колесо
-  async updateWheel(id, wheelData) {
-    try {
-      const { name, diameter, width, material, condition } = wheelData;
-      const stmt = this.db.prepare(`
-        UPDATE wheels 
-        SET name = ?, diameter = ?, width = ?, material = ?, condition = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `);
-
-      const result = stmt.run(name, diameter, width, material, condition, id);
-
-      if (result.changes === 0) {
-        throw new Error("Колесо не найдено");
-      }
-
-      const wheel = await this.getWheelById(id);
-      return wheel;
-    } catch (error) {
-      console.error("❌ Ошибка обновления колеса:", error.message);
-      throw error;
-    }
-  }
-
-  // Удалить колесо
-  async deleteWheel(id) {
-    try {
-      // Сначала получить колесо для возврата
-      const wheel = await this.getWheelById(id);
-      if (!wheel) {
-        throw new Error("Колесо не найдено");
-      }
-
-      const stmt = this.db.prepare("DELETE FROM wheels WHERE id = ?");
-      stmt.run(id);
-
-      return wheel;
-    } catch (error) {
-      console.error("❌ Ошибка удаления колеса:", error.message);
-      throw error;
-    }
-  }
-
-  // Миграция данных из JSON файла (если существует)
-  async migrateFromJson() {
-    const fs = require("fs").promises;
-    try {
-      // Ищем JSON файл в разных местах
-      const possiblePaths = [
-        this.dbPath.replace(".db", ".json"), // Рядом с новой БД
-        path.join(__dirname, "../data/safewheel.json"), // В папке data проекта
-        path.join(path.dirname(this.dbPath), "safewheel.json"), // Рядом с исполняемым файлом
+        // Индексы
+        `CREATE INDEX IF NOT EXISTS idx_teams_competition ON teams(competition_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_participants_team ON participants(team_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_stages_competition ON stages(competition_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_results_stage ON stage_results(stage_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_results_participant ON stage_results(participant_id)`,
       ];
 
-      let jsonData = null;
-      for (const jsonPath of possiblePaths) {
-        try {
-          const data = await fs.readFile(jsonPath, "utf8");
-          jsonData = JSON.parse(data);
-          break;
-        } catch (err) {
-          // Продолжаем поиск
-        }
-      }
-
-      if (!jsonData) {
-        throw new Error("JSON файл не найден");
-      }
-
-      if (Array.isArray(jsonData) && jsonData.length > 0) {
-        console.log("📦 Найдены данные для миграции из JSON файла");
-
-        for (const wheel of jsonData) {
-          try {
-            await this.createWheel({
-              name: wheel.name,
-              diameter: wheel.diameter,
-              width: wheel.width,
-              material: wheel.material,
-              condition: wheel.condition,
-            });
-          } catch (err) {
-            console.warn("⚠️ Ошибка миграции колеса:", wheel.id, err.message);
-          }
-        }
-
-        console.log("✅ Миграция данных завершена");
-
-        // Переименовать старый JSON файл
-        await fs.rename(
-          this.dbPath.replace(".db", ".json"),
-          this.dbPath.replace(".db", ".json.backup")
-        );
-        console.log("📁 Старый JSON файл переименован в .backup");
-      }
-    } catch (err) {
-      // JSON файл не существует или пуст - это нормально
-      console.log("📝 JSON файл не найден, создаем новую базу данных");
+      this.db.exec(ddl.join(";"));
+      console.log("✅ Таблицы конкурсов созданы/проверены");
+    } catch (error) {
+      console.error("❌ Ошибка создания таблиц:", error.message);
+      throw error;
     }
+  }
+
+  // ===== CRUD: Competitions =====
+  async listCompetitions() {
+    const stmt = this.db.prepare(
+      "SELECT * FROM competitions ORDER BY created_at DESC"
+    );
+    return stmt.all();
+  }
+
+  async getCompetitionById(id) {
+    const stmt = this.db.prepare("SELECT * FROM competitions WHERE id = ?");
+    return stmt.get(id);
+  }
+
+  async createCompetition(data) {
+    const stmt = this.db.prepare(`
+      INSERT INTO competitions (name, created_at, updated_at)
+      VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `);
+    const result = stmt.run(String(data.name || "").trim());
+    return this.getCompetitionById(result.lastInsertRowid);
+  }
+
+  async updateCompetition(id, data) {
+    const stmt = this.db.prepare(`
+      UPDATE competitions SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `);
+    stmt.run(String(data.name || "").trim(), id);
+    return this.getCompetitionById(id);
+  }
+
+  async deleteCompetition(id) {
+    const comp = await this.getCompetitionById(id);
+    if (!comp) return null;
+    const stmt = this.db.prepare("DELETE FROM competitions WHERE id = ?");
+    stmt.run(id);
+    return comp;
+  }
+
+  // ===== CRUD: Teams =====
+  async listTeams(competitionId) {
+    const stmt = this.db.prepare(
+      "SELECT * FROM teams WHERE competition_id = ? ORDER BY name ASC"
+    );
+    return stmt.all(competitionId);
+  }
+
+  async getTeamById(id) {
+    const stmt = this.db.prepare("SELECT * FROM teams WHERE id = ?");
+    return stmt.get(id);
+  }
+
+  async createTeam(competitionId, name) {
+    const stmt = this.db.prepare(`
+      INSERT INTO teams (competition_id, name, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `);
+    const res = stmt.run(competitionId, String(name || "").trim());
+    return this.getTeamById(res.lastInsertRowid);
+  }
+
+  async updateTeam(id, name) {
+    const stmt = this.db.prepare(
+      `UPDATE teams SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+    );
+    stmt.run(String(name || "").trim(), id);
+    return this.getTeamById(id);
+  }
+
+  async deleteTeam(id) {
+    const team = await this.getTeamById(id);
+    if (!team) return null;
+    const stmt = this.db.prepare("DELETE FROM teams WHERE id = ?");
+    stmt.run(id);
+    return team;
+  }
+
+  // ===== CRUD: Participants =====
+  async listParticipants(teamId) {
+    const stmt = this.db.prepare(
+      "SELECT * FROM participants WHERE team_id = ? ORDER BY id ASC"
+    );
+    return stmt.all(teamId);
+  }
+
+  async getParticipantById(id) {
+    return this.db.prepare("SELECT * FROM participants WHERE id = ?").get(id);
+  }
+
+  async createParticipant(teamId, payload) {
+    // Контроль лимита 4 участника на команду
+    const count = this.db
+      .prepare("SELECT COUNT(1) AS cnt FROM participants WHERE team_id = ?")
+      .get(teamId).cnt;
+    if (count >= 4) {
+      throw new Error("В команде не может быть больше 4 участников");
+    }
+    const stmt = this.db.prepare(`
+      INSERT INTO participants (team_id, full_name, gender, age, created_at, updated_at)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `);
+    const res = stmt.run(
+      teamId,
+      String(payload.full_name || "").trim(),
+      payload.gender || null,
+      Number(payload.age || 0)
+    );
+    return this.getParticipantById(res.lastInsertRowid);
+  }
+
+  async updateParticipant(id, payload) {
+    const stmt = this.db.prepare(`
+      UPDATE participants SET full_name = ?, gender = ?, age = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `);
+    stmt.run(
+      String(payload.full_name || "").trim(),
+      payload.gender || null,
+      Number(payload.age || 0),
+      id
+    );
+    return this.getParticipantById(id);
+  }
+
+  async deleteParticipant(id) {
+    const p = await this.getParticipantById(id);
+    if (!p) return null;
+    this.db.prepare("DELETE FROM participants WHERE id = ?").run(id);
+    return p;
+  }
+
+  // ===== CRUD: Stages =====
+  async listStages(competitionId) {
+    return this.db
+      .prepare("SELECT * FROM stages WHERE competition_id = ? ORDER BY id ASC")
+      .all(competitionId);
+  }
+
+  async getStageById(id) {
+    return this.db.prepare("SELECT * FROM stages WHERE id = ?").get(id);
+  }
+
+  async createStage(competitionId, payload) {
+    const stmt = this.db.prepare(`
+      INSERT INTO stages (competition_id, name, created_at, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `);
+    const res = stmt.run(competitionId, String(payload.name || "").trim());
+    return this.getStageById(res.lastInsertRowid);
+  }
+
+  async updateStage(id, payload) {
+    const stmt = this.db.prepare(`
+      UPDATE stages SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `);
+    stmt.run(String(payload.name || "").trim(), id);
+    return this.getStageById(id);
+  }
+
+  async deleteStage(id) {
+    const s = await this.getStageById(id);
+    if (!s) return null;
+    this.db.prepare("DELETE FROM stages WHERE id = ?").run(id);
+    return s;
+  }
+
+  // ===== Results per participant per stage =====
+  async upsertStageResult(stageId, participantId, payload) {
+    const timeSeconds = Number(payload.time_seconds || 0);
+    const penaltyPoints = Number(payload.penalty_points || 0);
+    const existing = this.db
+      .prepare(
+        "SELECT id FROM stage_results WHERE stage_id = ? AND participant_id = ?"
+      )
+      .get(stageId, participantId);
+    if (existing) {
+      this.db
+        .prepare(
+          `UPDATE stage_results SET time_seconds = ?, penalty_points = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+        )
+        .run(timeSeconds, penaltyPoints, existing.id);
+      return this.db
+        .prepare("SELECT * FROM stage_results WHERE id = ?")
+        .get(existing.id);
+    } else {
+      const res = this.db
+        .prepare(
+          `INSERT INTO stage_results (stage_id, participant_id, time_seconds, penalty_points, created_at, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+        )
+        .run(stageId, participantId, timeSeconds, penaltyPoints);
+      return this.db
+        .prepare("SELECT * FROM stage_results WHERE id = ?")
+        .get(res.lastInsertRowid);
+    }
+  }
+
+  async getStageResults(stageId) {
+    return this.db
+      .prepare(
+        `
+        SELECT sr.*, p.full_name, p.gender, p.age, p.team_id
+        FROM stage_results sr
+        JOIN participants p ON p.id = sr.participant_id
+        WHERE sr.stage_id = ?
+      `
+      )
+      .all(stageId);
+  }
+
+  // ===== Итоги по соревнованию =====
+  // Сумма штрафных баллов и времени по всем этапам; при равенстве — по среднему возрасту команды (меньше — выше)
+  async computeStandings(competitionId) {
+    const sql = `
+      WITH team_members AS (
+        SELECT t.id AS team_id, t.name AS team_name,
+               AVG(p.age) AS avg_age
+        FROM teams t
+        JOIN participants p ON p.team_id = t.id
+        WHERE t.competition_id = ?
+        GROUP BY t.id
+      ),
+      member_results AS (
+        SELECT p.team_id,
+               COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
+               COALESCE(SUM(sr.time_seconds), 0) AS total_time
+        FROM participants p
+        LEFT JOIN stage_results sr ON sr.participant_id = p.id
+        JOIN teams t ON t.id = p.team_id AND t.competition_id = ?
+        GROUP BY p.team_id
+      )
+      SELECT tm.team_id, tm.team_name,
+             mr.total_penalties, mr.total_time, tm.avg_age
+      FROM team_members tm
+      JOIN member_results mr ON mr.team_id = tm.team_id
+      ORDER BY mr.total_penalties ASC, mr.total_time ASC, tm.avg_age ASC
+    `;
+    const rows = this.db.prepare(sql).all(competitionId, competitionId);
+    // Добавим ранги
+    return rows.map((r, idx) => ({ ...r, rank: idx + 1 }));
+  }
+
+  // Миграция данных из JSON файла (если существует) — отключено для конкурсов
+  async migrateFromJson() {
+    // Зарезервировано под будущую миграцию, сейчас не используется
+    return;
   }
 
   // Закрытие соединения

@@ -2,18 +2,18 @@
   <div id="app">
     <el-container>
       <el-header class="header">
-        <h1>SafeWheel - Управление колесами</h1>
+        <h1>Безопасное колесо — Конкурсы</h1>
       </el-header>
-      
+
       <el-main>
-        <WheelManager />
+        <CompetitionsManager />
       </el-main>
     </el-container>
   </div>
 </template>
 
 <script setup>
-import WheelManager from './components/WheelManager.vue'
+import CompetitionsManager from './components/CompetitionsManager.vue'
 </script>
 
 <style>
