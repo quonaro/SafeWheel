@@ -213,7 +213,6 @@ const filteredRows = computed(() => {
 const groupedParticipants = computed(() => {
   const groups = new Map()
   
-  console.log(`Фильтрованных участников: ${filteredRows.value.length}`)
   
   filteredRows.value.forEach(participant => {
     const teamName = participant.team_name
@@ -228,8 +227,6 @@ const groupedParticipants = computed(() => {
   })
   
   const result = Array.from(groups.values())
-  console.log(`Групп команд: ${result.length}`)
-  console.log(`Общее количество участников в группах: ${result.reduce((sum, group) => sum + group.participants.length, 0)}`)
   
   return result
 })

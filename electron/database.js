@@ -22,20 +22,17 @@ class DatabaseManager {
         // Для AppImage используем переменную окружения APPIMAGE
         if (process.env.APPIMAGE) {
           exeDir = path.dirname(process.env.APPIMAGE);
-          console.log("🔍 Найден AppImage путь:", process.env.APPIMAGE);
         } else if (
           process.env.ARGV0 &&
           !process.env.ARGV0.includes("/tmp/.mount_")
         ) {
           // Fallback на ARGV0 если это не временный путь
           exeDir = path.dirname(process.env.ARGV0);
-          console.log("🔍 Используем ARGV0 путь:", process.env.ARGV0);
         } else {
           // Обычный путь к исполняемому файлу
           exeDir = app
             ? path.dirname(app.getPath("exe"))
             : path.dirname(process.execPath);
-          console.log("🔍 Используем стандартный путь:", exeDir);
         }
 
         return exeDir;
@@ -86,12 +83,11 @@ class DatabaseManager {
       const dataDir = path.dirname(this.dbPath);
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
-        console.log("📁 Создана папка для базы данных:", dataDir);
       }
 
       this.db = new Database(this.dbPath, {
         // Оптимизации для better-sqlite3
-        verbose: process.env.NODE_ENV === 'development' ? console.log : null,
+        verbose: null,
         // Включаем WAL режим для лучшей производительности
         pragma: {
           journal_mode: 'WAL',
@@ -102,8 +98,6 @@ class DatabaseManager {
           page_size: 4096
         }
       });
-      console.log("✅ Подключение к SQLite базе данных установлено");
-      console.log("📂 Путь к базе данных:", this.dbPath);
 
       await this.createTables();
     } catch (error) {
@@ -204,7 +198,6 @@ class DatabaseManager {
         this.db.exec(
           "ALTER TABLE competitions ADD COLUMN emoji TEXT DEFAULT '🏆'"
         );
-        console.log("✅ Добавлено поле emoji в таблицу competitions");
       } catch (e) {
         // Поле уже существует, игнорируем ошибку
         if (!e.message.includes("duplicate column name")) {
@@ -220,7 +213,6 @@ class DatabaseManager {
         this.db.exec(
           "ALTER TABLE competitions ADD COLUMN description TEXT DEFAULT ''"
         );
-        console.log("✅ Добавлено поле description в таблицу competitions");
       } catch (e) {
         // Поле уже существует, игнорируем ошибку
         if (!e.message.includes("duplicate column name")) {
@@ -231,7 +223,6 @@ class DatabaseManager {
         }
       }
 
-      console.log("✅ Таблицы конкурсов созданы/проверены");
       
       // Выполняем миграции
       await this.migrateStagesTable();
@@ -242,7 +233,6 @@ class DatabaseManager {
       // Заполняем тестовыми данными если база пустая
       const existingCompetitions = this.db.prepare("SELECT COUNT(*) as count FROM competitions").get();
       if (existingCompetitions.count === 0) {
-        console.log("🌱 База данных пустая, загружаем тестовые данные...");
         await this.seedTestData();
       }
     } catch (error) {
@@ -856,10 +846,8 @@ class DatabaseManager {
       const hasOrderIndex = tableInfo.some(col => col.name === 'order_index');
 
       if (!hasOrderIndex) {
-        console.log("🔄 Добавляем колонку order_index в таблицу stages...");
         this.db.prepare("ALTER TABLE stages ADD COLUMN order_index INTEGER DEFAULT 0").run();
         this.db.prepare("UPDATE stages SET order_index = id WHERE order_index = 0").run();
-        console.log("✅ Колонка order_index добавлена в таблицу stages");
       }
     } catch (error) {
       console.error("❌ Ошибка миграции таблицы stages:", error.message);
@@ -882,7 +870,6 @@ class DatabaseManager {
       const testingDataPath = path.join(__dirname, '..', 'testing.json');
       
       if (!fs.existsSync(testingDataPath)) {
-        console.log('📄 Файл testing.json не найден, пропускаем заполнение тестовыми данными');
         return;
       }
 
@@ -895,7 +882,6 @@ class DatabaseManager {
         emoji: '🏆'
       });
 
-      console.log(`✅ Создано соревнование: ${competition.name}`);
 
       // Создаем этапы на основе ключей из JSON
       const stages = Object.keys(testingData);
@@ -907,7 +893,6 @@ class DatabaseManager {
           order_index: i + 1
         });
         createdStages.push(stage);
-        console.log(`✅ Создан этап: ${stage.name}`);
       }
 
       // Сначала собираем все команды и участников из всех этапов
@@ -936,7 +921,6 @@ class DatabaseManager {
             if (!teamsData[currentTeam]) {
               teamsData[currentTeam] = [];
             }
-            console.log(`🔍 Найдена команда: ${currentTeam}`);
           }
           // Если есть данные участника (есть Column2 с именем)
           else if (row['Column2'] && 
@@ -950,7 +934,6 @@ class DatabaseManager {
               penalties: row['Column5'],
               stage_id: currentStage.id
             });
-            console.log(`  👤 Участник: ${row['Column2']} (${row['Column3']}, ${row['Column4']}, ${row['Column5']} штрафов)`);
           }
         }
 
@@ -990,7 +973,6 @@ class DatabaseManager {
       for (const teamName of Object.keys(allTeamsData)) {
         const team = await this.createTeam(competition.id, teamName);
         createdTeams[teamName] = team;
-        console.log(`✅ Создана команда: ${team.name}`);
       }
 
       // Создаем участников и их результаты
@@ -1005,7 +987,6 @@ class DatabaseManager {
           age: Math.floor(Math.random() * 3) + 10 // Случайный возраст 10-12 лет
         });
 
-        console.log(`✅ Создан участник: ${createdParticipant.full_name}`);
 
         // Создаем результаты для каждого этапа
         for (const [stageId, result] of Object.entries(participantData.results)) {
@@ -1016,12 +997,10 @@ class DatabaseManager {
               time_seconds: timeInSeconds,
               penalty_points: result.penalties || 0
             });
-            console.log(`  📊 Результат для этапа ${stageId}: ${result.time}, ${result.penalties} штрафов`);
           }
         }
       }
 
-      console.log('🎉 Тестовые данные успешно загружены!');
       return competition.id;
     } catch (error) {
       console.error('❌ Ошибка загрузки тестовых данных:', error.message);
@@ -1056,7 +1035,6 @@ class DatabaseManager {
   close() {
     if (this.db) {
       this.db.close();
-      console.log("✅ Соединение с базой данных закрыто");
     }
   }
 }
