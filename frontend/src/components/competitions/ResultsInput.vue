@@ -139,7 +139,7 @@ const loadTeams = async () => {
 
 // Функция форматирования времени из секунд в формат ММ:СС
 const formatTime = (seconds) => {
-  if (!seconds || seconds === 0) return '00:00'
+  if (seconds === null || seconds === undefined || seconds === 0) return '00:00'
   
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = Math.floor(seconds % 60)
@@ -149,13 +149,13 @@ const formatTime = (seconds) => {
 
 // Функция парсинга времени из формата ММ:СС в секунды
 const parseTimeToSeconds = (timeStr) => {
-  if (!timeStr || timeStr === '00:00') return 0
+  if (!timeStr || timeStr === '00:00' || timeStr.trim() === '') return 0
   
   const parts = timeStr.split(':')
   if (parts.length !== 2) return 0
   
-  const minutes = parseInt(parts[0]) || 0
-  const seconds = parseInt(parts[1]) || 0
+  const minutes = parseInt(parts[0], 10) || 0
+  const seconds = parseInt(parts[1], 10) || 0
   
   return minutes * 60 + seconds
 }
@@ -173,10 +173,10 @@ const loadRows = async () => {
       team_id: p.team_id,
       team_name: p.team_name,
       full_name: p.full_name,
-      age: p.age,
-      time_seconds: p.time_seconds || 0,
-      time_display: formatTime(p.time_seconds || 0),
-      penalty_points: p.penalty_points || 0
+      age: p.age || 0,
+      time_seconds: Number(p.time_seconds) || 0,
+      time_display: formatTime(Number(p.time_seconds) || 0),
+      penalty_points: Number(p.penalty_points) || 0
     }))
     
     rows.value = participantRows
@@ -211,6 +211,8 @@ const filteredRows = computed(() => {
 const groupedParticipants = computed(() => {
   const groups = new Map()
   
+  console.log(`Фильтрованных участников: ${filteredRows.value.length}`)
+  
   filteredRows.value.forEach(participant => {
     const teamName = participant.team_name
     if (!groups.has(teamName)) {
@@ -223,7 +225,11 @@ const groupedParticipants = computed(() => {
     groups.get(teamName).participants.push(participant)
   })
   
-  return Array.from(groups.values())
+  const result = Array.from(groups.values())
+  console.log(`Групп команд: ${result.length}`)
+  console.log(`Общее количество участников в группах: ${result.reduce((sum, group) => sum + group.participants.length, 0)}`)
+  
+  return result
 })
 
 const filterResults = () => {
@@ -247,10 +253,14 @@ const handleTimeChange = (row) => {
   }
   
   // Конвертируем в секунды
-  row.time_seconds = parseTimeToSeconds(row.time_display)
+  const newTimeSeconds = parseTimeToSeconds(row.time_display)
+  const oldTimeSeconds = row.time_seconds
   
-  // Сохраняем
-  debouncedSave(row)
+  // Сохраняем только если время изменилось
+  if (newTimeSeconds !== oldTimeSeconds) {
+    row.time_seconds = newTimeSeconds
+    debouncedSave(row)
+  }
 }
 
 let timer = null

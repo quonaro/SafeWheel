@@ -185,8 +185,8 @@ function setupIpcHandlers() {
   ipcMain.handle("db:getStageStandings", async (e, competitionId) =>
     database.getStageStandings(competitionId)
   );
-  ipcMain.handle("db:getParticipantResults", async (e, competitionId) =>
-    database.getParticipantResults(competitionId)
+  ipcMain.handle("db:getParticipantResults", async (e, competitionId, options) =>
+    database.getParticipantResults(competitionId, options)
   );
   ipcMain.handle("db:getParticipantStageDetails", async (e, competitionId, participantId) =>
     database.getParticipantStageDetails(competitionId, participantId)
@@ -196,6 +196,9 @@ function setupIpcHandlers() {
   );
   ipcMain.handle("db:getParticipantsWithResults", async (e, competitionId, stageId) =>
     database.getParticipantsWithResults(competitionId, stageId)
+  );
+  ipcMain.handle("db:getParticipantStageResults", async (e, competitionId, participantName) =>
+    database.getParticipantStageResults(competitionId, participantName)
   );
 }
 

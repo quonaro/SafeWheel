@@ -60,14 +60,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("db:computeStandings", competitionId),
     getStageStandings: (competitionId) =>
       ipcRenderer.invoke("db:getStageStandings", competitionId),
-    getParticipantResults: (competitionId) =>
-      ipcRenderer.invoke("db:getParticipantResults", competitionId),
+    getParticipantResults: (competitionId, options) =>
+      ipcRenderer.invoke("db:getParticipantResults", competitionId, options),
     getParticipantStageDetails: (competitionId, participantId) =>
       ipcRenderer.invoke("db:getParticipantStageDetails", competitionId, participantId),
     getStageStandingsWithParticipants: (competitionId) =>
       ipcRenderer.invoke("db:getStageStandingsWithParticipants", competitionId),
     getParticipantsWithResults: (competitionId, stageId) =>
       ipcRenderer.invoke("db:getParticipantsWithResults", competitionId, stageId),
+    getParticipantStageResults: (competitionId, participantName) =>
+      ipcRenderer.invoke("db:getParticipantStageResults", competitionId, participantName),
   },
 
   // Пример API для работы с файлами (если понадобится)

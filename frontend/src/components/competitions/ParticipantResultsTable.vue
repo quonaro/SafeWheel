@@ -114,7 +114,7 @@ const pageSize = ref(20) // Оптимальный размер страницы
 
 // Функция форматирования времени из секунд в формат ММ:СС
 const formatTime = (seconds) => {
-  if (!seconds || seconds === 0) return '00:00'
+  if (seconds === null || seconds === undefined || seconds === 0) return '00:00'
   
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = Math.floor(seconds % 60)
@@ -149,7 +149,7 @@ const load = async () => {
   
   loading.value = true
   try {
-    participants.value = await api.getParticipantResults(props.competitionId)
+    participants.value = await api.getParticipantResults(props.competitionId, { limit: 1000 })
   } catch (error) {
     console.error('Ошибка загрузки личных результатов:', error)
     participants.value = []
