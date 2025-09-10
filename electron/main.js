@@ -191,6 +191,9 @@ function setupIpcHandlers() {
   ipcMain.handle("db:getParticipantStageDetails", async (e, competitionId, participantId) =>
     database.getParticipantStageDetails(competitionId, participantId)
   );
+  ipcMain.handle("db:getStageStandingsWithParticipants", async (e, competitionId) =>
+    database.getStageStandingsWithParticipants(competitionId)
+  );
 }
 
 function createWindow() {

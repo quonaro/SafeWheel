@@ -20,61 +20,73 @@
           <h4 class="stage-title">{{ stage.stage_name }}</h4>
         </div>
         
-        <div class="table-scroll">
-          <el-table 
-            :data="stage.results" 
-            style="width: 100%" 
-            :class="['modern-table', { 'empty-table': stage.results.length === 0 }]"
-            :height="stage.results.length > 0 ? 'auto' : 200" 
-            empty-text="Нет данных для отображения"
-          >
-            <el-table-column prop="rank" label="Место" :width="stage.results.length > 0 ? 100 : 0">
-              <template #default="scope">
-                <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
-                  <template v-if="scope.row.rank === 1">
-                    <span class="trophy gold">🥇</span>
-                  </template>
-                  <template v-else-if="scope.row.rank === 2">
-                    <span class="trophy silver">🥈</span>
-                  </template>
-                  <template v-else-if="scope.row.rank === 3">
-                    <span class="trophy bronze">🥉</span>
-                  </template>
-                  <template v-else>
-                    <span class="rank-number">{{ scope.row.rank }}</span>
-                  </template>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column prop="team_name" label="Команда" :min-width="stage.results.length > 0 ? 200 : 0">
-              <template #default="scope">
-                <div class="team-cell">
-                  <span class="team-name">{{ scope.row.team_name }}</span>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column prop="total_penalties" label="Штрафы" :width="stage.results.length > 0 ? 140 : 0">
-              <template #default="scope">
-                <div class="penalty-cell">
-                  <span class="penalty-value">{{ scope.row.total_penalties }}</span>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column prop="total_time" label="Время (сек)" :width="stage.results.length > 0 ? 180 : 0">
-              <template #default="scope">
-                <div class="time-cell">
-                  <span class="time-value">{{ scope.row.total_time }}</span>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column prop="avg_age" label="Ср. возраст" :width="stage.results.length > 0 ? 120 : 0">
-              <template #default="scope">
-                <div class="age-cell">
-                  <span class="age-value">{{ scope.row.avg_age ? scope.row.avg_age.toFixed(1) : '—' }}</span>
-                </div>
-              </template>
-            </el-table-column>
-          </el-table>
+        <div v-for="team in stage.teams" :key="team.team_id" class="team-section">
+          <div class="team-header">
+            <div class="team-rank">
+              <span class="rank-badge" :class="{ 'is-top': [1, 2, 3].includes(team.rank) }">
+                <template v-if="team.rank === 1">🥇</template>
+                <template v-else-if="team.rank === 2">🥈</template>
+                <template v-else-if="team.rank === 3">🥉</template>
+                <template v-else>{{ team.rank }}</template>
+              </span>
+            </div>
+            <div class="team-info">
+              <h4 class="team-name">{{ team.team_name }}</h4>
+              <div class="team-stats">
+                <span class="stat-item">Штрафы: {{ team.total_penalties }}</span>
+                <span class="stat-item">Время: {{ team.total_time }}с</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="participants-table">
+            <el-table 
+              :data="team.participants" 
+              style="width: 100%" 
+              size="small"
+              :show-header="false"
+            >
+              <el-table-column prop="rank" label="Место" width="60">
+                <template #default="scope">
+                  <div class="participant-rank" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
+                    {{ scope.row.rank }}
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column prop="full_name" label="Участник" min-width="150">
+                <template #default="scope">
+                  <div class="participant-info">
+                    <span class="participant-name">{{ scope.row.full_name }}</span>
+                    <span class="participant-details">{{ scope.row.gender }}, {{ scope.row.age }}л</span>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column prop="penalty_points" label="Штрафы" width="80">
+                <template #default="scope">
+                  <div class="penalty-cell">
+                    <span class="penalty-value">{{ scope.row.penalty_points }}</span>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column prop="time_seconds" label="Время" width="100">
+                <template #default="scope">
+                  <div class="time-cell">
+                    <span class="time-value">{{ scope.row.time_seconds }}с</span>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column label="Статус" width="100">
+                <template #default="scope">
+                  <el-tag 
+                    :type="scope.row.penalty_points > 0 || scope.row.time_seconds > 0 ? 'success' : 'info'"
+                    size="small"
+                  >
+                    {{ scope.row.penalty_points > 0 || scope.row.time_seconds > 0 ? 'Завершен' : 'Не участвовал' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
       </div>
     </div>
@@ -104,7 +116,7 @@ const load = async () => {
   
   loading.value = true
   try {
-    stages.value = await api.getStageStandings(props.competitionId)
+    stages.value = await api.getStageStandingsWithParticipants(props.competitionId)
   } catch (error) {
     console.error('Ошибка загрузки результатов по этапам:', error)
     stages.value = []
@@ -356,16 +368,133 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 }
 
 .stage-header {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   padding-bottom: 12px;
   border-bottom: 2px solid #e5e7eb;
 }
 
 .stage-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: #374151;
+}
+
+/* Секция команды */
+.team-section {
+  margin-bottom: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.team-section:last-child {
+  margin-bottom: 0;
+}
+
+.team-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.team-rank {
+  flex-shrink: 0;
+}
+
+.rank-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #6b7280;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.rank-badge.is-top {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+.team-info {
+  flex: 1;
+}
+
+.team-name {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.team-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.stat-item {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Таблица участников */
+.participants-table {
+  background: white;
+}
+
+.participants-table :deep(.el-table__body tr) {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.participants-table :deep(.el-table__body tr:hover) {
+  background: #f8fafc;
+}
+
+.participants-table :deep(.el-table__body td) {
+  padding: 8px 12px;
+  border: none;
+}
+
+.participant-rank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.participant-rank.is-top {
+  background: #fbbf24;
+  color: white;
+}
+
+.participant-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.participant-name {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.participant-details {
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .table-scroll {
