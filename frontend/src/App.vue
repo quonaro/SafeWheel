@@ -434,13 +434,34 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* Скроллбар для списка конкурсов */
+.competition-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.competition-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  margin: 10px 0;
+}
+
+.competition-list::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.competition-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
 /* Стили для селектора конкурсов */
 .competition-selector {
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 60px 40px;
   background: #ffffff;
   border-radius: 20px;
@@ -473,33 +494,43 @@ onMounted(() => {
 .competition-list {
   width: 100%;
   max-width: 1400px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: clamp(16px, 2.5vw, 32px);
   position: relative;
   z-index: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  padding: 20px 0;
+  margin: -20px 0;
 }
 
 /* Адаптивность для разных экранов */
 @media (max-width: 1200px) {
-  .competition-list {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: clamp(16px, 2vw, 24px);
+  .competition-card {
+    width: clamp(240px, 18vw, 300px);
   }
 }
 
 @media (max-width: 900px) {
-  .competition-list {
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: clamp(14px, 1.8vw, 20px);
+  .competition-card {
+    width: clamp(220px, 16vw, 280px);
   }
 }
 
 @media (max-width: 768px) {
   .competition-list {
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: clamp(12px, 1.5vw, 18px);
     max-width: 100%;
+    justify-content: center;
+    max-height: calc(100vh - 150px);
+    padding: 15px 0;
+    margin: -15px 0;
+  }
+
+  .competition-card {
+    width: clamp(200px, 14vw, 260px);
   }
 
   .competition-selector {
@@ -517,12 +548,24 @@ onMounted(() => {
 
 @media (max-width: 600px) {
   .competition-list {
-    grid-template-columns: 1fr;
-    gap: clamp(10px, 1.2vw, 16px);
+    justify-content: center;
+    max-height: calc(100vh - 120px);
+    padding: 10px 0;
+    margin: -10px 0;
+  }
+
+  .competition-card {
+    width: clamp(180px, 12vw, 240px);
   }
 }
 
 @media (max-width: 480px) {
+  .competition-list {
+    max-height: calc(100vh - 100px);
+    padding: 8px 0;
+    margin: -8px 0;
+  }
+
   .competition-selector {
     padding: clamp(20px, 4vw, 30px) clamp(12px, 3vw, 20px);
   }
@@ -555,9 +598,8 @@ onMounted(() => {
 }
 
 @media (min-width: 1400px) {
-  .competition-list {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: clamp(20px, 2.5vw, 36px);
+  .competition-card {
+    width: clamp(280px, 22vw, 340px);
   }
 
   .competition-selector {
@@ -574,9 +616,8 @@ onMounted(() => {
 }
 
 @media (min-width: 1800px) {
-  .competition-list {
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: clamp(24px, 3vw, 40px);
+  .competition-card {
+    width: clamp(300px, 24vw, 360px);
   }
 }
 
@@ -595,6 +636,8 @@ onMounted(() => {
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   min-height: clamp(200px, 25vw, 280px);
+  width: clamp(250px, 20vw, 320px);
+  flex: 0 0 auto;
 }
 
 .competition-card:hover {
