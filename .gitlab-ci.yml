@@ -95,7 +95,7 @@ build_windows:
     - echo "🔍 Проверяем build директорию..."
     - ls -la build/
     - echo "🔨 Собираем Electron приложение для Windows..."
-    - npm run build:electron -- --win nsis --x64
+    - npm run build:electron -- --win portable --x64
     - echo "🔍 Проверяем результат сборки..."
     - ls -la dist/
   artifacts:
@@ -124,8 +124,8 @@ create_release:
       links:
         - name: "SafeWheel Linux AppImage"
           url: "${CI_JOB_URL}/artifacts/file/dist/SafeWheel-${CI_COMMIT_TAG#v}.AppImage"
-        - name: "SafeWheel Windows Installer"
-          url: "${CI_JOB_URL}/artifacts/file/dist/SafeWheel Setup ${CI_COMMIT_TAG#v}.exe"
+        - name: "SafeWheel Windows Portable"
+          url: "${CI_JOB_URL}/artifacts/file/dist/SafeWheel-${CI_COMMIT_TAG#v}.exe"
   only:
     - tags
     - /^v.*$/
