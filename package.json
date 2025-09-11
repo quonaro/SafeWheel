@@ -9,11 +9,15 @@
     "dev:frontend": "cd frontend && npm run dev",
     "build": "npm run build:frontend && npm run build:electron",
     "build:frontend": "cd frontend && npm run build",
-    "build:electron": "electron-builder",
-    "build:win": "npm run clean && npm run build:frontend && electron-builder --win portable",
-    "clean": "rm -rf dist/win-unpacked dist/*.exe dist/*.AppImage",
+    "build:electron": "npm run copy:deps && npm run rebuild:native && electron-builder",
+    "build:win": "npm run clean && npm run build:frontend && npm run rebuild:win && npx --yes electron-builder --win --config.win.target=portable",
+    "clean": "rm -rf dist/win-unpacked dist/*.exe dist/*.AppImage build-deps",
     "start": "NODE_ENV=production electron . --no-sandbox",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "rebuild:native": "electron-rebuild",
+    "rebuild:win": "node scripts/rebuild-for-platform.js win32",
+    "rebuild:linux": "node scripts/rebuild-for-platform.js linux",
+    "copy:deps": "node scripts/copy-dependencies.js"
   },
   "devDependencies": {
     "electron": "^32.0.0",
@@ -31,7 +35,6 @@
     "files": [
       "electron/**/*",
       "frontend/dist/**/*",
-      "node_modules/better-sqlite3/**/*",
       "package.json",
       "!node_modules/**/*",
       "!frontend/node_modules/**/*",
@@ -60,32 +63,39 @@
     ],
     "extraResources": [
       {
-        "from": "build/icon.ico",
-        "to": "icon.ico"
+        "from": "node_modules",
+        "to": "node_modules"
       }
     ],
-    "icon": "build/icon.ico",
     "mac": {
       "category": "public.app-category.productivity"
     },
     "win": {
-      "target": [
-        {
-          "target": "portable",
-          "arch": ["x64"]
-        }
-      ],
+      "target": "portable",
       "publisherName": "SafeWheel Team",
-      "icon": "build/icon.ico",
+      "icon": null,
       "requestedExecutionLevel": "asInvoker",
       "verifyUpdateCodeSignature": false,
-      "asar": false
+      "signAndEditExecutable": false,
+      "signDlls": false,
+      "asar": true,
+      "asarUnpack": [
+        "node_modules/**/*"
+      ]
     },
     "linux": {
+      "extraResources": [
+        {
+          "from": "build-deps/node_modules",
+          "to": "node_modules"
+        }
+      ],
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "executableArgs": [
@@ -98,7 +108,11 @@
         "--single-process"
       ],
       "category": "Utility",
-      "icon": "build/icon.png",
+      "icon": null,
+      "asar": true,
+      "asarUnpack": [
+        "node_modules/**/*"
+      ],
       "desktop": {
         "Name": "SafeWheel",
         "Comment": "Desktop приложение SafeWheel",
