@@ -10,7 +10,7 @@
     "build": "npm run build:frontend && npm run build:electron",
     "build:frontend": "cd frontend && npm run build",
     "build:electron": "electron-builder",
-    "build:win": "npm run clean && npm run build:frontend && electron-builder --win nsis",
+    "build:win": "npm run clean && npm run build:frontend && electron-builder --win portable",
     "clean": "rm -rf dist/win-unpacked dist/*.exe dist/*.AppImage",
     "start": "NODE_ENV=production electron . --no-sandbox",
     "postinstall": "electron-builder install-app-deps"
@@ -71,14 +71,15 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "portable",
           "arch": ["x64"]
         }
       ],
       "publisherName": "SafeWheel Team",
       "icon": "build/icon.ico",
       "requestedExecutionLevel": "asInvoker",
-      "verifyUpdateCodeSignature": false
+      "verifyUpdateCodeSignature": false,
+      "asar": false
     },
     "linux": {
       "target": [
@@ -104,26 +105,6 @@
         "Keywords": "safewheel;competition;results;",
         "StartupWMClass": "safewheel"
       }
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "SafeWheel",
-      "artifactName": "SafeWheel Setup ${version}.${ext}",
-      "uninstallDisplayName": "SafeWheel ${version}",
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico",
-      "deleteAppDataOnUninstall": false,
-      "runAfterFinish": true,
-      "menuCategory": false,
-      "perMachine": false,
-      "allowElevation": true,
-      "warningsAsErrors": false,
-      "displayLanguageSelector": false,
-      "installerLanguages": ["en_US", "ru_RU"]
     },
     "publish": null
   },
