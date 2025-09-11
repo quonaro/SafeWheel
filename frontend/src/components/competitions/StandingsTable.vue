@@ -4,14 +4,17 @@
       <el-tab-pane name="overall">
         <template #label>
           <div class="tab-label">
-            <el-icon class="tab-icon"><Trophy /></el-icon>
+            <el-icon class="tab-icon">
+              <Trophy />
+            </el-icon>
             <span>Общие результаты</span>
             <el-badge v-if="rows.length > 0" :value="rows.length" class="tab-badge" />
           </div>
         </template>
         <div class="table-container">
-          <el-table :data="paginatedRows" style="width: 100%" :class="['modern-table', { 'empty-table': rows.length === 0 }]"
-            :max-height="460" empty-text="Нет данных для отображения">
+          <el-table :data="paginatedRows" style="width: 100%"
+            :class="['modern-table', { 'empty-table': rows.length === 0 }]" :max-height="460"
+            empty-text="Нет данных для отображения">
             <el-table-column prop="rank" label="Место" :width="rows.length > 0 ? 100 : 0">
               <template #default="scope">
                 <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
@@ -66,20 +69,12 @@
               </template>
             </el-table-column>
           </el-table>
-          
+
           <!-- Пагинация -->
           <div v-if="rows.length > pageSize" class="pagination-container">
-            <el-pagination
-              :key="`pagination-${rows.length}-${pageSize}`"
-              v-model:current-page="currentPage"
-              :page-size="pageSize"
-              :total="rows.length"
-              layout="pager"
-              :page-sizes="[10, 20, 50, 100]"
-              @size-change="handleSizeChange"
-              @current-change="handleCurrentChange"
-              class="modern-pagination"
-            />
+            <el-pagination :key="`pagination-${rows.length}-${pageSize}`" v-model:current-page="currentPage"
+              :page-size="pageSize" :total="rows.length" layout="pager" :page-sizes="[10, 20, 50, 100]"
+              @size-change="handleSizeChange" @current-change="handleCurrentChange" class="modern-pagination" />
           </div>
         </div>
       </el-tab-pane>
@@ -87,7 +82,9 @@
       <el-tab-pane name="stages">
         <template #label>
           <div class="tab-label">
-            <el-icon class="tab-icon"><List /></el-icon>
+            <el-icon class="tab-icon">
+              <List />
+            </el-icon>
             <span>Результаты по этапам</span>
           </div>
         </template>
@@ -97,27 +94,13 @@
       <el-tab-pane name="participants">
         <template #label>
           <div class="tab-label">
-            <el-icon class="tab-icon"><User /></el-icon>
+            <el-icon class="tab-icon">
+              <User />
+            </el-icon>
             <span>Личностные</span>
           </div>
         </template>
         <ParticipantResultsTable :competition-id="competitionId" />
-        
-        <!-- Временная отладочная кнопка -->
-        <div style="margin-top: 20px; padding: 20px; background: #f0f0f0; border-radius: 8px;">
-          <h4>Отладка времени участника</h4>
-          <el-input v-model="debugParticipantName" placeholder="Введите имя участника" style="width: 300px; margin-right: 10px;" />
-          <el-button @click="debugParticipantTime" type="primary">Проверить результаты по этапам</el-button>
-          <div v-if="debugResults.length > 0" style="margin-top: 10px;">
-            <h5>Результаты по этапам:</h5>
-            <ul>
-              <li v-for="result in debugResults" :key="result.stage_id">
-                {{ result.stage_name }}: {{ result.time_display }} ({{ result.time_seconds }} сек)
-              </li>
-            </ul>
-            <p><strong>Общее время: {{ formatTime(debugResults.reduce((sum, r) => sum + (r.time_seconds || 0), 0)) }}</strong></p>
-          </div>
-        </div>
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -137,19 +120,16 @@ const activeTab = ref('overall')
 const currentPage = ref(1)
 const pageSize = ref(20) // Оптимальный размер страницы
 
-// Отладочные переменные
-const debugParticipantName = ref('')
-const debugResults = ref([])
 
 // Функция форматирования времени из секунд в формат ММ:СС
 const formatTime = (seconds) => {
   if (seconds === null || seconds === undefined || seconds === 0) return '00:00'
-  
+
   // Округляем до ближайшего целого числа секунд
   const totalSeconds = Math.round(Number(seconds))
   const minutes = Math.floor(totalSeconds / 60)
   const remainingSeconds = totalSeconds % 60
-  
+
   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
@@ -173,26 +153,15 @@ const handleCurrentChange = async (newPage) => {
 }
 
 const load = async () => {
-  if (!props.competitionId) { 
+  if (!props.competitionId) {
     rows.value = []
-    return 
+    return
   }
   rows.value = await api.computeStandings(props.competitionId)
   currentPage.value = 1 // Сбрасываем на первую страницу при загрузке новых данных
   await nextTick() // Ждем обновления DOM
 }
 
-// Отладочная функция для проверки результатов участника
-const debugParticipantTime = async () => {
-  if (!debugParticipantName.value || !props.competitionId) return
-  
-  try {
-    debugResults.value = await api.getParticipantStageResults(props.competitionId, debugParticipantName.value)
-  } catch (error) {
-    console.error('Ошибка загрузки результатов участника:', error)
-    debugResults.value = []
-  }
-}
 
 watch(() => props.competitionId, () => load(), { immediate: true })
 </script>
@@ -322,11 +291,16 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 }
 
 /* Центрирование ячеек данных */
-.modern-table :deep(.el-table__body td:nth-child(1)), /* Место */
-.modern-table :deep(.el-table__body td:nth-child(3)), /* Штрафы */
-.modern-table :deep(.el-table__body td:nth-child(4)), /* Время */
-.modern-table :deep(.el-table__body td:nth-child(5)), /* Возраст */
-.modern-table :deep(.el-table__body td:nth-child(6)) { /* Участников */
+.modern-table :deep(.el-table__body td:nth-child(1)),
+/* Место */
+.modern-table :deep(.el-table__body td:nth-child(3)),
+/* Штрафы */
+.modern-table :deep(.el-table__body td:nth-child(4)),
+/* Время */
+.modern-table :deep(.el-table__body td:nth-child(5)),
+/* Возраст */
+.modern-table :deep(.el-table__body td:nth-child(6)) {
+  /* Участников */
   text-align: center;
 }
 
@@ -528,9 +502,10 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   box-shadow: none;
 }
 
-.el-tabs__nav-wrap:after{
+.el-tabs__nav-wrap:after {
   background: none;
 }
+
 .results-tabs :deep(.el-tabs__item:last-child) {
   padding-right: 12px !important;
 }
@@ -538,6 +513,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 .results-tabs :deep(.el-tabs__item:nth-child(2)) {
   padding-left: 12px !important;
 }
+
 .results-tabs :deep(.el-tabs__nav.is-top) {
   gap: 5px;
 }
@@ -716,7 +692,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 0; /* Позволяет контейнеру сжиматься */
+  min-height: 0;
+  /* Позволяет контейнеру сжиматься */
 }
 
 .table-container .modern-table {
@@ -880,7 +857,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
     line-height: 12px;
   }
 
- 
+
 
   .modern-pagination :deep(.el-pagination) {
     --el-pagination-font-size: 12px;
