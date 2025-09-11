@@ -11,8 +11,21 @@ const { spawn } = require("child_process");
 const DatabaseManager = require("./database");
 const isDev = process.env.NODE_ENV === "development";
 
+// Функция для получения правильного пути к модулю из extraResources
+function requireFromResources(moduleName) {
+  if (process.env.NODE_ENV === "development") {
+    // В режиме разработки используем обычный require
+    return require(moduleName);
+  } else {
+    // В продакшене загружаем из extraResources
+    const resourcesPath = process.resourcesPath;
+    const modulePath = path.join(resourcesPath, "node_modules", moduleName);
+    return require(modulePath);
+  }
+}
+
 // Импортируем fetch для Node.js
-const fetch = require("node-fetch");
+const fetch = requireFromResources("node-fetch");
 
 let mainWindow;
 let frontendProcess = null;
@@ -21,15 +34,20 @@ let database = null;
 // Функция для инициализации базы данных
 async function initDatabase() {
   if (database) {
+    console.log("🔧 База данных уже инициализирована");
     return;
   }
 
-
+  console.log("🔧 Начинаем инициализацию базы данных...");
   try {
     database = new DatabaseManager();
+    console.log("🔧 DatabaseManager создан, вызываем init()...");
     await database.init();
+    console.log("✅ База данных успешно инициализирована");
   } catch (error) {
     console.error("❌ Ошибка инициализации базы данных:", error);
+    console.error("❌ Детали ошибки:", error.stack);
+    throw error; // Пробрасываем ошибку дальше
   }
 }
 
@@ -43,7 +61,6 @@ function closeDatabase() {
 
 // Функция для проверки доступности сервера
 async function waitForServer(url, maxAttempts = 30, delay = 1000) {
-  
   for (let i = 0; i < maxAttempts; i++) {
     try {
       const response = await fetch(url);
@@ -53,10 +70,10 @@ async function waitForServer(url, maxAttempts = 30, delay = 1000) {
     } catch (error) {
       // Игнорируем ошибки соединения на ранних этапах
     }
-    
-    await new Promise(resolve => setTimeout(resolve, delay));
+
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
-  
+
   console.error(`❌ Сервер не отвечает после ${maxAttempts} попыток`);
   return false;
 }
@@ -98,16 +115,34 @@ function stopAllProcesses() {
 
 // Настройка IPC обработчиков для работы с базой данных
 function setupIpcHandlers() {
+  console.log("🔧 Настраиваем IPC обработчики...");
+
+  if (!database) {
+    console.error(
+      "❌ База данных не инициализирована, не можем настроить IPC обработчики"
+    );
+    return;
+  }
+
   // ===== Competitions =====
-  ipcMain.handle("db:listCompetitions", async () =>
-    database.listCompetitions()
-  );
-  ipcMain.handle("db:getCompetitionById", async (e, id) =>
-    database.getCompetitionById(id)
-  );
-  ipcMain.handle("db:createCompetition", async (e, data) =>
-    database.createCompetition(data)
-  );
+  ipcMain.handle("db:listCompetitions", async () => {
+    if (!database) {
+      throw new Error("База данных не инициализирована");
+    }
+    return database.listCompetitions();
+  });
+  ipcMain.handle("db:getCompetitionById", async (e, id) => {
+    if (!database) {
+      throw new Error("База данных не инициализирована");
+    }
+    return database.getCompetitionById(id);
+  });
+  ipcMain.handle("db:createCompetition", async (e, data) => {
+    if (!database) {
+      throw new Error("База данных не инициализирована");
+    }
+    return database.createCompetition(data);
+  });
   ipcMain.handle("db:updateCompetition", async (e, id, data) =>
     database.updateCompetition(id, data)
   );
@@ -173,20 +208,30 @@ function setupIpcHandlers() {
   ipcMain.handle("db:getStageStandings", async (e, competitionId) =>
     database.getStageStandings(competitionId)
   );
-  ipcMain.handle("db:getParticipantResults", async (e, competitionId, options) =>
-    database.getParticipantResults(competitionId, options)
+  ipcMain.handle(
+    "db:getParticipantResults",
+    async (e, competitionId, options) =>
+      database.getParticipantResults(competitionId, options)
   );
-  ipcMain.handle("db:getParticipantStageDetails", async (e, competitionId, participantId) =>
-    database.getParticipantStageDetails(competitionId, participantId)
+  ipcMain.handle(
+    "db:getParticipantStageDetails",
+    async (e, competitionId, participantId) =>
+      database.getParticipantStageDetails(competitionId, participantId)
   );
-  ipcMain.handle("db:getStageStandingsWithParticipants", async (e, competitionId) =>
-    database.getStageStandingsWithParticipants(competitionId)
+  ipcMain.handle(
+    "db:getStageStandingsWithParticipants",
+    async (e, competitionId) =>
+      database.getStageStandingsWithParticipants(competitionId)
   );
-  ipcMain.handle("db:getParticipantsWithResults", async (e, competitionId, stageId) =>
-    database.getParticipantsWithResults(competitionId, stageId)
+  ipcMain.handle(
+    "db:getParticipantsWithResults",
+    async (e, competitionId, stageId) =>
+      database.getParticipantsWithResults(competitionId, stageId)
   );
-  ipcMain.handle("db:getParticipantStageResults", async (e, competitionId, participantName) =>
-    database.getParticipantStageResults(competitionId, participantName)
+  ipcMain.handle(
+    "db:getParticipantStageResults",
+    async (e, competitionId, participantName) =>
+      database.getParticipantStageResults(competitionId, participantName)
   );
 }
 
@@ -219,7 +264,6 @@ function createWindow() {
     ? "http://localhost:3000" // Фронтенд запускается на порту 3000
     : `file://${path.join(__dirname, "../frontend/dist/index.html")}`;
 
-
   // Ждем пока фронтенд будет готов
   if (isDev) {
     // В режиме разработки ждем готовности сервера
@@ -249,7 +293,6 @@ function createWindow() {
     // В продакшене загружаем сразу
     mainWindow.loadURL(startUrl);
   }
-
 
   // Обработка ошибок загрузки
   mainWindow.webContents.on(
@@ -330,7 +373,7 @@ function createWindow() {
       event.preventDefault();
       return;
     }
-    
+
     // Разрешаем ALT в комбинациях (Alt+Tab, Alt+F4 и т.д.)
     if (input.alt && (input.control || input.shift || input.meta)) {
       return; // Разрешаем комбинации с ALT
@@ -513,10 +556,10 @@ function createMenu() {
 }
 
 // Отключаем sandbox для Linux
-if (process.platform === 'linux') {
-  app.commandLine.appendSwitch('--no-sandbox');
-  app.commandLine.appendSwitch('--disable-setuid-sandbox');
-  app.commandLine.appendSwitch('--disable-dev-shm-usage');
+if (process.platform === "linux") {
+  app.commandLine.appendSwitch("--no-sandbox");
+  app.commandLine.appendSwitch("--disable-setuid-sandbox");
+  app.commandLine.appendSwitch("--disable-dev-shm-usage");
 }
 
 // Этот метод будет вызван когда Electron закончит инициализацию
@@ -526,11 +569,37 @@ app.whenReady().then(async () => {
   // Полностью убираем меню для чистого интерфейса
   Menu.setApplicationMenu(null);
 
-  // Инициализируем базу данных
-  await initDatabase();
+  try {
+    // Инициализируем базу данных
+    await initDatabase();
+    console.log("✅ База данных инициализирована успешно");
 
-  // Настраиваем IPC обработчики для работы с базой данных
-  setupIpcHandlers();
+    // Настраиваем IPC обработчики для работы с базой данных
+    setupIpcHandlers();
+    console.log("✅ IPC обработчики настроены");
+  } catch (error) {
+    console.error("❌ Критическая ошибка инициализации:", error);
+    // Показываем ошибку пользователю
+    if (mainWindow) {
+      mainWindow.loadURL(`data:text/html,
+      <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+          <h1>🚫 Ошибка инициализации SafeWheel</h1>
+          <p><strong>Не удалось инициализировать базу данных</strong></p>
+          <p>Ошибка: ${error.message}</p>
+          <hr>
+          <p>Попробуйте:</p>
+          <ul style="text-align: left; display: inline-block;">
+            <li>Перезапустить приложение</li>
+            <li>Проверить права доступа к файлам</li>
+            <li>Запустить в режиме разработки: <code>npm run dev</code></li>
+          </ul>
+        </body>
+      </html>
+    `);
+    }
+    return; // Не продолжаем инициализацию
+  }
 
   // Фронтенд запускаем только в режиме разработки
   if (isDev) {

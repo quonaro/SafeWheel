@@ -1,5 +1,39 @@
-const Database = require("better-sqlite3");
 const path = require("path");
+const { app } = require("electron");
+
+// Функция для получения правильного пути к модулю из extraResources
+function requireFromResources(moduleName) {
+  try {
+    if (process.env.NODE_ENV === "development") {
+      // В режиме разработки используем обычный require
+      console.log(`🔧 [DEV] Загружаем модуль: ${moduleName}`);
+      return require(moduleName);
+    } else {
+      // В продакшене загружаем из extraResources
+      const resourcesPath = process.resourcesPath;
+      const modulePath = path.join(resourcesPath, "node_modules", moduleName);
+      console.log(`🔧 [PROD] Загружаем модуль: ${moduleName} из ${modulePath}`);
+
+      // Проверяем существование файла
+      const fs = require("fs");
+      if (!fs.existsSync(modulePath)) {
+        console.error(`❌ Модуль не найден: ${modulePath}`);
+        // Fallback на обычный require
+        console.log(`🔄 Fallback на обычный require для ${moduleName}`);
+        return require(moduleName);
+      }
+
+      return require(modulePath);
+    }
+  } catch (error) {
+    console.error(`❌ Ошибка загрузки модуля ${moduleName}:`, error.message);
+    // Fallback на обычный require
+    console.log(`🔄 Fallback на обычный require для ${moduleName}`);
+    return require(moduleName);
+  }
+}
+
+const Database = requireFromResources("better-sqlite3");
 
 class DatabaseManager {
   constructor() {
@@ -90,13 +124,13 @@ class DatabaseManager {
         verbose: null,
         // Включаем WAL режим для лучшей производительности
         pragma: {
-          journal_mode: 'WAL',
-          synchronous: 'NORMAL',
+          journal_mode: "WAL",
+          synchronous: "NORMAL",
           cache_size: -64000, // 64MB кэш
-          temp_store: 'MEMORY',
+          temp_store: "MEMORY",
           mmap_size: 134217728, // 128MB memory-mapped I/O
-          page_size: 4096
-        }
+          page_size: 4096,
+        },
       });
 
       await this.createTables();
@@ -176,14 +210,14 @@ class DatabaseManager {
         `CREATE INDEX IF NOT EXISTS idx_stages_competition ON stages(competition_id)`,
         `CREATE INDEX IF NOT EXISTS idx_results_stage ON stage_results(stage_id)`,
         `CREATE INDEX IF NOT EXISTS idx_results_participant ON stage_results(participant_id)`,
-        
+
         // Составные индексы для оптимизации сложных запросов
         // idx_stages_competition_order будет создан после миграции
         `CREATE INDEX IF NOT EXISTS idx_participants_team_competition ON participants(team_id)`,
         `CREATE INDEX IF NOT EXISTS idx_results_stage_participant ON stage_results(stage_id, participant_id)`,
         `CREATE INDEX IF NOT EXISTS idx_results_participant_stage ON stage_results(participant_id, stage_id)`,
         `CREATE INDEX IF NOT EXISTS idx_teams_competition_name ON teams(competition_id, name)`,
-        
+
         // Индексы для сортировки и группировки
         `CREATE INDEX IF NOT EXISTS idx_participants_age ON participants(age)`,
         `CREATE INDEX IF NOT EXISTS idx_participants_gender ON participants(gender)`,
@@ -223,21 +257,31 @@ class DatabaseManager {
         }
       }
 
-      
       // Выполняем миграции
       await this.migrateStagesTable();
-      
+
       // Создаем индекс после миграции
-      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_stages_competition_order ON stages(competition_id, order_index)`);
-      
+      this.db.exec(
+        `CREATE INDEX IF NOT EXISTS idx_stages_competition_order ON stages(competition_id, order_index)`
+      );
     } catch (error) {
       console.error("❌ Ошибка создания таблиц:", error.message);
       throw error;
     }
   }
 
+  // Проверка инициализации базы данных
+  checkDatabase() {
+    if (!this.db) {
+      throw new Error(
+        "База данных не инициализирована. Вызовите init() сначала."
+      );
+    }
+  }
+
   // ===== CRUD: Competitions =====
   async listCompetitions() {
+    this.checkDatabase();
     const stmt = this.db.prepare(
       "SELECT * FROM competitions ORDER BY created_at DESC"
     );
@@ -250,6 +294,7 @@ class DatabaseManager {
   }
 
   async createCompetition(data) {
+    this.checkDatabase();
     const stmt = this.db.prepare(`
       INSERT INTO competitions (name, description, emoji, created_at, updated_at)
       VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -519,24 +564,26 @@ class DatabaseManager {
       SELECT * FROM stage_team_results
     `;
     const rows = this.db.prepare(sql).all(competitionId, competitionId);
-    
+
     // Группируем по этапам и добавляем ранги
     const stagesMap = new Map();
-    rows.forEach(row => {
+    rows.forEach((row) => {
       if (!stagesMap.has(row.stage_id)) {
         stagesMap.set(row.stage_id, {
           stage_id: row.stage_id,
           stage_name: row.stage_name,
           order_index: row.order_index,
-          results: []
+          results: [],
         });
       }
       stagesMap.get(row.stage_id).results.push(row);
     });
 
     // Добавляем ранги для каждого этапа
-    const stages = Array.from(stagesMap.values()).sort((a, b) => a.order_index - b.order_index);
-    stages.forEach(stage => {
+    const stages = Array.from(stagesMap.values()).sort(
+      (a, b) => a.order_index - b.order_index
+    );
+    stages.forEach((stage) => {
       stage.results.forEach((result, idx) => {
         result.rank = idx + 1;
       });
@@ -600,21 +647,21 @@ class DatabaseManager {
       LEFT JOIN competition_data cd ON cd.stage_id = ta.stage_id AND cd.team_id = ta.team_id
       ORDER BY ta.order_index, ta.team_total_penalties, ta.team_total_time, cd.full_name
     `;
-    
+
     const rows = this.db.prepare(sql).all(competitionId, competitionId);
-    
+
     // Группируем по этапам и командам
     const stagesMap = new Map();
-    rows.forEach(row => {
+    rows.forEach((row) => {
       if (!stagesMap.has(row.stage_id)) {
         stagesMap.set(row.stage_id, {
           stage_id: row.stage_id,
           stage_name: row.stage_name,
           order_index: row.order_index,
-          teams: new Map()
+          teams: new Map(),
         });
       }
-      
+
       const stage = stagesMap.get(row.stage_id);
       if (!stage.teams.has(row.team_id)) {
         stage.teams.set(row.team_id, {
@@ -622,10 +669,10 @@ class DatabaseManager {
           team_name: row.team_name,
           participants: [],
           total_penalties: row.team_total_penalties,
-          total_time: row.team_total_time
+          total_time: row.team_total_time,
         });
       }
-      
+
       const team = stage.teams.get(row.team_id);
       if (row.participant_id) {
         team.participants.push({
@@ -634,7 +681,7 @@ class DatabaseManager {
           gender: row.gender,
           age: row.age,
           penalty_points: row.penalty_points,
-          time_seconds: row.time_seconds
+          time_seconds: row.time_seconds,
         });
       }
     });
@@ -642,22 +689,30 @@ class DatabaseManager {
     // Преобразуем Map в обычные объекты и добавляем ранги
     const stages = Array.from(stagesMap.values())
       .sort((a, b) => a.order_index - b.order_index)
-      .map(stage => ({
+      .map((stage) => ({
         stage_id: stage.stage_id,
         stage_name: stage.stage_name,
         order_index: stage.order_index,
         teams: Array.from(stage.teams.values())
-          .sort((a, b) => a.total_penalties - b.total_penalties || a.total_time - b.total_time)
+          .sort(
+            (a, b) =>
+              a.total_penalties - b.total_penalties ||
+              a.total_time - b.total_time
+          )
           .map((team, teamIdx) => ({
             ...team,
             rank: teamIdx + 1,
             participants: team.participants
-              .sort((a, b) => a.penalty_points - b.penalty_points || a.time_seconds - b.time_seconds)
+              .sort(
+                (a, b) =>
+                  a.penalty_points - b.penalty_points ||
+                  a.time_seconds - b.time_seconds
+              )
               .map((participant, partIdx) => ({
                 ...participant,
-                rank: partIdx + 1
-              }))
-          }))
+                rank: partIdx + 1,
+              })),
+          })),
       }));
 
     return stages;
@@ -667,7 +722,7 @@ class DatabaseManager {
   async getParticipantResults(competitionId, options = {}) {
     const { page = 1, limit = 50, offset = null } = options;
     const actualOffset = offset !== null ? offset : (page - 1) * limit;
-    
+
     const sql = `
       WITH participant_totals AS (
         SELECT p.id, p.full_name, p.gender, p.age, t.name AS team_name,
@@ -705,8 +760,10 @@ class DatabaseManager {
       FROM ranked_participants
       LIMIT ? OFFSET ?
     `;
-    
-    return this.db.prepare(sql).all(competitionId, competitionId, limit, actualOffset);
+
+    return this.db
+      .prepare(sql)
+      .all(competitionId, competitionId, limit, actualOffset);
   }
 
   // ===== Подсчет общего количества участников =====
@@ -717,40 +774,15 @@ class DatabaseManager {
       JOIN teams t ON t.id = p.team_id
       WHERE t.competition_id = ?
     `;
-    
+
     const result = this.db.prepare(sql).get(competitionId);
     return result.count;
-  }
-
-  // ===== Отладочная функция для проверки результатов участника по этапам =====
-  async getParticipantStageResults(competitionId, participantName) {
-    const sql = `
-      SELECT 
-        p.full_name,
-        s.name as stage_name,
-        s.id as stage_id,
-        sr.time_seconds,
-        sr.penalty_points,
-        CASE 
-          WHEN sr.time_seconds IS NOT NULL 
-          THEN printf('%02d:%02d', sr.time_seconds / 60, sr.time_seconds % 60)
-          ELSE 'Нет результата'
-        END as time_display
-      FROM participants p
-      JOIN teams t ON t.id = p.team_id
-      LEFT JOIN stage_results sr ON sr.participant_id = p.id
-      LEFT JOIN stages s ON s.id = sr.stage_id
-      WHERE t.competition_id = ? AND p.full_name LIKE ?
-      ORDER BY s.id
-    `;
-    
-    return this.db.prepare(sql).all(competitionId, `%${participantName}%`);
   }
 
   // ===== Оптимизированная загрузка участников с результатами (решение N+1 проблемы) =====
   async getParticipantsWithResults(competitionId, stageId = null) {
     let sql, params;
-    
+
     if (stageId) {
       // Участники с результатами для конкретного этапа
       sql = `
@@ -787,14 +819,14 @@ class DatabaseManager {
       `;
       params = [competitionId];
     }
-    
+
     return this.db.prepare(sql).all(...params);
   }
 
   // ===== Детальные результаты участника по этапам (ОПТИМИЗИРОВАННАЯ ВЕРСИЯ) =====
   async getParticipantStageDetails(competitionId, participantId = null) {
     let sql, params;
-    
+
     if (participantId) {
       // Результаты конкретного участника - оптимизированный запрос
       sql = `
@@ -828,7 +860,7 @@ class DatabaseManager {
       `;
       params = [competitionId];
     }
-    
+
     const rows = this.db.prepare(sql).all(...params);
     return rows;
   }
@@ -894,14 +926,16 @@ class DatabaseManager {
       LEFT JOIN stages_data sd ON sd.competition_id = ci.id
       GROUP BY ci.id
     `;
-    
-    const result = this.db.prepare(sql).get(competitionId, competitionId, competitionId);
-    
+
+    const result = this.db
+      .prepare(sql)
+      .get(competitionId, competitionId, competitionId);
+
     if (result) {
-      result.teams = JSON.parse(result.teams || '[]');
-      result.stages = JSON.parse(result.stages || '[]');
+      result.teams = JSON.parse(result.teams || "[]");
+      result.stages = JSON.parse(result.stages || "[]");
     }
-    
+
     return result;
   }
 
@@ -927,7 +961,7 @@ class DatabaseManager {
       WHERE t.competition_id = ? AND s.competition_id = ?
       ORDER BY s.order_index, t.name, p.full_name
     `;
-    
+
     return this.db.prepare(sql).all(competitionId, competitionId);
   }
 
@@ -968,7 +1002,7 @@ class DatabaseManager {
       FROM team_stats ts
       CROSS JOIN stage_stats ss
     `;
-    
+
     return this.db.prepare(sql).get(competitionId, competitionId);
   }
 
@@ -976,11 +1010,17 @@ class DatabaseManager {
   async migrateStagesTable() {
     try {
       const tableInfo = this.db.prepare("PRAGMA table_info(stages)").all();
-      const hasOrderIndex = tableInfo.some(col => col.name === 'order_index');
+      const hasOrderIndex = tableInfo.some((col) => col.name === "order_index");
 
       if (!hasOrderIndex) {
-        this.db.prepare("ALTER TABLE stages ADD COLUMN order_index INTEGER DEFAULT 0").run();
-        this.db.prepare("UPDATE stages SET order_index = id WHERE order_index = 0").run();
+        this.db
+          .prepare(
+            "ALTER TABLE stages ADD COLUMN order_index INTEGER DEFAULT 0"
+          )
+          .run();
+        this.db
+          .prepare("UPDATE stages SET order_index = id WHERE order_index = 0")
+          .run();
       }
     } catch (error) {
       console.error("❌ Ошибка миграции таблицы stages:", error.message);
@@ -995,25 +1035,27 @@ class DatabaseManager {
 
   // Парсинг времени из формата "14:54" (минуты:секунды) в секунды
   parseTimeToSeconds(timeStr) {
-    if (!timeStr || timeStr === '00:00') return 0;
-    
-    const parts = timeStr.split(':');
+    if (!timeStr || timeStr === "00:00") return 0;
+
+    const parts = timeStr.split(":");
     if (parts.length !== 2) return 0;
-    
+
     const minutes = parseInt(parts[0]) || 0;
     const seconds = parseInt(parts[1]) || 0;
-    
+
     return minutes * 60 + seconds;
   }
 
   // Форматирование времени из секунд в формат "ММ:СС"
   formatTime(seconds) {
-    if (!seconds || seconds === 0) return '00:00';
-    
+    if (!seconds || seconds === 0) return "00:00";
+
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
-    
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+      .toString()
+      .padStart(2, "0")}`;
   }
 
   // Закрытие соединения
