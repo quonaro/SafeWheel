@@ -5,8 +5,10 @@ const {
   MenuItem,
   shell,
   ipcMain,
+  dialog,
 } = require("electron");
 const path = require("path");
+const fs = require("fs");
 const { spawn } = require("child_process");
 const DatabaseManager = require("./database");
 const isDev = process.env.NODE_ENV === "development";
@@ -233,6 +235,44 @@ function setupIpcHandlers() {
     async (e, competitionId, participantName) =>
       database.getParticipantStageResults(competitionId, participantName)
   );
+
+  // ===== File Operations =====
+  ipcMain.handle("file:selectDirectory", async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ["openDirectory"],
+      title: "Выберите папку для сохранения файлов",
+    });
+
+    if (result.canceled) {
+      return null;
+    }
+
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle("file:saveWordDocument", async (e, fileName, uint8Array) => {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: "Сохранить файл",
+      defaultPath: fileName,
+      filters: [
+        { name: "Word Documents", extensions: ["docx"] },
+        { name: "All Files", extensions: ["*"] },
+      ],
+    });
+
+    if (result.canceled) {
+      return null;
+    }
+
+    try {
+      // Конвертируем Uint8Array в Buffer для записи файла
+      const buffer = Buffer.from(uint8Array);
+      fs.writeFileSync(result.filePath, buffer);
+      return result.filePath;
+    } catch (error) {
+      throw new Error(`Ошибка сохранения файла: ${error.message}`);
+    }
+  });
 }
 
 function createWindow() {

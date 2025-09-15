@@ -52,7 +52,10 @@ import { ref, reactive, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 
-const props = defineProps({ competitionId: { type: Number, required: false } })
+const props = defineProps({
+  competitionId: { type: Number, required: false },
+  refreshCounts: { type: Function, default: () => { } }
+})
 const api = window.electronAPI?.database
 
 const stages = ref([])
@@ -75,6 +78,7 @@ const addStage = async () => {
     const created = await api.createStage(props.competitionId, payload)
     stages.value.push(created)
     Object.assign(stageForm, { name: '' })
+    await props.refreshCounts()
   } catch (e) {
     ElMessage.error(e.message || 'Ошибка добавления этапа')
   }
@@ -103,6 +107,7 @@ const saveStage = async () => {
 const removeStage = async (id) => {
   await api.deleteStage(id)
   stages.value = stages.value.filter(s => s.id !== id)
+  await props.refreshCounts()
 }
 
 // Inline редактирование этапа

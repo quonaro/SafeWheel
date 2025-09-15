@@ -48,13 +48,13 @@
                     </div>
                   </template>
                 </el-table-column>
-                <el-table-column prop="age" label="Возраст" width="120">
+                <el-table-column prop="birth_date" label="Дата рождения" width="140">
                   <template #default="p">
                     <div class="editable-cell" @click="editParticipant(scope.row.id, p.row)">
-                      <span v-if="!p.row.editing">{{ p.row.age }}</span>
-                      <el-input-number v-else v-model="p.row.age" :min="0" :max="120"
-                        @change="handleAgeChange(scope.row.id, p.row)" size="small" class="age-input"
-                        :controls="false" />
+                      <span v-if="!p.row.editing">{{ formatBirthDate(p.row.birth_date) }}</span>
+                      <el-date-picker v-else v-model="p.row.birth_date" type="date"
+                        @change="handleBirthDateChange(scope.row.id, p.row)" size="small" class="birth-date-input"
+                        format="DD.MM.YYYY" value-format="YYYY-MM-DD" />
                     </div>
                   </template>
                 </el-table-column>
@@ -102,8 +102,9 @@
             <el-option label="Ж" value="Ж" />
           </el-select>
         </el-form-item>
-        <el-form-item label="Возраст">
-          <el-input-number v-model="participantForm.age" :min="0" :max="120" />
+        <el-form-item label="Дата рождения">
+          <el-date-picker v-model="participantForm.birth_date" type="date" format="DD.MM.YYYY" value-format="YYYY-MM-DD"
+            style="width: 100%" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -119,7 +120,10 @@ import { ref, watch, reactive, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Delete } from '@element-plus/icons-vue'
 
-const props = defineProps({ competitionId: { type: Number, required: false } })
+const props = defineProps({
+  competitionId: { type: Number, required: false },
+  refreshCounts: { type: Function, default: () => { } }
+})
 const api = window.electronAPI?.database
 
 const teams = ref([])
@@ -128,7 +132,7 @@ const teamName = ref('')
 
 const participantDialog = ref(false)
 const currentTeamId = ref(null)
-const participantForm = reactive({ id: null, full_name: '', gender: 'М', age: 0 })
+const participantForm = reactive({ id: null, full_name: '', gender: 'М', birth_date: null })
 
 const loadTeams = async () => {
   if (!props.competitionId) { teams.value = []; return }
@@ -153,6 +157,7 @@ const addTeam = async () => {
     teams.value.push(t)
     participantsByTeam[t.id] = []
     teamName.value = ''
+    await props.refreshCounts()
   } catch (e) {
     ElMessage.error(e.message || 'Ошибка добавления команды')
   }
@@ -162,12 +167,33 @@ const removeTeam = async (teamId) => {
   await api.deleteTeam(teamId)
   teams.value = teams.value.filter(t => t.id !== teamId)
   delete participantsByTeam[teamId]
+  await props.refreshCounts()
 }
 
 const openParticipantDialog = (teamId, participant = null) => {
   currentTeamId.value = teamId
-  Object.assign(participantForm, participant || { id: null, full_name: '', gender: 'М', age: 0 })
+  Object.assign(participantForm, participant || { id: null, full_name: '', gender: 'М', birth_date: null })
   participantDialog.value = true
+}
+
+// Функция форматирования даты рождения
+const formatBirthDate = (birthDate) => {
+  if (!birthDate) return '—'
+  const date = new Date(birthDate)
+  return date.toLocaleDateString('ru-RU')
+}
+
+// Функция вычисления возраста из даты рождения
+const calculateAge = (birthDate) => {
+  if (!birthDate) return 0
+  const today = new Date()
+  const birth = new Date(birthDate)
+  let age = today.getFullYear() - birth.getFullYear()
+  const monthDiff = today.getMonth() - birth.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--
+  }
+  return age
 }
 
 const saveParticipant = async () => {
@@ -177,7 +203,8 @@ const saveParticipant = async () => {
     const payload = {
       full_name: String(participantForm.full_name || '').trim(),
       gender: participantForm.gender || 'М',
-      age: Number(participantForm.age || 0)
+      birth_date: participantForm.birth_date || null,
+      age: calculateAge(participantForm.birth_date)
     }
     let saved
     if (participantForm.id) {
@@ -255,7 +282,8 @@ const saveParticipantInline = async (teamId, participant) => {
     const payload = {
       full_name: String(participant.full_name || '').trim(),
       gender: participant.gender || 'М',
-      age: Number(participant.age || 0)
+      birth_date: participant.birth_date || null,
+      age: calculateAge(participant.birth_date)
     }
     const saved = await api.updateParticipant(participant.id, payload)
     Object.assign(participant, saved)
@@ -274,7 +302,8 @@ const handleGenderChange = async (teamId, participant) => {
     const payload = {
       full_name: String(participant.full_name || '').trim(),
       gender: participant.gender || 'М',
-      age: Number(participant.age || 0)
+      birth_date: participant.birth_date || null,
+      age: calculateAge(participant.birth_date)
     }
     const saved = await api.updateParticipant(participant.id, payload)
     Object.assign(participant, saved)
@@ -285,20 +314,21 @@ const handleGenderChange = async (teamId, participant) => {
   }
 }
 
-// Обработка изменения возраста
-const handleAgeChange = async (teamId, participant) => {
+// Обработка изменения даты рождения
+const handleBirthDateChange = async (teamId, participant) => {
   try {
     const payload = {
       full_name: String(participant.full_name || '').trim(),
       gender: participant.gender || 'М',
-      age: Number(participant.age || 0)
+      birth_date: participant.birth_date || null,
+      age: calculateAge(participant.birth_date)
     }
     const saved = await api.updateParticipant(participant.id, payload)
     Object.assign(participant, saved)
-    ElMessage.success('Возраст обновлен')
+    ElMessage.success('Дата рождения обновлена')
   } catch (e) {
-    ElMessage.error(e.message || 'Ошибка обновления возраста')
-    participant.age = participant.originalData.age
+    ElMessage.error(e.message || 'Ошибка обновления даты рождения')
+    participant.birth_date = participant.originalData.birth_date
   }
 }
 </script>
@@ -650,6 +680,31 @@ const handleAgeChange = async (teamId, participant) => {
 }
 
 .age-input :deep(.el-input-number__input:focus) {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+/* Стили для date picker */
+.birth-date-input {
+  z-index: 1000;
+}
+
+.birth-date-input :deep(.el-input__wrapper) {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+  color: #059669;
+  box-shadow: none;
+}
+
+.birth-date-input :deep(.el-input__wrapper:hover) {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.birth-date-input :deep(.el-input__wrapper.is-focus) {
   border-color: #10b981;
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }

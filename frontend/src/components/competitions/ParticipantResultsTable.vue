@@ -1,23 +1,23 @@
 <template>
   <div class="participant-results-container">
     <div v-if="loading" class="loading-container">
-      <el-icon class="is-loading"><Loading /></el-icon>
+      <el-icon class="is-loading">
+        <Loading />
+      </el-icon>
       <span>Загрузка результатов...</span>
     </div>
 
     <div v-else-if="participants.length === 0" class="empty-state">
-      <el-icon><UserFilled /></el-icon>
+      <el-icon>
+        <UserFilled />
+      </el-icon>
       <p>Нет данных для отображения</p>
     </div>
 
     <div v-else class="table-container">
-      <el-table 
-        :data="paginatedParticipants" 
-        style="width: 100%" 
-        :class="['modern-table', { 'empty-table': participants.length === 0 }]"
-        height="460px" 
-        empty-text="Нет данных для отображения"
-      >
+      <el-table :data="paginatedParticipants" style="width: 100%"
+        :class="['modern-table', { 'empty-table': participants.length === 0 }]" height="460px"
+        empty-text="Нет данных для отображения">
         <el-table-column prop="rank" label="Место" :width="participants.length > 0 ? 100 : 0">
           <template #default="scope">
             <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
@@ -52,7 +52,7 @@
         </el-table-column>
         <el-table-column prop="age" label="Возраст" :width="participants.length > 0 ? 100 : 0">
           <template #default="scope">
-            <span>{{ scope.row.age || '—' }}</span>
+            <span>{{ scope.row.age ? scope.row.age + 'л' : '—' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="gender" label="Пол" :width="participants.length > 0 ? 80 : 0">
@@ -74,22 +74,14 @@
             </div>
           </template>
         </el-table-column>
-        </el-table>
-        
-        <!-- Пагинация -->
-        <div v-if="participants.length > pageSize" class="pagination-container">
-          <el-pagination
-            :key="`pagination-${participants.length}-${pageSize}`"
-            v-model:current-page="currentPage"
-            :page-size="pageSize"
-            :total="participants.length"
-            layout="pager"
-            :page-sizes="[10, 20, 50, 100]"
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
-            class="modern-pagination"
-          />
-        </div>
+      </el-table>
+
+      <!-- Пагинация -->
+      <div v-if="participants.length > pageSize" class="pagination-container">
+        <el-pagination :key="`pagination-${participants.length}-${pageSize}`" v-model:current-page="currentPage"
+          :page-size="pageSize" :total="participants.length" layout="pager" :page-sizes="[10, 20, 50, 100]"
+          @size-change="handleSizeChange" @current-change="handleCurrentChange" class="modern-pagination" />
+      </div>
     </div>
 
   </div>
@@ -99,11 +91,11 @@
 import { ref, watch, computed, nextTick } from 'vue'
 import { Loading, UserFilled } from '@element-plus/icons-vue'
 
-const props = defineProps({ 
-  competitionId: { 
-    type: Number, 
-    required: false 
-  } 
+const props = defineProps({
+  competitionId: {
+    type: Number,
+    required: false
+  }
 })
 
 const api = window.electronAPI?.database
@@ -115,12 +107,12 @@ const pageSize = ref(20) // Оптимальный размер страницы
 // Функция форматирования времени из секунд в формат ММ:СС
 const formatTime = (seconds) => {
   if (seconds === null || seconds === undefined || seconds === 0) return '00:00'
-  
+
   // Округляем до ближайшего целого числа секунд
   const totalSeconds = Math.round(Number(seconds))
   const minutes = Math.floor(totalSeconds / 60)
   const remainingSeconds = totalSeconds % 60
-  
+
   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
@@ -144,11 +136,11 @@ const handleCurrentChange = async (newPage) => {
 }
 
 const load = async () => {
-  if (!props.competitionId) { 
+  if (!props.competitionId) {
     participants.value = []
-    return 
+    return
   }
-  
+
   loading.value = true
   try {
     participants.value = await api.getParticipantResults(props.competitionId, { limit: 1000 })
@@ -182,7 +174,8 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 0; /* Позволяет контейнеру сжиматься */
+  min-height: 0;
+  /* Позволяет контейнеру сжиматься */
 }
 
 .table-container .modern-table {
@@ -463,17 +456,25 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 }
 
 /* Центрирование текста в колонках */
-.modern-table :deep(.el-table__body td:nth-child(4)), /* Возраст */
-.modern-table :deep(.el-table__body td:nth-child(5)), /* Пол */
-.modern-table :deep(.el-table__body td:nth-child(6)), /* Штрафы */
-.modern-table :deep(.el-table__body td:nth-child(7)) { /* Время */
+.modern-table :deep(.el-table__body td:nth-child(4)),
+/* Возраст */
+.modern-table :deep(.el-table__body td:nth-child(5)),
+/* Пол */
+.modern-table :deep(.el-table__body td:nth-child(6)),
+/* Штрафы */
+.modern-table :deep(.el-table__body td:nth-child(7)) {
+  /* Время */
   text-align: center;
 }
 
-.modern-table :deep(.el-table__header th:nth-child(4)), /* Возраст */
-.modern-table :deep(.el-table__header th:nth-child(5)), /* Пол */
-.modern-table :deep(.el-table__header th:nth-child(6)), /* Штрафы */
-.modern-table :deep(.el-table__header th:nth-child(7)) { /* Время */
+.modern-table :deep(.el-table__header th:nth-child(4)),
+/* Возраст */
+.modern-table :deep(.el-table__header th:nth-child(5)),
+/* Пол */
+.modern-table :deep(.el-table__header th:nth-child(6)),
+/* Штрафы */
+.modern-table :deep(.el-table__header th:nth-child(7)) {
+  /* Время */
   text-align: center;
 }
 
@@ -511,6 +512,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
 /* Адаптивность */
 @media (max-width: 768px) {
+
   .modern-table :deep(.el-table__header th),
   .modern-table :deep(.el-table__body td) {
     padding: 8px 6px;

@@ -1,10 +1,16 @@
 <template>
   <div class="competitions">
     <div class="content-container">
-      <TeamsParticipants v-if="activeTab === 'teams'" :competition-id="currentCompetitionId" />
-      <StagesManager v-if="activeTab === 'stages'" :competition-id="currentCompetitionId" />
-      <ResultsInput v-if="activeTab === 'results'" :competition-id="currentCompetitionId" />
-      <StandingsTable v-if="activeTab === 'standings'" :competition-id="currentCompetitionId" />
+      <TeamsParticipants v-if="activeTab === 'teams'" :competition-id="currentCompetitionId"
+        :refresh-counts="refreshCounts" />
+      <StagesManager v-if="activeTab === 'stages'" :competition-id="currentCompetitionId"
+        :refresh-counts="refreshCounts" />
+      <ResultsInput v-if="activeTab === 'results'" :competition-id="currentCompetitionId"
+        :refresh-counts="refreshCounts" />
+      <StandingsTable v-if="activeTab === 'standings'" :competition-id="currentCompetitionId"
+        :refresh-counts="refreshCounts" />
+      <Settings v-if="activeTab === 'settings'" :competition-id="currentCompetitionId"
+        :refresh-counts="refreshCounts" />
     </div>
   </div>
 </template>
@@ -21,6 +27,10 @@ const props = defineProps({
   competitionId: {
     type: [String, Number],
     required: true
+  },
+  refreshCounts: {
+    type: Function,
+    default: () => { }
   }
 })
 
@@ -67,7 +77,8 @@ export default {
     TeamsParticipants: () => import('./competitions/TeamsParticipants.vue'),
     StagesManager: () => import('./competitions/StagesManager.vue'),
     ResultsInput: () => import('./competitions/ResultsInput.vue'),
-    StandingsTable: () => import('./competitions/StandingsTable.vue')
+    StandingsTable: () => import('./competitions/StandingsTable.vue'),
+    Settings: () => import('./competitions/Settings.vue')
   }
 }
 </script>
@@ -86,7 +97,4 @@ export default {
   flex: 1;
   overflow: hidden;
 }
-
 </style>
-
-
