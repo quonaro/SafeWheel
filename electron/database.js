@@ -153,6 +153,7 @@ class DatabaseManager {
           name TEXT NOT NULL,
           description TEXT DEFAULT '',
           emoji TEXT DEFAULT '🏆',
+          settings TEXT DEFAULT '{}',
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`,
@@ -173,6 +174,7 @@ class DatabaseManager {
           team_id INTEGER NOT NULL,
           full_name TEXT NOT NULL,
           gender TEXT CHECK (gender IN ('М','Ж')),
+          birth_date DATE,
           age INTEGER NOT NULL CHECK(age >= 0),
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -257,6 +259,34 @@ class DatabaseManager {
         }
       }
 
+      // Миграция: добавляем поле settings если его нет
+      try {
+        this.db.exec(
+          "ALTER TABLE competitions ADD COLUMN settings TEXT DEFAULT '{}'"
+        );
+      } catch (e) {
+        // Поле уже существует, игнорируем ошибку
+        if (!e.message.includes("duplicate column name")) {
+          console.warn(
+            "⚠️ Предупреждение при добавлении поля settings:",
+            e.message
+          );
+        }
+      }
+
+      // Миграция: добавляем поле birth_date если его нет
+      try {
+        this.db.exec("ALTER TABLE participants ADD COLUMN birth_date DATE");
+      } catch (e) {
+        // Поле уже существует, игнорируем ошибку
+        if (!e.message.includes("duplicate column name")) {
+          console.warn(
+            "⚠️ Предупреждение при добавлении поля birth_date:",
+            e.message
+          );
+        }
+      }
+
       // Выполняем миграции
       await this.migrateStagesTable();
 
@@ -296,25 +326,27 @@ class DatabaseManager {
   async createCompetition(data) {
     this.checkDatabase();
     const stmt = this.db.prepare(`
-      INSERT INTO competitions (name, description, emoji, created_at, updated_at)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      INSERT INTO competitions (name, description, emoji, settings, created_at, updated_at)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `);
     const result = stmt.run(
       String(data.name || "").trim(),
       String(data.description || "").trim(),
-      String(data.emoji || "🏆")
+      String(data.emoji || "🏆"),
+      JSON.stringify(data.settings || { maxParticipantsPerTeam: 4 })
     );
     return this.getCompetitionById(result.lastInsertRowid);
   }
 
   async updateCompetition(id, data) {
     const stmt = this.db.prepare(`
-      UPDATE competitions SET name = ?, description = ?, emoji = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+      UPDATE competitions SET name = ?, description = ?, emoji = ?, settings = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
     `);
     stmt.run(
       String(data.name || "").trim(),
       String(data.description || "").trim(),
       String(data.emoji || "🏆"),
+      JSON.stringify(data.settings || { maxParticipantsPerTeam: 4 }),
       id
     );
     return this.getCompetitionById(id);
@@ -385,27 +417,60 @@ class DatabaseManager {
     if (count >= 4) {
       throw new Error("В команде не может быть больше 4 участников");
     }
+
+    // Вычисляем возраст из даты рождения если она указана
+    let age = Number(payload.age || 0);
+    if (payload.birth_date && !age) {
+      const birthDate = new Date(payload.birth_date);
+      const today = new Date();
+      age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+      ) {
+        age--;
+      }
+    }
+
     const stmt = this.db.prepare(`
-      INSERT INTO participants (team_id, full_name, gender, age, created_at, updated_at)
-      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      INSERT INTO participants (team_id, full_name, gender, birth_date, age, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `);
     const res = stmt.run(
       teamId,
       String(payload.full_name || "").trim(),
       payload.gender || null,
-      Number(payload.age || 0)
+      payload.birth_date || null,
+      age
     );
     return this.getParticipantById(res.lastInsertRowid);
   }
 
   async updateParticipant(id, payload) {
+    // Вычисляем возраст из даты рождения если она указана
+    let age = Number(payload.age || 0);
+    if (payload.birth_date && !age) {
+      const birthDate = new Date(payload.birth_date);
+      const today = new Date();
+      age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+      ) {
+        age--;
+      }
+    }
+
     const stmt = this.db.prepare(`
-      UPDATE participants SET full_name = ?, gender = ?, age = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+      UPDATE participants SET full_name = ?, gender = ?, birth_date = ?, age = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
     `);
     stmt.run(
       String(payload.full_name || "").trim(),
       payload.gender || null,
-      Number(payload.age || 0),
+      payload.birth_date || null,
+      age,
       id
     );
     return this.getParticipantById(id);
@@ -500,6 +565,13 @@ class DatabaseManager {
   // Сумма штрафных баллов и времени по всем этапам; при равенстве — по среднему возрасту команды (меньше — выше)
   // Команды с меньшим количеством участников ставятся на последние места
   async computeStandings(competitionId) {
+    // Получаем настройки соревнования
+    const competition = await this.getCompetitionById(competitionId);
+    const settings = competition?.settings
+      ? JSON.parse(competition.settings)
+      : { maxParticipantsPerTeam: 4 };
+    const maxParticipantsPerTeam = settings.maxParticipantsPerTeam || 4;
+
     const sql = `
       WITH team_aggregates AS (
         SELECT 
@@ -515,10 +587,6 @@ class DatabaseManager {
         LEFT JOIN stages s ON s.id = sr.stage_id AND s.competition_id = ?
         WHERE t.competition_id = ?
         GROUP BY t.id, t.name
-      ),
-      max_participants AS (
-        SELECT MAX(participant_count) AS max_count
-        FROM team_aggregates
       )
       SELECT 
         ta.team_id, 
@@ -528,18 +596,19 @@ class DatabaseManager {
         ta.total_time, 
         ta.avg_age,
         CASE 
-          WHEN ta.participant_count < mp.max_count THEN 1 
+          WHEN ta.participant_count < ? THEN 1 
           ELSE 0 
         END AS is_incomplete_team
       FROM team_aggregates ta
-      CROSS JOIN max_participants mp
       ORDER BY 
         is_incomplete_team ASC,  -- Полные команды сначала
         total_penalties ASC, 
         total_time ASC, 
         avg_age ASC
     `;
-    const rows = this.db.prepare(sql).all(competitionId, competitionId);
+    const rows = this.db
+      .prepare(sql)
+      .all(competitionId, competitionId, maxParticipantsPerTeam);
     // Добавим ранги
     return rows.map((r, idx) => ({ ...r, rank: idx + 1 }));
   }
@@ -723,6 +792,13 @@ class DatabaseManager {
     const { page = 1, limit = 50, offset = null } = options;
     const actualOffset = offset !== null ? offset : (page - 1) * limit;
 
+    // Получаем настройки соревнования
+    const competition = await this.getCompetitionById(competitionId);
+    const settings = competition?.settings
+      ? JSON.parse(competition.settings)
+      : { maxParticipantsPerTeam: 4 };
+    const maxParticipantsPerTeam = settings.maxParticipantsPerTeam || 4;
+
     const sql = `
       WITH participant_totals AS (
         SELECT p.id, p.full_name, p.gender, p.age, t.name AS team_name,
@@ -736,25 +812,20 @@ class DatabaseManager {
         WHERE t.competition_id = ?
         GROUP BY p.id, p.full_name, p.gender, p.age, t.name
       ),
-      max_team_participants AS (
-        SELECT MAX(team_participant_count) AS max_count
-        FROM participant_totals
-      ),
       ranked_participants AS (
-        SELECT pt.*, mp.max_count,
+        SELECT pt.*,
                CASE 
-                 WHEN pt.team_participant_count < mp.max_count THEN 1 
+                 WHEN pt.team_participant_count < ? THEN 1 
                  ELSE 0 
                END AS is_incomplete_team,
                ROW_NUMBER() OVER (
                  ORDER BY 
-                   CASE WHEN pt.team_participant_count < mp.max_count THEN 1 ELSE 0 END ASC,
+                   CASE WHEN pt.team_participant_count < ? THEN 1 ELSE 0 END ASC,
                    total_penalties ASC, 
                    total_time ASC, 
                    age ASC
                ) as rank
         FROM participant_totals pt
-        CROSS JOIN max_team_participants mp
       )
       SELECT id, full_name, gender, age, team_name, total_penalties, total_time, rank
       FROM ranked_participants
@@ -763,7 +834,14 @@ class DatabaseManager {
 
     return this.db
       .prepare(sql)
-      .all(competitionId, competitionId, limit, actualOffset);
+      .all(
+        competitionId,
+        competitionId,
+        maxParticipantsPerTeam,
+        maxParticipantsPerTeam,
+        limit,
+        actualOffset
+      );
   }
 
   // ===== Подсчет общего количества участников =====

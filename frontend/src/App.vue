@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <div class="app-container">
-      <div class="sidebar">
+      <div class="sidebar" :class="{ expanded: isMenuExpanded }">
         <div class="sidebar-content">
           <nav class="nav-menu">
             <div class="nav-item back-item" :class="{
@@ -10,38 +10,74 @@
               <el-icon>
                 <ArrowLeft />
               </el-icon>
+              <span v-if="isMenuExpanded" class="nav-text">Назад</span>
             </div>
-            <div class="nav-item" :class="{
-              active: activeTab === 'teams' && selectedCompetitionId,
-              disabled: !selectedCompetitionId
-            }" @click="selectedCompetitionId && setActiveTab('teams')">
-              <el-icon>
-                <UserFilled />
-              </el-icon>
-            </div>
-            <div class="nav-item" :class="{
+
+            <div class="nav-item stages-item" :class="{
               active: activeTab === 'stages' && selectedCompetitionId,
               disabled: !selectedCompetitionId
             }" @click="selectedCompetitionId && setActiveTab('stages')">
               <el-icon>
                 <List />
               </el-icon>
+              <span v-if="isMenuExpanded" class="nav-text">Этапы</span>
+              <div v-if="selectedCompetitionId && stagesCount > 0" class="nav-badge">
+                {{ stagesCount }}
+              </div>
             </div>
-            <div class="nav-item" :class="{
+
+            <div class="nav-item teams-item" :class="{
+              active: activeTab === 'teams' && selectedCompetitionId,
+              disabled: !selectedCompetitionId
+            }" @click="selectedCompetitionId && setActiveTab('teams')">
+              <el-icon>
+                <UserFilled />
+              </el-icon>
+              <span v-if="isMenuExpanded" class="nav-text">Команды</span>
+              <div v-if="selectedCompetitionId && teamsCount > 0" class="nav-badge">
+                {{ teamsCount }}
+              </div>
+            </div>
+
+            <div class="nav-item results-item" :class="{
               active: activeTab === 'results' && selectedCompetitionId,
               disabled: !selectedCompetitionId
             }" @click="selectedCompetitionId && setActiveTab('results')">
               <el-icon>
                 <Edit />
               </el-icon>
+              <span v-if="isMenuExpanded" class="nav-text">Заполнение результатов</span>
             </div>
-            <div class="nav-item" :class="{
+
+            <div class="nav-item standings-item" :class="{
               active: activeTab === 'standings' && selectedCompetitionId,
               disabled: !selectedCompetitionId
             }" @click="selectedCompetitionId && setActiveTab('standings')">
               <el-icon>
                 <TrophyBase />
               </el-icon>
+              <span v-if="isMenuExpanded" class="nav-text">Результаты</span>
+            </div>
+
+            <div class="nav-item settings-item" :class="{
+              active: activeTab === 'settings' && selectedCompetitionId,
+              disabled: !selectedCompetitionId
+            }" @click="selectedCompetitionId && setActiveTab('settings')">
+              <el-icon>
+                <Setting />
+              </el-icon>
+              <span v-if="isMenuExpanded" class="nav-text">Настройки</span>
+            </div>
+
+            <!-- Кнопка сворачивания/разворачивания меню -->
+            <div class="nav-item toggle-item" @click="toggleMenu">
+              <el-icon>
+                <Expand v-if="!isMenuExpanded" />
+                <Fold v-else />
+              </el-icon>
+              <span v-if="isMenuExpanded" class="nav-text">
+                {{ isMenuExpanded ? 'Свернуть' : 'Развернуть' }}
+              </span>
             </div>
           </nav>
         </div>
@@ -77,7 +113,7 @@
           </div>
 
           <CompetitionsManager v-else :active-tab="activeTab" :competition-id="selectedCompetitionId"
-            @tab-change="handleTabChange" @back-to-selector="backToSelector" />
+            :refresh-counts="refreshCounts" @tab-change="handleTabChange" @back-to-selector="backToSelector" />
         </div>
       </div>
     </div>
@@ -115,16 +151,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import CompetitionsManager from './components/CompetitionsManager.vue'
-import { UserFilled, List, Edit, TrophyBase, Plus, ArrowLeft } from '@element-plus/icons-vue'
+import { UserFilled, List, Edit, TrophyBase, Plus, ArrowLeft, Setting, Expand, Fold } from '@element-plus/icons-vue'
 
 const activeTab = ref('teams')
 const selectedCompetitionId = ref(null)
 const competitions = ref([])
 const createDialogVisible = ref(false)
 const competitionForm = reactive({ name: '', description: '', emoji: '🏆' })
+const isMenuExpanded = ref(true) // Меню развернуто по умолчанию
+const stagesCount = ref(0)
+const teamsCount = ref(0)
 
 // Список доступных эмодзи для выбора
 const availableEmojis = [
@@ -144,13 +183,35 @@ const setActiveTab = (tab) => {
   activeTab.value = tab
 }
 
+const toggleMenu = () => {
+  isMenuExpanded.value = !isMenuExpanded.value
+}
+
+// Загрузка количества этапов и команд
+const loadCounts = async () => {
+  if (!selectedCompetitionId.value || !api) return
+
+  try {
+    const stages = await api.listStages(selectedCompetitionId.value)
+    const teams = await api.listTeams(selectedCompetitionId.value)
+
+    stagesCount.value = stages?.length || 0
+    teamsCount.value = teams?.length || 0
+  } catch (error) {
+    console.error('Ошибка загрузки количества этапов и команд:', error)
+    stagesCount.value = 0
+    teamsCount.value = 0
+  }
+}
+
 const handleTabChange = (tab) => {
   activeTab.value = tab
 }
 
-const selectCompetition = (competitionId) => {
+const selectCompetition = async (competitionId) => {
   selectedCompetitionId.value = competitionId
   activeTab.value = 'teams'
+  await loadCounts()
 }
 
 const backToSelector = () => {
@@ -176,7 +237,7 @@ const createCompetition = async () => {
     competitions.value.unshift(created)
     createDialogVisible.value = false
     ElMessage.success('Конкурс создан')
-    selectCompetition(created.id)
+    await selectCompetition(created.id)
   } catch (e) {
     ElMessage.error(e.message || 'Ошибка')
   }
@@ -186,6 +247,20 @@ const loadCompetitions = async () => {
   if (!api) return
   competitions.value = await api.listCompetitions()
 }
+
+// Функция для обновления количества (можно вызывать из дочерних компонентов)
+const refreshCounts = async () => {
+  if (selectedCompetitionId.value) {
+    await loadCounts()
+  }
+}
+
+// Watcher для обновления количества при изменении активной вкладки
+watch(activeTab, async () => {
+  if (selectedCompetitionId.value) {
+    await loadCounts()
+  }
+})
 
 onMounted(() => {
   loadCompetitions()
@@ -215,106 +290,6 @@ onMounted(() => {
   padding: 20px;
 }
 
-/* Адаптивность для основного контейнера */
-@media (max-width: 768px) {
-  .app-container {
-    flex-direction: column;
-    gap: 16px;
-    padding: 16px;
-  }
-
-  .sidebar {
-    width: 100%;
-    height: auto;
-    flex-direction: row;
-    justify-content: center;
-    padding: 16px 0;
-  }
-
-  .sidebar-content {
-    flex-direction: row;
-    gap: 12px;
-    padding: 0 20px;
-  }
-
-  .nav-menu {
-    flex-direction: row;
-    gap: 12px;
-  }
-
-  .nav-item {
-    margin-bottom: 0;
-  }
-}
-
-@media (max-width: 480px) {
-  .app-container {
-    padding: 12px;
-    gap: 12px;
-  }
-
-  .sidebar {
-    width: 60px;
-    padding: 10px 0;
-    flex-shrink: 0;
-    min-width: 60px;
-    max-width: 60px;
-  }
-
-  .sidebar-content {
-    padding: 0 12px;
-    gap: 6px;
-  }
-
-  .nav-menu {
-    gap: 6px;
-  }
-
-  .nav-item {
-    width: 36px;
-    height: 36px;
-  }
-
-  .nav-item .el-icon {
-    font-size: 12px;
-  }
-
-  .nav-item.back-item {
-    margin-bottom: 8px;
-  }
-}
-
-@media (max-width: 360px) {
-  .sidebar {
-    width: 50px;
-    padding: 8px 0;
-    flex-shrink: 0;
-    min-width: 50px;
-    max-width: 50px;
-  }
-
-  .sidebar-content {
-    padding: 0 8px;
-    gap: 4px;
-  }
-
-  .nav-menu {
-    gap: 4px;
-  }
-
-  .nav-item {
-    width: 32px;
-    height: 32px;
-  }
-
-  .nav-item .el-icon {
-    font-size: 10px;
-  }
-
-  .nav-item.back-item {
-    margin-bottom: 6px;
-  }
-}
 
 .sidebar {
   width: 70px;
@@ -329,6 +304,13 @@ onMounted(() => {
   flex-shrink: 0;
   min-width: 70px;
   max-width: 70px;
+  transition: all 0.3s ease;
+}
+
+.sidebar.expanded {
+  width: 200px;
+  min-width: 200px;
+  max-width: 200px;
 }
 
 .sidebar-content {
@@ -354,59 +336,81 @@ onMounted(() => {
   border-radius: 14px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #6b7280;
+  color: #8b5cf6;
   margin-bottom: 8px;
   position: relative;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.08);
+  gap: 8px;
+  padding: 0 12px;
+  min-width: 48px;
 }
 
-.nav-item::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(59, 130, 246, 0.1);
-  border-radius: 16px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
+/* Базовые стили применяются только к кнопкам без специальных классов */
+.nav-item:not(.stages-item):not(.teams-item):not(.results-item):not(.standings-item):not(.settings-item):not(.back-item):not(.toggle-item) {
+  color: #8b5cf6;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-color: rgba(139, 92, 246, 0.1);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.08);
+}
+
+.sidebar.expanded .nav-item {
+  width: auto;
+  min-width: 48px;
+  justify-content: flex-start;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.8);
-  color: #3b82f6;
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.2);
-}
-
-.nav-item:hover::before {
-  opacity: 1;
+  transform: translateY(-2px) scale(1.02);
 }
 
 .nav-item.active {
-  background: #3b82f6;
-  color: white;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
-  border-color: transparent;
-  transform: translateY(-2px) scale(1.1);
+  transform: translateY(-2px) scale(1.05);
 }
 
-.nav-item.active::before {
-  opacity: 0;
+/* Базовые стили hover и active применяются только к кнопкам без специальных классов */
+.nav-item:not(.stages-item):not(.teams-item):not(.results-item):not(.standings-item):not(.settings-item):not(.back-item):not(.toggle-item):hover {
+  background: linear-gradient(135deg, #ede9fe, #e0e7ff);
+  color: #7c3aed;
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.2);
 }
+
+.nav-item:not(.stages-item):not(.teams-item):not(.results-item):not(.standings-item):not(.settings-item):not(.back-item):not(.toggle-item).active {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
+  border-color: transparent;
+}
+
+.nav-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-color: rgba(107, 114, 128, 0.1);
+  color: #9ca3af;
+  box-shadow: none;
+}
+
+.nav-item.disabled:hover {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  transform: none;
+  color: #9ca3af;
+  box-shadow: none;
+}
+
 
 .nav-item .el-icon {
   font-size: 20px;
   position: relative;
   z-index: 1;
   transition: all 0.3s ease;
+  flex-shrink: 0;
 }
 
 .nav-item:hover .el-icon {
@@ -416,6 +420,59 @@ onMounted(() => {
 .nav-item.active .el-icon {
   transform: scale(1.15);
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.nav-text {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.3s ease;
+  opacity: 1;
+  max-width: 120px;
+  flex-shrink: 0;
+}
+
+.sidebar:not(.expanded) .nav-text {
+  opacity: 0;
+  width: 0;
+  max-width: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .nav-item.disabled {
@@ -440,40 +497,152 @@ onMounted(() => {
 
 /* Стили для кнопки "назад" */
 .nav-item.back-item {
-  background: rgba(239, 68, 68, 0.1);
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
   border: 1px solid rgba(239, 68, 68, 0.2);
   color: #dc2626;
   margin-bottom: 16px;
 }
 
 .nav-item.back-item:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: linear-gradient(135deg, #fecaca, #fca5a5);
   color: #b91c1c;
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.3);
 }
 
-.nav-item.back-item:hover::before {
-  background: rgba(239, 68, 68, 0.1);
-  opacity: 1;
-}
-
 .nav-item.back-item.disabled {
-  opacity: 0.3;
+  opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
-  background: rgba(107, 114, 128, 0.1);
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
   border-color: rgba(107, 114, 128, 0.1);
-  color: #6b7280;
+  color: #9ca3af;
   box-shadow: none;
 }
 
 .nav-item.back-item.disabled:hover {
-  background: rgba(107, 114, 128, 0.1);
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
   transform: none;
-  color: #6b7280;
+  color: #9ca3af;
   box-shadow: none;
+}
+
+/* Стили для кнопки переключения меню */
+.nav-item.toggle-item {
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  color: #0ea5e9;
+  margin-top: auto;
+}
+
+.nav-item.toggle-item:hover {
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  color: #0284c7;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.15);
+  border-color: rgba(14, 165, 233, 0.3);
+}
+
+/* Цвета для разных кнопок */
+.nav-item.stages-item {
+  color: #059669;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-color: rgba(5, 150, 105, 0.2);
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.08);
+}
+
+.nav-item.stages-item:hover {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #047857;
+  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.15);
+  border-color: rgba(5, 150, 105, 0.3);
+}
+
+.nav-item.stages-item.active {
+  background: linear-gradient(135deg, #059669, #047857);
+  color: white;
+  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.3);
+}
+
+.nav-item.teams-item {
+  color: #dc2626;
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border-color: rgba(220, 38, 38, 0.2);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);
+}
+
+.nav-item.teams-item:hover {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  color: #b91c1c;
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.nav-item.teams-item.active {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
+}
+
+.nav-item.results-item {
+  color: #7c3aed;
+  background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+  border-color: rgba(124, 58, 237, 0.2);
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.08);
+}
+
+.nav-item.results-item:hover {
+  background: linear-gradient(135deg, #f3e8ff, #e9d5ff);
+  color: #6d28d9;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.15);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
+.nav-item.results-item.active {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: white;
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+}
+
+.nav-item.standings-item {
+  color: #ea580c;
+  background: linear-gradient(135deg, #fff7ed, #fed7aa);
+  border-color: rgba(234, 88, 12, 0.2);
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.08);
+}
+
+.nav-item.standings-item:hover {
+  background: linear-gradient(135deg, #fed7aa, #fdba74);
+  color: #c2410c;
+  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.15);
+  border-color: rgba(234, 88, 12, 0.3);
+}
+
+.nav-item.standings-item.active {
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+  color: white;
+  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.3);
+}
+
+.nav-item.settings-item {
+  color: #0891b2;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border-color: rgba(8, 145, 178, 0.2);
+  box-shadow: 0 2px 8px rgba(8, 145, 178, 0.08);
+}
+
+.nav-item.settings-item:hover {
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  color: #0e7490;
+  box-shadow: 0 8px 24px rgba(8, 145, 178, 0.15);
+  border-color: rgba(8, 145, 178, 0.3);
+}
+
+.nav-item.settings-item.active {
+  background: linear-gradient(135deg, #0891b2, #0e7490);
+  color: white;
+  box-shadow: 0 4px 16px rgba(8, 145, 178, 0.3);
 }
 
 .main-content {
@@ -493,22 +662,6 @@ onMounted(() => {
   position: relative;
 }
 
-/* Адаптивность для контентной области */
-@media (max-width: 768px) {
-  .content-card {
-    padding: 24px;
-    border-radius: 16px;
-    overflow: visible;
-  }
-}
-
-@media (max-width: 480px) {
-  .content-card {
-    padding: 16px;
-    border-radius: 12px;
-    overflow: visible;
-  }
-}
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
@@ -619,144 +772,10 @@ onMounted(() => {
   margin: 0;
 }
 
-/* Адаптивность для разных экранов */
-@media (max-width: 1200px) {
-  .competition-card {
-    width: clamp(180px, 14vw, 240px);
-  }
-}
 
-@media (max-width: 900px) {
-  .competition-card {
-    width: clamp(160px, 12vw, 200px);
-  }
-}
 
-@media (max-width: 768px) {
-  .competition-list {
-    max-width: 100%;
-    justify-content: center;
-    padding: 30px 15px;
-    margin: 0;
-  }
 
-  .competition-card {
-    width: clamp(150px, 10vw, 180px);
-  }
 
-  .competition-selector {
-    padding: clamp(30px, 5vw, 50px) clamp(16px, 4vw, 30px);
-    overflow: visible;
-  }
-
-  .header-content {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-
-  .header-text {
-    text-align: center;
-  }
-
-  .header-text h1 {
-    font-size: clamp(28px, 4vw, 36px);
-  }
-
-  .header-text p {
-    font-size: clamp(14px, 2vw, 18px);
-  }
-
-  .create-button {
-    padding: 10px 20px;
-    font-size: 14px;
-  }
-}
-
-@media (max-width: 600px) {
-  .competition-list {
-    justify-content: center;
-    padding: 25px 10px;
-    margin: 0;
-  }
-
-  .competition-card {
-    width: clamp(140px, 8vw, 160px);
-  }
-
-  .create-button {
-    padding: 8px 16px;
-    font-size: 13px;
-  }
-}
-
-@media (max-width: 480px) {
-  .competition-list {
-    padding: 20px 8px;
-    margin: 0;
-  }
-
-  .competition-selector {
-    padding: clamp(20px, 4vw, 30px) clamp(12px, 3vw, 20px);
-    overflow: visible;
-  }
-
-  .header-text h1 {
-    font-size: clamp(24px, 3.5vw, 32px);
-  }
-
-  .header-text p {
-    font-size: clamp(12px, 1.8vw, 16px);
-  }
-
-  .create-button {
-    padding: 6px 12px;
-    font-size: 12px;
-  }
-
-  .competition-card {
-    padding: clamp(12px, 2.5vw, 18px);
-  }
-
-  .competition-icon {
-    width: clamp(35px, 6vw, 50px);
-    height: clamp(35px, 6vw, 50px);
-    font-size: clamp(20px, 3vw, 28px);
-  }
-
-  .competition-info h3 {
-    font-size: clamp(12px, 2vw, 16px);
-  }
-
-  .competition-info p {
-    font-size: clamp(9px, 1.2vw, 12px);
-  }
-}
-
-@media (min-width: 1400px) {
-  .competition-card {
-    width: clamp(220px, 18vw, 280px);
-  }
-
-  .competition-selector {
-    padding: clamp(60px, 8vw, 100px) clamp(40px, 6vw, 80px);
-    overflow: visible;
-  }
-
-  .selector-header h1 {
-    font-size: clamp(36px, 5vw, 52px);
-  }
-
-  .selector-header p {
-    font-size: clamp(16px, 2.2vw, 22px);
-  }
-}
-
-@media (min-width: 1800px) {
-  .competition-card {
-    width: clamp(240px, 20vw, 300px);
-  }
-}
 
 .competition-card {
   background: #ffffff;
@@ -1001,55 +1020,6 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 
-/* Адаптивность для диалогов */
-@media (max-width: 768px) {
-  .custom-dialog :deep(.el-dialog) {
-    width: 90% !important;
-    margin: 0 auto;
-  }
-
-  .custom-dialog :deep(.el-dialog__header) {
-    padding: 20px 24px 16px;
-  }
-
-  .custom-dialog :deep(.el-dialog__body) {
-    padding: 24px;
-  }
-
-  .custom-dialog :deep(.el-dialog__footer) {
-    padding: 16px 24px 24px;
-  }
-}
-
-@media (max-width: 480px) {
-  .custom-dialog :deep(.el-dialog) {
-    width: 95% !important;
-    border-radius: 16px;
-  }
-
-  .custom-dialog :deep(.el-dialog__header) {
-    padding: 16px 20px 12px;
-  }
-
-  .custom-dialog :deep(.el-dialog__title) {
-    font-size: 18px;
-  }
-
-  .custom-dialog :deep(.el-dialog__body) {
-    padding: 20px;
-  }
-
-  .custom-dialog :deep(.el-dialog__footer) {
-    padding: 12px 20px 20px;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .custom-dialog :deep(.el-button) {
-    width: 100%;
-    padding: 14px 24px;
-  }
-}
 
 /* Стили для селектора эмодзи */
 .emoji-selector {
@@ -1113,52 +1083,5 @@ onMounted(() => {
   border-color: #3b82f6;
   transform: scale(1.15);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-/* Адаптивность для селектора эмодзи */
-@media (max-width: 768px) {
-  .emoji-grid {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
-    max-height: 120px;
-  }
-
-  .emoji-option {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
-  }
-
-  .emoji-preview {
-    width: 45px;
-    height: 45px;
-  }
-
-  .preview-emoji {
-    font-size: 20px;
-  }
-}
-
-@media (max-width: 480px) {
-  .emoji-grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 3px;
-    max-height: 100px;
-  }
-
-  .emoji-option {
-    width: 24px;
-    height: 24px;
-    font-size: 12px;
-  }
-
-  .emoji-preview {
-    width: 40px;
-    height: 40px;
-  }
-
-  .preview-emoji {
-    font-size: 18px;
-  }
 }
 </style>

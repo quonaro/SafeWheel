@@ -1,5 +1,20 @@
 <template>
   <div class="standings-container">
+    <div class="standings-header">
+      <h2 class="standings-title">
+        <el-icon class="title-icon">
+          <Trophy />
+        </el-icon>
+        Результаты соревнования
+      </h2>
+      <el-button type="primary" @click="openExportDialog" class="export-button">
+        <el-icon>
+          <Download />
+        </el-icon>
+        Экспорт в Word
+      </el-button>
+    </div>
+
     <el-tabs v-model="activeTab" class="results-tabs">
       <el-tab-pane name="overall">
         <template #label>
@@ -54,13 +69,6 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="avg_age" label="Возраст" :width="rows.length > 0 ? 100 : 0">
-              <template #default="scope">
-                <div class="age-cell">
-                  <span class="age-value">{{ Math.round(scope.row.avg_age) }}</span>
-                </div>
-              </template>
-            </el-table-column>
             <el-table-column prop="participant_count" label="Участников" :width="rows.length > 0 ? 100 : 0">
               <template #default="scope">
                 <div class="participant-count-cell" :class="{ 'incomplete-team': scope.row.is_incomplete_team }">
@@ -103,14 +111,140 @@
         <ParticipantResultsTable :competition-id="competitionId" />
       </el-tab-pane>
     </el-tabs>
+
+    <!-- Диалог экспорта в Word -->
+    <el-dialog v-model="showExportDialog" title="Экспорт результатов в Word" width="600px" class="export-dialog">
+      <div class="export-form">
+        <!-- Выбор типа экспорта -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <el-icon class="section-icon">
+              <Trophy />
+            </el-icon>
+            Тип отчета
+          </h3>
+          <div class="export-type-group">
+            <div class="export-option" :class="{ active: exportForm.exportType === 'general' }"
+              @click="exportForm.exportType = 'general'">
+              <div class="option-content">
+                <el-icon class="option-icon">
+                  <Trophy />
+                </el-icon>
+                <div class="option-text">
+                  <div class="option-title">Общие результаты</div>
+                  <div class="option-description">Общая таблица команд с местами</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="export-option" :class="{ active: exportForm.exportType === 'stages' }"
+              @click="exportForm.exportType = 'stages'">
+              <div class="option-content">
+                <el-icon class="option-icon">
+                  <List />
+                </el-icon>
+                <div class="option-text">
+                  <div class="option-title">Результаты по этапам</div>
+                  <div class="option-description">Детальные результаты по каждому этапу</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="export-option" :class="{ active: exportForm.exportType === 'personal' }"
+              @click="exportForm.exportType = 'personal'">
+              <div class="option-content">
+                <el-icon class="option-icon">
+                  <User />
+                </el-icon>
+                <div class="option-text">
+                  <div class="option-title">Личные результаты</div>
+                  <div class="option-description">Индивидуальные результаты участников</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Выбор папки сохранения -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <el-icon class="section-icon">
+              <Folder />
+            </el-icon>
+            Папка сохранения
+          </h3>
+          <div class="directory-selector">
+            <el-input v-model="exportForm.directory" placeholder="Выберите папку для сохранения файла" readonly
+              class="directory-input">
+              <template #suffix>
+                <el-button @click="selectDirectory" :loading="exportLoading.selectingDirectory" type="primary" text
+                  class="select-directory-btn">
+                  <el-icon>
+                    <FolderOpened />
+                  </el-icon>
+                  Выбрать папку
+                </el-button>
+              </template>
+            </el-input>
+          </div>
+        </div>
+
+        <!-- Настройка имени файла -->
+        <div class="form-section">
+          <h3 class="section-title">
+            <el-icon class="section-icon">
+              <Document />
+            </el-icon>
+            Имя файла
+          </h3>
+          <el-input v-model="exportForm.fileName" :placeholder="generateFileName(exportForm.exportType)"
+            class="filename-input">
+            <template #prepend>
+              <el-icon>
+                <Document />
+              </el-icon>
+            </template>
+          </el-input>
+          <div class="filename-help">
+            Если не указано, будет использовано автоматически сгенерированное имя
+          </div>
+        </div>
+
+        <!-- Информация о формате -->
+        <div class="export-info">
+          <el-icon class="info-icon">
+            <InfoFilled />
+          </el-icon>
+          <span>Файл будет сохранен в формате Microsoft Word (.docx)</span>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showExportDialog = false" class="cancel-btn">
+            Отмена
+          </el-button>
+          <el-button type="primary" @click="handleExport"
+            :loading="exportLoading.general || exportLoading.stages || exportLoading.personal"
+            :disabled="!exportForm.directory" class="export-confirm-btn">
+            <el-icon>
+              <Download />
+            </el-icon>
+            Экспортировать
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, computed, nextTick } from 'vue'
-import { Trophy, List, User } from '@element-plus/icons-vue'
+import { ref, watch, computed, nextTick, reactive } from 'vue'
+import { Trophy, List, User, Download, InfoFilled, Folder, FolderOpened, Document } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import StageResultsTable from './StageResultsTable.vue'
 import ParticipantResultsTable from './ParticipantResultsTable.vue'
+import wordExportService from '../../services/wordExport.js'
 
 const props = defineProps({ competitionId: { type: Number, required: false } })
 const api = window.electronAPI?.database
@@ -119,6 +253,20 @@ const rows = ref([])
 const activeTab = ref('overall')
 const currentPage = ref(1)
 const pageSize = ref(20) // Оптимальный размер страницы
+const showExportDialog = ref(false)
+const selectedDirectory = ref('')
+const exportForm = reactive({
+  directory: '',
+  fileName: '',
+  exportType: 'general'
+})
+
+const exportLoading = reactive({
+  general: false,
+  stages: false,
+  personal: false,
+  selectingDirectory: false
+})
 
 
 // Функция форматирования времени из секунд в формат ММ:СС
@@ -164,6 +312,153 @@ const load = async () => {
 
 
 watch(() => props.competitionId, () => load(), { immediate: true })
+
+// Функции для работы с экспортом
+const selectDirectory = async () => {
+  exportLoading.selectingDirectory = true
+  try {
+    const directory = await window.electronAPI.files.selectDirectory()
+    if (directory) {
+      exportForm.directory = directory
+      selectedDirectory.value = directory
+    }
+  } catch (error) {
+    console.error('Ошибка выбора папки:', error)
+    ElMessage.error('Ошибка выбора папки: ' + error.message)
+  } finally {
+    exportLoading.selectingDirectory = false
+  }
+}
+
+const generateFileName = (type) => {
+  const competitionName = rows.value[0]?.competition_name || 'Соревнование'
+  const date = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-')
+
+  switch (type) {
+    case 'general':
+      return `Общие результаты - ${competitionName} - ${date}.docx`
+    case 'stages':
+      return `Результаты по этапам - ${competitionName} - ${date}.docx`
+    case 'personal':
+      return `Личные результаты - ${competitionName} - ${date}.docx`
+    default:
+      return `Результаты - ${competitionName} - ${date}.docx`
+  }
+}
+
+const resetExportForm = () => {
+  exportForm.directory = ''
+  exportForm.fileName = ''
+  exportForm.exportType = 'general'
+  selectedDirectory.value = ''
+}
+
+const openExportDialog = () => {
+  resetExportForm()
+  showExportDialog.value = true
+}
+
+// Универсальная функция экспорта
+const handleExport = async () => {
+  switch (exportForm.exportType) {
+    case 'general':
+      await exportGeneralResults()
+      break
+    case 'stages':
+      await exportStageResults()
+      break
+    case 'personal':
+      await exportPersonalResults()
+      break
+    default:
+      ElMessage.error('Неизвестный тип экспорта')
+  }
+}
+
+// Функции экспорта в Word
+const exportGeneralResults = async () => {
+  if (!props.competitionId) return
+
+  exportLoading.general = true
+  try {
+    const buffer = await wordExportService.exportGeneralResults(props.competitionId)
+
+    // Генерируем имя файла
+    const fileName = exportForm.fileName || generateFileName('general')
+
+    // Сохраняем файл в выбранную директорию
+    const filePath = await window.electronAPI.files.saveWordDocument(
+      fileName,
+      buffer
+    )
+
+    if (filePath) {
+      ElMessage.success(`Файл сохранен: ${filePath}`)
+      showExportDialog.value = false
+    }
+  } catch (error) {
+    console.error('Ошибка экспорта:', error)
+    ElMessage.error('Ошибка экспорта: ' + error.message)
+  } finally {
+    exportLoading.general = false
+  }
+}
+
+const exportStageResults = async () => {
+  if (!props.competitionId) return
+
+  exportLoading.stages = true
+  try {
+    const buffer = await wordExportService.exportStageResults(props.competitionId)
+
+    // Генерируем имя файла
+    const fileName = exportForm.fileName || generateFileName('stages')
+
+    // Сохраняем файл в выбранную директорию
+    const filePath = await window.electronAPI.files.saveWordDocument(
+      fileName,
+      buffer
+    )
+
+    if (filePath) {
+      ElMessage.success(`Файл сохранен: ${filePath}`)
+      showExportDialog.value = false
+    }
+  } catch (error) {
+    console.error('Ошибка экспорта:', error)
+    ElMessage.error('Ошибка экспорта: ' + error.message)
+  } finally {
+    exportLoading.stages = false
+  }
+}
+
+const exportPersonalResults = async () => {
+  if (!props.competitionId) return
+
+  exportLoading.personal = true
+  try {
+    const buffer = await wordExportService.exportPersonalResults(props.competitionId)
+
+    // Генерируем имя файла
+    const fileName = exportForm.fileName || generateFileName('personal')
+
+    // Сохраняем файл в выбранную директорию
+    const filePath = await window.electronAPI.files.saveWordDocument(
+      fileName,
+      buffer
+    )
+
+    if (filePath) {
+      ElMessage.success(`Файл сохранен: ${filePath}`)
+      showExportDialog.value = false
+    }
+  } catch (error) {
+    console.error('Ошибка экспорта:', error)
+    ElMessage.error('Ошибка экспорта: ' + error.message)
+  } finally {
+    exportLoading.personal = false
+  }
+}
 </script>
 
 <style scoped>
@@ -172,6 +467,44 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* Заголовок с кнопкой экспорта */
+.standings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 4px;
+}
+
+.standings-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.title-icon {
+  font-size: 28px;
+  color: #f59e0b;
+}
+
+.export-button {
+  height: 40px;
+  padding: 0 20px;
+  font-weight: 600;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+  transition: all 0.3s ease;
+}
+
+.export-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
 }
 
 /* Современные стили для таблицы результатов */
@@ -402,22 +735,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   font-size: 13px;
 }
 
-.age-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  min-height: 20px;
-}
 
-.age-value {
-  font-weight: 600;
-  color: #7c3aed;
-  font-size: 14px;
-}
 
 .participant-count-cell {
   display: flex;
@@ -790,15 +1108,13 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
   .team-cell,
   .penalty-cell,
-  .time-cell,
-  .age-cell {
+  .time-cell {
     padding: 2px 4px;
   }
 
   .team-name,
   .penalty-value,
-  .time-value,
-  .age-value {
+  .time-value {
     font-size: 12px;
   }
 
@@ -880,5 +1196,225 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   .modern-pagination :deep(.el-pagination .el-pagination__jump) {
     display: none;
   }
+}
+
+/* Стили для диалога экспорта */
+.export-dialog :deep(.el-dialog__header) {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-bottom: 1px solid #e5e7eb;
+  padding: 20px 24px 16px;
+}
+
+.export-dialog :deep(.el-dialog__title) {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.export-options h3 {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.export-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.export-btn {
+  width: 100%;
+  height: 50px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.export-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  color: #0369a1;
+  font-size: 14px;
+}
+
+.info-icon {
+  font-size: 16px;
+  color: #0ea5e9;
+}
+
+/* Стили для улучшенной формы экспорта */
+.export-form {
+  padding: 0;
+}
+
+.form-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.section-icon {
+  font-size: 18px;
+  color: #6366f1;
+}
+
+.export-type-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.export-option {
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  width: 100%;
+  cursor: pointer;
+  background: #ffffff;
+}
+
+.export-option:hover {
+  border-color: #6366f1;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+  transform: translateY(-1px);
+}
+
+.export-option.active {
+  border-color: #6366f1;
+  background: linear-gradient(135deg, #f0f4ff, #e0e7ff);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.option-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  width: 100%;
+}
+
+.option-icon {
+  font-size: 20px;
+  color: #6366f1;
+  flex-shrink: 0;
+}
+
+.option-text {
+  flex: 1;
+}
+
+.option-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.option-description {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.directory-selector {
+  width: 100%;
+}
+
+.directory-input {
+  width: 100%;
+}
+
+.directory-input :deep(.el-input__inner) {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding-right: 120px;
+}
+
+.select-directory-btn {
+  margin-right: 8px;
+  font-weight: 500;
+}
+
+.filename-input {
+  width: 100%;
+}
+
+.filename-input :deep(.el-input-group__prepend) {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-right: none;
+}
+
+.filename-input :deep(.el-input__inner) {
+  border-left: none;
+}
+
+.filename-help {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 0 0 0;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 24px;
+}
+
+.cancel-btn {
+  padding: 10px 20px;
+  font-weight: 500;
+}
+
+.export-confirm-btn {
+  padding: 10px 24px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border: none;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  transition: all 0.3s ease;
+}
+
+.export-confirm-btn:hover {
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+}
+
+.export-confirm-btn:disabled {
+  background: #9ca3af;
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
 }
 </style>

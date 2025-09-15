@@ -63,13 +63,25 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getParticipantResults: (competitionId, options) =>
       ipcRenderer.invoke("db:getParticipantResults", competitionId, options),
     getParticipantStageDetails: (competitionId, participantId) =>
-      ipcRenderer.invoke("db:getParticipantStageDetails", competitionId, participantId),
+      ipcRenderer.invoke(
+        "db:getParticipantStageDetails",
+        competitionId,
+        participantId
+      ),
     getStageStandingsWithParticipants: (competitionId) =>
       ipcRenderer.invoke("db:getStageStandingsWithParticipants", competitionId),
     getParticipantsWithResults: (competitionId, stageId) =>
-      ipcRenderer.invoke("db:getParticipantsWithResults", competitionId, stageId),
+      ipcRenderer.invoke(
+        "db:getParticipantsWithResults",
+        competitionId,
+        stageId
+      ),
     getParticipantStageResults: (competitionId, participantName) =>
-      ipcRenderer.invoke("db:getParticipantStageResults", competitionId, participantName),
+      ipcRenderer.invoke(
+        "db:getParticipantStageResults",
+        competitionId,
+        participantName
+      ),
   },
 
   // Пример API для работы с файлами (если понадобится)
@@ -82,4 +94,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // API для получения информации о приложении
   getAppInfo: () => ipcRenderer.invoke("app:getInfo"),
+
+  // API для работы с файлами
+  files: {
+    selectDirectory: () => ipcRenderer.invoke("file:selectDirectory"),
+    saveWordDocument: (fileName, buffer) =>
+      ipcRenderer.invoke("file:saveWordDocument", fileName, buffer),
+  },
 });

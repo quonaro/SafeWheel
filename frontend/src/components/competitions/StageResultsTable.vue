@@ -1,12 +1,16 @@
 <template>
   <div class="stage-results-container">
     <div v-if="loading" class="loading-container">
-      <el-icon class="is-loading"><Loading /></el-icon>
+      <el-icon class="is-loading">
+        <Loading />
+      </el-icon>
       <span>Загрузка результатов...</span>
     </div>
 
     <div v-else-if="stages.length === 0" class="empty-state">
-      <el-icon><TrophyBase /></el-icon>
+      <el-icon>
+        <TrophyBase />
+      </el-icon>
       <p>Нет данных для отображения</p>
     </div>
 
@@ -15,145 +19,120 @@
       <div class="stages-navigation">
         <!-- Выпадающий список для большого количества этапов -->
         <div v-if="stages.length > 4" class="stage-selector">
-          <el-select 
-            v-model="activeStageIndex" 
-            placeholder="Выберите этап"
-            size="large"
-            style="width: 300px"
-            @change="setActiveStage(activeStageIndex)"
-          >
-            <el-option
-              v-for="(stage, index) in stages"
-              :key="stage.stage_id"
+          <el-select v-model="activeStageIndex" placeholder="Выберите этап" size="large" style="width: 300px"
+            @change="setActiveStage(activeStageIndex)">
+            <el-option v-for="(stage, index) in stages" :key="stage.stage_id"
               :label="`${stage.stage_name} (${stage.teams.length} команд, ${stage.teams.reduce((total, team) => total + team.participants.length, 0)} участников)`"
-              :value="index"
-            />
+              :value="index" />
           </el-select>
         </div>
-        
+
         <!-- Вкладки для небольшого количества этапов -->
         <div v-else class="stages-tabs">
-          <div 
-            v-for="(stage, index) in stages" 
-            :key="stage.stage_id"
-            class="stage-tab"
-            :class="{ 'is-active': activeStageIndex === index }"
-            @click="setActiveStage(index)"
-          >
+          <div v-for="(stage, index) in stages" :key="stage.stage_id" class="stage-tab"
+            :class="{ 'is-active': activeStageIndex === index }" @click="setActiveStage(index)">
             <div class="tab-content">
               <span class="tab-title">{{ stage.stage_name }}</span>
               <div class="tab-stats">
                 <span class="teams-count">{{ stage.teams.length }}</span>
-                <span class="participants-count">{{ stage.teams.reduce((total, team) => total + team.participants.length, 0) }}</span>
+                <span class="participants-count">{{stage.teams.reduce((total, team) => total +
+                  team.participants.length, 0) }}</span>
               </div>
             </div>
           </div>
         </div>
-        
+
         <!-- Навигационные стрелки -->
         <div class="navigation-controls">
-          <el-button 
-            :disabled="activeStageIndex === 0"
-            @click="prevStage"
-            size="small"
-            circle
-            title="Предыдущий этап"
-          >
-            <el-icon><ArrowLeft /></el-icon>
+          <el-button :disabled="activeStageIndex === 0" @click="prevStage" size="small" circle title="Предыдущий этап">
+            <el-icon>
+              <ArrowLeft />
+            </el-icon>
           </el-button>
-          
+
           <span class="stage-counter">
             {{ activeStageIndex + 1 }} из {{ stages.length }}
           </span>
-          
-          <el-button 
-            :disabled="activeStageIndex === stages.length - 1"
-            @click="nextStage"
-            size="small"
-            circle
-            title="Следующий этап"
-          >
-            <el-icon><ArrowRight /></el-icon>
+
+          <el-button :disabled="activeStageIndex === stages.length - 1" @click="nextStage" size="small" circle
+            title="Следующий этап">
+            <el-icon>
+              <ArrowRight />
+            </el-icon>
           </el-button>
         </div>
       </div>
-      
+
       <!-- Контент активного этапа -->
       <div class="active-stage-content">
         <div v-if="activeStage" class="stage-section">
-          
+
           <div class="teams-container">
             <div v-for="team in activeStage.teams" :key="team.team_id" class="team-section">
-          <div class="team-header">
-            <div class="team-rank">
-              <span class="rank-badge" :class="{ 'is-top': [1, 2, 3].includes(team.rank) }">
-                <template v-if="team.rank === 1">🥇</template>
-                <template v-else-if="team.rank === 2">🥈</template>
-                <template v-else-if="team.rank === 3">🥉</template>
-                <template v-else>{{ team.rank }}</template>
-              </span>
-            </div>
-            <div class="team-info">
-              <h4 class="team-name">{{ team.team_name }}</h4>
-              <div class="team-stats">
-                <span class="stat-item">Штрафы: {{ team.total_penalties }}</span>
-                <span class="stat-item">Время: {{ formatTime(team.total_time) }}</span>
-                <span class="stat-item participants-count">Участников: {{ team.participants.length }}</span>
+              <div class="team-header">
+                <div class="team-rank">
+                  <span class="rank-badge" :class="{ 'is-top': [1, 2, 3].includes(team.rank) }">
+                    <template v-if="team.rank === 1">🥇</template>
+                    <template v-else-if="team.rank === 2">🥈</template>
+                    <template v-else-if="team.rank === 3">🥉</template>
+                    <template v-else>{{ team.rank }}</template>
+                  </span>
+                </div>
+                <div class="team-info">
+                  <h4 class="team-name">{{ team.team_name }}</h4>
+                  <div class="team-stats">
+                    <span class="stat-item">Штрафы: {{ team.total_penalties }}</span>
+                    <span class="stat-item">Время: {{ formatTime(team.total_time) }}</span>
+                    <span class="stat-item participants-count">Участников: {{ team.participants.length }}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          
-          <div class="participants-table">
-            <el-table 
-              :data="team.participants" 
-              style="width: 100%" 
-              size="small"
-              :show-header="false"
-            >
-              <el-table-column prop="rank" label="Место" width="60">
-                <template #default="scope">
-                  <div class="participant-rank" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
-                    <template v-if="scope.row.rank === 1">🥇</template>
-                    <template v-else-if="scope.row.rank === 2">🥈</template>
-                    <template v-else-if="scope.row.rank === 3">🥉</template>
-                    <template v-else>{{ scope.row.rank }}</template>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column prop="full_name" label="Участник" min-width="150">
-                <template #default="scope">
-                  <div class="participant-info">
-                    <span class="participant-name">{{ scope.row.full_name }}</span>
-                    <span class="participant-details">{{ scope.row.gender }}, {{ scope.row.age }}л</span>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column prop="penalty_points" label="Штрафы" width="80">
-                <template #default="scope">
-                  <div class="penalty-cell">
-                    <span class="penalty-value">{{ scope.row.penalty_points }}</span>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column prop="time_seconds" label="Время" width="100">
-                <template #default="scope">
-                  <div class="time-cell">
-                    <span class="time-value">{{ formatTime(scope.row.time_seconds) }}</span>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column label="Статус" width="100">
-                <template #default="scope">
-                  <el-tag 
-                    :type="scope.row.penalty_points > 0 || scope.row.time_seconds > 0 ? 'success' : 'info'"
-                    size="small"
-                  >
-                    {{ scope.row.penalty_points > 0 || scope.row.time_seconds > 0 ? 'Завершен' : 'Не участвовал' }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
+
+              <div class="participants-table">
+                <el-table :data="team.participants" style="width: 100%" size="small" :show-header="false">
+                  <el-table-column prop="rank" label="Место" width="60">
+                    <template #default="scope">
+                      <div class="participant-rank" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
+                        <template v-if="scope.row.rank === 1">🥇</template>
+                        <template v-else-if="scope.row.rank === 2">🥈</template>
+                        <template v-else-if="scope.row.rank === 3">🥉</template>
+                        <template v-else>{{ scope.row.rank }}</template>
+                      </div>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="full_name" label="Участник" min-width="150">
+                    <template #default="scope">
+                      <div class="participant-info">
+                        <span class="participant-name">{{ scope.row.full_name }}</span>
+                        <span class="participant-details">{{ scope.row.gender }}, {{ scope.row.age ? scope.row.age + 'л'
+                          : '—' }}</span>
+                      </div>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="penalty_points" label="Штрафы" width="80">
+                    <template #default="scope">
+                      <div class="penalty-cell">
+                        <span class="penalty-value">{{ scope.row.penalty_points }}</span>
+                      </div>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="time_seconds" label="Время" width="100">
+                    <template #default="scope">
+                      <div class="time-cell">
+                        <span class="time-value">{{ formatTime(scope.row.time_seconds) }}</span>
+                      </div>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="Статус" width="100">
+                    <template #default="scope">
+                      <el-tag :type="scope.row.penalty_points > 0 || scope.row.time_seconds > 0 ? 'success' : 'info'"
+                        size="small">
+                        {{ scope.row.penalty_points > 0 || scope.row.time_seconds > 0 ? 'Завершен' : 'Не участвовал' }}
+                      </el-tag>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
             </div>
           </div>
         </div>
@@ -166,11 +145,11 @@
 import { ref, watch, computed } from 'vue'
 import { Loading, TrophyBase, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 
-const props = defineProps({ 
-  competitionId: { 
-    type: Number, 
-    required: false 
-  } 
+const props = defineProps({
+  competitionId: {
+    type: Number,
+    required: false
+  }
 })
 
 const api = window.electronAPI?.database
@@ -207,21 +186,21 @@ const prevStage = () => {
 // Функция форматирования времени из секунд в формат ММ:СС
 const formatTime = (seconds) => {
   if (!seconds || seconds === 0) return '00:00'
-  
+
   // Округляем до ближайшего целого числа секунд
   const totalSeconds = Math.round(Number(seconds))
   const minutes = Math.floor(totalSeconds / 60)
   const remainingSeconds = totalSeconds % 60
-  
+
   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
 const load = async () => {
-  if (!props.competitionId) { 
+  if (!props.competitionId) {
     stages.value = []
-    return 
+    return
   }
-  
+
   loading.value = true
   try {
     stages.value = await api.getStageStandingsWithParticipants(props.competitionId)
@@ -296,22 +275,22 @@ watch(() => props.competitionId, () => load(), { immediate: true })
     gap: 12px;
     padding: 12px;
   }
-  
+
   .stage-selector {
     max-width: 100%;
     width: 100%;
   }
-  
+
   .navigation-controls {
     width: 100%;
     justify-content: center;
   }
-  
+
   .stages-tabs {
     width: 100%;
     justify-content: center;
   }
-  
+
   .stage-tab {
     min-width: 150px;
   }
@@ -935,6 +914,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 
 /* Адаптивность */
 @media (max-width: 768px) {
+
   .modern-table :deep(.el-table__header th),
   .modern-table :deep(.el-table__body td) {
     padding: 8px 6px;
