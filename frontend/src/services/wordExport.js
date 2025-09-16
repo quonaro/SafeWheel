@@ -506,54 +506,98 @@ export class WordExportService {
         children: [
           new TableCell({
             children: [
-              new Paragraph({ text: "Место", alignment: AlignmentType.CENTER }),
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: "Место",
+                    bold: true,
+                    size: 24,
+                    color: "000000",
+                  }),
+                ],
+                alignment: AlignmentType.CENTER,
+              }),
             ],
             width: { size: 10, type: WidthType.PERCENTAGE },
-            shading: { fill: "E5E7EB" },
+            shading: { fill: "e5e7eb", type: ShadingType.SOLID },
           }),
           new TableCell({
             children: [
               new Paragraph({
-                text: "Команда",
+                children: [
+                  new TextRun({
+                    text: "Команда",
+                    bold: true,
+                    size: 24,
+                    color: "000000",
+                  }),
+                ],
                 alignment: AlignmentType.CENTER,
               }),
             ],
             width: { size: 25, type: WidthType.PERCENTAGE },
-            shading: { fill: "E5E7EB" },
+            shading: { fill: "e5e7eb", type: ShadingType.SOLID },
           }),
           new TableCell({
             children: [
               new Paragraph({
-                text: "Штрафы",
+                children: [
+                  new TextRun({
+                    text: "Штрафы",
+                    bold: true,
+                    size: 24,
+                    color: "000000",
+                  }),
+                ],
                 alignment: AlignmentType.CENTER,
               }),
             ],
             width: { size: 15, type: WidthType.PERCENTAGE },
-            shading: { fill: "E5E7EB" },
-          }),
-          new TableCell({
-            children: [
-              new Paragraph({ text: "Время", alignment: AlignmentType.CENTER }),
-            ],
-            width: { size: 15, type: WidthType.PERCENTAGE },
-            shading: { fill: "E5E7EB" },
+            shading: { fill: "e5e7eb", type: ShadingType.SOLID },
           }),
           new TableCell({
             children: [
               new Paragraph({
-                text: "Участники",
+                children: [
+                  new TextRun({
+                    text: "Время",
+                    bold: true,
+                    size: 24,
+                    color: "000000",
+                  }),
+                ],
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+            width: { size: 15, type: WidthType.PERCENTAGE },
+            shading: { fill: "e5e7eb", type: ShadingType.SOLID },
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: "Участники",
+                    bold: true,
+                    size: 24,
+                    color: "000000",
+                  }),
+                ],
                 alignment: AlignmentType.CENTER,
               }),
             ],
             width: { size: 35, type: WidthType.PERCENTAGE },
-            shading: { fill: "E5E7EB" },
+            shading: { fill: "e5e7eb", type: ShadingType.SOLID },
           }),
         ],
       });
 
       const dataRows = stage.teams.map((team, teamIndex) => {
         const isTopThree = [1, 2, 3].includes(team.rank);
-        const cellShading = isTopThree ? { fill: "FEF3C7" } : undefined;
+        const cellShading = isTopThree
+          ? { fill: "FEF3C7", type: ShadingType.SOLID }
+          : { fill: "f9fafb", type: ShadingType.SOLID };
+        const textColor = isTopThree ? "92400e" : "1f2937";
 
         // Список участников команды
         const participantsText = team.participants
@@ -575,6 +619,8 @@ export class WordExportService {
                     new TextRun({
                       text: team.rank.toString(),
                       bold: isTopThree,
+                      size: 22,
+                      color: textColor,
                     }),
                   ],
                 }),
@@ -582,14 +628,16 @@ export class WordExportService {
               shading: cellShading,
             }),
             new TableCell({
-              children: [new Paragraph({ text: team.team_name })],
-              shading: cellShading,
-            }),
-            new TableCell({
               children: [
                 new Paragraph({
-                  text: team.total_penalties.toString(),
-                  alignment: AlignmentType.CENTER,
+                  children: [
+                    new TextRun({
+                      text: team.team_name,
+                      size: 22,
+                      color: textColor,
+                      bold: isTopThree,
+                    }),
+                  ],
                 }),
               ],
               shading: cellShading,
@@ -597,14 +645,47 @@ export class WordExportService {
             new TableCell({
               children: [
                 new Paragraph({
-                  text: this.formatTime(team.total_time),
                   alignment: AlignmentType.CENTER,
+                  children: [
+                    new TextRun({
+                      text: team.total_penalties.toString(),
+                      size: 22,
+                      color: textColor,
+                      bold: isTopThree,
+                    }),
+                  ],
                 }),
               ],
               shading: cellShading,
             }),
             new TableCell({
-              children: [new Paragraph({ text: participantsText })],
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    new TextRun({
+                      text: this.formatTime(team.total_time),
+                      size: 22,
+                      color: textColor,
+                      bold: isTopThree,
+                    }),
+                  ],
+                }),
+              ],
+              shading: cellShading,
+            }),
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: participantsText,
+                      size: 22,
+                      color: textColor,
+                    }),
+                  ],
+                }),
+              ],
               shading: cellShading,
             }),
           ],
@@ -646,7 +727,7 @@ export class WordExportService {
                 new TextRun({
                   text: "№",
                   bold: true,
-                  size: 20,
+                  size: 24,
                   color: "000000",
                 }),
               ],
@@ -663,7 +744,7 @@ export class WordExportService {
                 new TextRun({
                   text: "УЧАСТНИК",
                   bold: true,
-                  size: 20,
+                  size: 24,
                   color: "000000",
                 }),
               ],
@@ -680,7 +761,7 @@ export class WordExportService {
                 new TextRun({
                   text: "КОМАНДА",
                   bold: true,
-                  size: 20,
+                  size: 24,
                   color: "000000",
                 }),
               ],
@@ -697,7 +778,7 @@ export class WordExportService {
                 new TextRun({
                   text: "ВОЗРАСТ",
                   bold: true,
-                  size: 20,
+                  size: 24,
                   color: "000000",
                 }),
               ],
@@ -714,7 +795,7 @@ export class WordExportService {
                 new TextRun({
                   text: "ПОЛ",
                   bold: true,
-                  size: 20,
+                  size: 24,
                   color: "000000",
                 }),
               ],
@@ -731,7 +812,7 @@ export class WordExportService {
                 new TextRun({
                   text: "ШТРАФЫ",
                   bold: true,
-                  size: 20,
+                  size: 24,
                   color: "000000",
                 }),
               ],
@@ -748,7 +829,7 @@ export class WordExportService {
                 new TextRun({
                   text: "ВРЕМЯ",
                   bold: true,
-                  size: 20,
+                  size: 24,
                   color: "000000",
                 }),
               ],
@@ -777,7 +858,7 @@ export class WordExportService {
                   new TextRun({
                     text: participant.rank.toString(),
                     bold: isTopThree,
-                    size: 18,
+                    size: 22,
                     color: textColor,
                   }),
                 ],
@@ -792,7 +873,7 @@ export class WordExportService {
                 children: [
                   new TextRun({
                     text: participant.full_name,
-                    size: 18,
+                    size: 22,
                     color: textColor,
                     bold: isTopThree,
                   }),
@@ -807,7 +888,7 @@ export class WordExportService {
                 children: [
                   new TextRun({
                     text: participant.team_name,
-                    size: 18,
+                    size: 22,
                     color: textColor,
                     bold: isTopThree,
                   }),
@@ -822,7 +903,7 @@ export class WordExportService {
                 children: [
                   new TextRun({
                     text: participant.age ? participant.age + "л" : "—",
-                    size: 18,
+                    size: 22,
                     color: textColor,
                     bold: isTopThree,
                   }),
@@ -838,7 +919,7 @@ export class WordExportService {
                 children: [
                   new TextRun({
                     text: participant.gender || "—",
-                    size: 18,
+                    size: 22,
                     color: textColor,
                     bold: isTopThree,
                   }),
@@ -854,7 +935,7 @@ export class WordExportService {
                 children: [
                   new TextRun({
                     text: participant.total_penalties.toString(),
-                    size: 18,
+                    size: 22,
                     color: textColor,
                     bold: isTopThree,
                   }),
@@ -870,7 +951,7 @@ export class WordExportService {
                 children: [
                   new TextRun({
                     text: this.formatTime(participant.total_time),
-                    size: 18,
+                    size: 22,
                     color: textColor,
                     bold: isTopThree,
                   }),
