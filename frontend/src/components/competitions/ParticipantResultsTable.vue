@@ -18,7 +18,7 @@
       <el-table :data="paginatedParticipants" style="width: 100%"
         :class="['modern-table', { 'empty-table': participants.length === 0 }]" height="460px"
         empty-text="Нет данных для отображения">
-        <el-table-column prop="rank" label="Место" :width="participants.length > 0 ? 100 : 0">
+        <el-table-column prop="rank" label="Место" :width="participants.length > 0 ? 80 : 0">
           <template #default="scope">
             <div class="rank-cell" :class="{ 'is-top': [1, 2, 3].includes(scope.row.rank) }">
               <template v-if="scope.row.rank === 1">
@@ -36,38 +36,38 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="full_name" label="Участник" :min-width="participants.length > 0 ? 180 : 0">
+        <el-table-column prop="full_name" label="Участник" :min-width="participants.length > 0 ? 140 : 0">
           <template #default="scope">
             <div class="participant-cell">
               <span class="participant-name">{{ scope.row.full_name }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="team_name" label="Команда" :min-width="participants.length > 0 ? 150 : 0">
+        <el-table-column prop="team_name" label="Команда" :min-width="participants.length > 0 ? 120 : 0">
           <template #default="scope">
             <div class="team-cell">
               <span class="team-name">{{ scope.row.team_name }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="age" label="Возраст" :width="participants.length > 0 ? 100 : 0">
+        <el-table-column prop="age" label="Возраст" :width="participants.length > 0 ? 80 : 0">
           <template #default="scope">
             <span>{{ scope.row.age ? scope.row.age + 'л' : '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="gender" label="Пол" :width="participants.length > 0 ? 80 : 0">
+        <el-table-column prop="gender" label="Пол" :width="participants.length > 0 ? 70 : 0">
           <template #default="scope">
             <span>{{ scope.row.gender || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="total_penalties" label="Штрафы" :width="participants.length > 0 ? 120 : 0">
+        <el-table-column prop="total_penalties" label="Штрафы" :width="participants.length > 0 ? 100 : 0">
           <template #default="scope">
             <div class="penalty-cell">
               <span class="penalty-value">{{ scope.row.total_penalties }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="total_time" label="Время" :width="participants.length > 0 ? 120 : 0">
+        <el-table-column prop="total_time" label="Время" :width="participants.length > 0 ? 100 : 0">
           <template #default="scope">
             <div class="time-cell">
               <span class="time-value">{{ formatTime(scope.row.total_time) }}</span>
@@ -185,7 +185,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   border: 1px solid rgba(0, 0, 0, 0.05);
   min-height: 200px;
   width: 100%;
-  min-width: 1000px;
+  min-width: 820px;
 }
 
 /* Стили для пустого состояния */
@@ -264,7 +264,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   color: #111827;
   font-weight: 600;
   font-size: 12px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: none;
 }
 
@@ -277,7 +277,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
 }
 
 .modern-table :deep(.el-table__body td) {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -418,7 +418,7 @@ watch(() => props.competitionId, () => load(), { immediate: true })
   max-width: 100%;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  min-width: 1000px;
+  min-width: 820px;
   flex: 1;
   min-height: 400px;
   border-radius: 12px;
