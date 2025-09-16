@@ -162,32 +162,43 @@
                 </div>
               </div>
             </div>
+
+            <div class="export-option" :class="{ active: exportForm.exportType === 'full' }"
+              @click="exportForm.exportType = 'full'">
+              <div class="option-content">
+                <el-icon class="option-icon">
+                  <Document />
+                </el-icon>
+                <div class="option-text">
+                  <div class="option-title">Полный отчет (всё)</div>
+                  <div class="option-description">Общие, этапы и личные в одном документе</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Выбор папки сохранения -->
-        <div class="form-section">
+        <!-- Настройки для экспорта этапов -->
+        <div v-if="exportForm.exportType === 'stages'" class="form-section">
           <h3 class="section-title">
             <el-icon class="section-icon">
-              <Folder />
+              <List />
             </el-icon>
-            Папка сохранения
+            Параметры этапов
           </h3>
-          <div class="directory-selector">
-            <el-input v-model="exportForm.directory" placeholder="Выберите папку для сохранения файла" readonly
-              class="directory-input">
-              <template #suffix>
-                <el-button @click="selectDirectory" :loading="exportLoading.selectingDirectory" type="primary" text
-                  class="select-directory-btn">
-                  <el-icon>
-                    <FolderOpened />
-                  </el-icon>
-                  Выбрать папку
-                </el-button>
-              </template>
-            </el-input>
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <el-radio-group v-model="exportForm.stageMode">
+              <el-radio-button label="all">Все этапы</el-radio-button>
+              <el-radio-button label="single">Конкретный этап</el-radio-button>
+            </el-radio-group>
+
+            <el-select v-model="exportForm.stageId" :disabled="exportForm.stageMode !== 'single'"
+              placeholder="Выберите этап" style="min-width: 260px">
+              <el-option v-for="stage in stages" :key="stage.id" :label="stage.name" :value="stage.id" />
+            </el-select>
           </div>
         </div>
+
 
         <!-- Настройка имени файла -->
         <div class="form-section">
@@ -215,7 +226,7 @@
           <el-icon class="info-icon">
             <InfoFilled />
           </el-icon>
-          <span>Файл будет сохранен в формате Microsoft Word (.docx)</span>
+          <span>Файл будет сохранен в формате Microsoft Word (.docx) в папку "Загрузки"</span>
         </div>
       </div>
 
@@ -225,8 +236,8 @@
             Отмена
           </el-button>
           <el-button type="primary" @click="handleExport"
-            :loading="exportLoading.general || exportLoading.stages || exportLoading.personal"
-            :disabled="!exportForm.directory" class="export-confirm-btn">
+            :loading="exportLoading.general || exportLoading.stages || exportLoading.personal || exportLoading.full"
+            class="export-confirm-btn">
             <el-icon>
               <Download />
             </el-icon>
@@ -240,7 +251,7 @@
 
 <script setup>
 import { ref, watch, computed, nextTick, reactive } from 'vue'
-import { Trophy, List, User, Download, InfoFilled, Folder, FolderOpened, Document } from '@element-plus/icons-vue'
+import { Trophy, List, User, Download, InfoFilled, Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import StageResultsTable from './StageResultsTable.vue'
 import ParticipantResultsTable from './ParticipantResultsTable.vue'
@@ -254,18 +265,19 @@ const activeTab = ref('overall')
 const currentPage = ref(1)
 const pageSize = ref(20) // Оптимальный размер страницы
 const showExportDialog = ref(false)
-const selectedDirectory = ref('')
 const exportForm = reactive({
-  directory: '',
   fileName: '',
-  exportType: 'general'
+  exportType: 'general',
+  stageMode: 'all', // 'all' | 'single'
+  stageId: null,
 })
+const stages = ref([])
 
 const exportLoading = reactive({
   general: false,
   stages: false,
   personal: false,
-  selectingDirectory: false
+  full: false,
 })
 
 
@@ -314,21 +326,6 @@ const load = async () => {
 watch(() => props.competitionId, () => load(), { immediate: true })
 
 // Функции для работы с экспортом
-const selectDirectory = async () => {
-  exportLoading.selectingDirectory = true
-  try {
-    const directory = await window.electronAPI.files.selectDirectory()
-    if (directory) {
-      exportForm.directory = directory
-      selectedDirectory.value = directory
-    }
-  } catch (error) {
-    console.error('Ошибка выбора папки:', error)
-    ElMessage.error('Ошибка выбора папки: ' + error.message)
-  } finally {
-    exportLoading.selectingDirectory = false
-  }
-}
 
 const generateFileName = (type) => {
   const competitionName = rows.value[0]?.competition_name || 'Соревнование'
@@ -337,24 +334,41 @@ const generateFileName = (type) => {
   switch (type) {
     case 'general':
       return `Общие результаты - ${competitionName} - ${date}.docx`
-    case 'stages':
+    case 'stages': {
+      if (exportForm.stageMode === 'single' && exportForm.stageId) {
+        const stage = stages.value.find(s => s.id === exportForm.stageId)
+        const stageName = stage?.name || 'Этап'
+        return `Результаты этапа - ${stageName} - ${competitionName} - ${date}.docx`
+      }
       return `Результаты по этапам - ${competitionName} - ${date}.docx`
+    }
     case 'personal':
       return `Личные результаты - ${competitionName} - ${date}.docx`
+    case 'full':
+      return `Полный отчет - ${competitionName} - ${date}.docx`
     default:
       return `Результаты - ${competitionName} - ${date}.docx`
   }
 }
 
 const resetExportForm = () => {
-  exportForm.directory = ''
   exportForm.fileName = ''
   exportForm.exportType = 'general'
-  selectedDirectory.value = ''
+  exportForm.stageMode = 'all'
+  exportForm.stageId = null
 }
 
-const openExportDialog = () => {
+const openExportDialog = async () => {
   resetExportForm()
+  if (props.competitionId) {
+    try {
+      stages.value = await api.listStages(props.competitionId)
+    } catch (e) {
+      stages.value = []
+    }
+  } else {
+    stages.value = []
+  }
   showExportDialog.value = true
 }
 
@@ -365,10 +379,17 @@ const handleExport = async () => {
       await exportGeneralResults()
       break
     case 'stages':
-      await exportStageResults()
+      if (exportForm.stageMode === 'single') {
+        await exportSingleStageResults()
+      } else {
+        await exportStageResults()
+      }
       break
     case 'personal':
       await exportPersonalResults()
+      break
+    case 'full':
+      await exportFullCompetition()
       break
     default:
       ElMessage.error('Неизвестный тип экспорта')
@@ -383,12 +404,13 @@ const exportGeneralResults = async () => {
   try {
     const buffer = await wordExportService.exportGeneralResults(props.competitionId)
 
-    // Генерируем имя файла
+    // Генерируем имя файла с расширением .docx
     const fileName = exportForm.fileName || generateFileName('general')
+    const fileNameWithExt = fileName.endsWith('.docx') ? fileName : `${fileName}.docx`
 
-    // Сохраняем файл в выбранную директорию
+    // Сохраняем файл
     const filePath = await window.electronAPI.files.saveWordDocument(
-      fileName,
+      fileNameWithExt,
       buffer
     )
 
@@ -411,12 +433,13 @@ const exportStageResults = async () => {
   try {
     const buffer = await wordExportService.exportStageResults(props.competitionId)
 
-    // Генерируем имя файла
+    // Генерируем имя файла с расширением .docx
     const fileName = exportForm.fileName || generateFileName('stages')
+    const fileNameWithExt = fileName.endsWith('.docx') ? fileName : `${fileName}.docx`
 
-    // Сохраняем файл в выбранную директорию
+    // Сохраняем файл
     const filePath = await window.electronAPI.files.saveWordDocument(
-      fileName,
+      fileNameWithExt,
       buffer
     )
 
@@ -439,12 +462,13 @@ const exportPersonalResults = async () => {
   try {
     const buffer = await wordExportService.exportPersonalResults(props.competitionId)
 
-    // Генерируем имя файла
+    // Генерируем имя файла с расширением .docx
     const fileName = exportForm.fileName || generateFileName('personal')
+    const fileNameWithExt = fileName.endsWith('.docx') ? fileName : `${fileName}.docx`
 
-    // Сохраняем файл в выбранную директорию
+    // Сохраняем файл
     const filePath = await window.electronAPI.files.saveWordDocument(
-      fileName,
+      fileNameWithExt,
       buffer
     )
 
@@ -457,6 +481,66 @@ const exportPersonalResults = async () => {
     ElMessage.error('Ошибка экспорта: ' + error.message)
   } finally {
     exportLoading.personal = false
+  }
+}
+
+const exportSingleStageResults = async () => {
+  if (!props.competitionId || !exportForm.stageId) {
+    ElMessage.error('Выберите этап')
+    return
+  }
+
+  exportLoading.stages = true
+  try {
+    const buffer = await wordExportService.exportSingleStageResults(
+      props.competitionId,
+      exportForm.stageId
+    )
+
+    const fileName = exportForm.fileName || generateFileName('stages')
+    const fileNameWithExt = fileName.endsWith('.docx') ? fileName : `${fileName}.docx`
+
+    const filePath = await window.electronAPI.files.saveWordDocument(
+      fileNameWithExt,
+      buffer
+    )
+
+    if (filePath) {
+      ElMessage.success(`Файл сохранен: ${filePath}`)
+      showExportDialog.value = false
+    }
+  } catch (error) {
+    console.error('Ошибка экспорта:', error)
+    ElMessage.error('Ошибка экспорта: ' + error.message)
+  } finally {
+    exportLoading.stages = false
+  }
+}
+
+const exportFullCompetition = async () => {
+  if (!props.competitionId) return
+
+  exportLoading.full = true
+  try {
+    const buffer = await wordExportService.exportFullCompetition(props.competitionId)
+
+    const fileName = exportForm.fileName || generateFileName('full')
+    const fileNameWithExt = fileName.endsWith('.docx') ? fileName : `${fileName}.docx`
+
+    const filePath = await window.electronAPI.files.saveWordDocument(
+      fileNameWithExt,
+      buffer
+    )
+
+    if (filePath) {
+      ElMessage.success(`Файл сохранен: ${filePath}`)
+      showExportDialog.value = false
+    }
+  } catch (error) {
+    console.error('Ошибка экспорта:', error)
+    ElMessage.error('Ошибка экспорта: ' + error.message)
+  } finally {
+    exportLoading.full = false
   }
 }
 </script>

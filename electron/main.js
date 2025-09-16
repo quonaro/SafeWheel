@@ -253,7 +253,7 @@ function setupIpcHandlers() {
   ipcMain.handle("file:saveWordDocument", async (e, fileName, uint8Array) => {
     const result = await dialog.showSaveDialog(mainWindow, {
       title: "Сохранить файл",
-      defaultPath: fileName,
+      defaultPath: path.join(require("os").homedir(), "Downloads", fileName),
       filters: [
         { name: "Word Documents", extensions: ["docx"] },
         { name: "All Files", extensions: ["*"] },
@@ -282,10 +282,10 @@ function createWindow() {
     height: 700,
     resizable: false,
     webPreferences: {
-      nodeIntegration: true,
+      nodeIntegration: false,
       contextIsolation: true,
-      enableRemoteModule: true,
-      webSecurity: false,
+      enableRemoteModule: false,
+      webSecurity: true,
       sandbox: false,
       preload: path.join(__dirname, "preload.js"),
     },
@@ -394,11 +394,12 @@ function createWindow() {
         responseHeaders: {
           ...details.responseHeaders,
           "Content-Security-Policy": [
-            "default-src 'self' 'unsafe-inline' data: http://localhost:* ws://localhost:*; " +
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+            "default-src 'self'; " +
+              "script-src 'self' 'unsafe-inline'; " +
               "style-src 'self' 'unsafe-inline'; " +
-              "img-src 'self' data: http://localhost:*; " +
-              "connect-src 'self' http://localhost:* ws://localhost:*;",
+              "img-src 'self' data:; " +
+              "connect-src 'self' http://localhost:* ws://localhost:*; " +
+              "font-src 'self' data:;",
           ],
         },
       });
