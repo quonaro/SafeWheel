@@ -1,0 +1,130 @@
+{
+  "name": "safewheel",
+  "version": "1.0.0",
+  "description": "Desktop приложение SafeWheel с Electron, Vue и встроенным Node.js сервером",
+  "author": "SafeWheel Team",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "NODE_ENV=development electron . --no-sandbox",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:frontend && npm run build:electron",
+    "build:frontend": "cd frontend && npm run build",
+    "build:electron": "npm run copy:deps && npm run rebuild:native && electron-builder",
+    "build:win": "npm run clean && npm run build:frontend && npm run rebuild:win && npx --yes electron-builder --win --config.win.target=portable",
+    "clean": "rm -rf dist/win-unpacked dist/*.exe dist/*.AppImage build-deps",
+    "start": "NODE_ENV=production electron . --no-sandbox",
+    "postinstall": "electron-builder install-app-deps",
+    "rebuild:native": "electron-rebuild",
+    "rebuild:win": "node scripts/rebuild-for-platform.js win32",
+    "rebuild:linux": "node scripts/rebuild-for-platform.js linux",
+    "copy:deps": "node scripts/copy-dependencies.js"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^24.6.4",
+    "electron-rebuild": "^3.2.9"
+  },
+  "build": {
+    "appId": "com.safewheel.app",
+    "productName": "SafeWheel",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build",
+      "app": "."
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/dist/**/*",
+      "package.json",
+      "!node_modules/**/*",
+      "!frontend/node_modules/**/*",
+      "!frontend/src/**/*",
+      "!frontend/*.config.js",
+      "!frontend/package*.json",
+      "!build.sh",
+      "!dist/**/*",
+      "!**/*.map",
+      "!**/*.ts",
+      "!**/*.md",
+      "!**/.git/**/*",
+      "!**/.gitignore",
+      "!**/README.md",
+      "!**/test/**/*",
+      "!**/tests/**/*",
+      "!**/spec/**/*",
+      "!**/coverage/**/*",
+      "!**/.nyc_output/**/*",
+      "!**/.eslintrc*",
+      "!**/.prettierrc*",
+      "!**/jest.config*",
+      "!**/webpack.config*",
+      "!**/vite.config*",
+      "!**/rollup.config*"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules",
+        "to": "node_modules"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "portable",
+      "publisherName": "SafeWheel Team",
+      "icon": null,
+      "requestedExecutionLevel": "asInvoker",
+      "verifyUpdateCodeSignature": false,
+      "signAndEditExecutable": false,
+      "signDlls": false,
+      "asar": true,
+      "asarUnpack": [
+        "node_modules/**/*"
+      ]
+    },
+    "linux": {
+      "extraResources": [
+        {
+          "from": "build-deps/node_modules",
+          "to": "node_modules"
+        }
+      ],
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "executableArgs": [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu-sandbox",
+        "--disable-software-rasterizer",
+        "--no-zygote",
+        "--single-process"
+      ],
+      "category": "Utility",
+      "icon": null,
+      "asar": true,
+      "asarUnpack": [
+        "node_modules/**/*"
+      ],
+      "desktop": {
+        "Name": "SafeWheel",
+        "Comment": "Desktop приложение SafeWheel",
+        "Keywords": "safewheel;competition;results;",
+        "StartupWMClass": "safewheel"
+      }
+    },
+    "publish": null
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "docx": "^9.5.1",
+    "node-fetch": "^2.7.0"
+  }
+}
