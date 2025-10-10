@@ -79,37 +79,14 @@
       "signDlls": false,
       "asar": true,
       "asarUnpack": [
-        "node_modules/**/*"
+        "build-deps/node_modules/**/*"
       ]
     },
     "linux": {
-        "extraResources": [
-          {
-            "from": "build-deps/node_modules",
-            "to": "node_modules",
-            "filter": [
-              "!**/.package-lock.json",
-              "!**/package-lock.json",
-              "!**/.npm/**",
-              "!**/npm-debug.log*",
-              "!**/*.log",
-              "!**/*.tmp",
-              "!**/.git*",
-              "!**/.cache/**",
-              "!**/.bin/**",
-              "!**/*.lock",
-              "!**/*.pid",
-              "!**/*.seed",
-              "!**/*.pid.lock",
-              "!**/.eslintcache",
-              "!**/.nyc_output/**",
-              "!**/coverage/**",
-              "!**/.hooks/**",
-              "!**/.modules/**",
-              "!**/.yarn/**"
-            ]
-          }
-        ],
+      "asar": true,
+      "asarUnpack": [
+        "build-deps/node_modules/**/*"
+      ],
       "target": [
         {
           "target": "AppImage",
@@ -129,10 +106,6 @@
       ],
       "category": "Utility",
       "icon": null,
-      "asar": true,
-      "asarUnpack": [
-        "node_modules/**/*"
-      ],
       "desktop": {
         "Name": "SafeWheel",
         "Comment": "Desktop приложение SafeWheel",

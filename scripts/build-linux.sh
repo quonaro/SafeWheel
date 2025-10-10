@@ -104,6 +104,22 @@ find node_modules -name ".package-lock.json" -delete 2>/dev/null || true
 find node_modules -name "package-lock.json" -delete 2>/dev/null || true
 find node_modules -name "*.log" -delete 2>/dev/null || true
 find node_modules -name "*.tmp" -delete 2>/dev/null || true
+find node_modules -name "CHANGELOG.md" -delete 2>/dev/null || true
+find node_modules -name "README.md" -delete 2>/dev/null || true
+find node_modules -name "LICENSE*" -delete 2>/dev/null || true
+find node_modules -name "*.md" -delete 2>/dev/null || true
+find node_modules -name "*.txt" -delete 2>/dev/null || true
+find node_modules -type d -name "test" -exec rm -rf {} + 2>/dev/null || true
+find node_modules -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true
+find node_modules -type d -name "spec" -exec rm -rf {} + 2>/dev/null || true
+find node_modules -type d -name "specs" -exec rm -rf {} + 2>/dev/null || true
+find node_modules -type d -name "example" -exec rm -rf {} + 2>/dev/null || true
+find node_modules -type d -name "examples" -exec rm -rf {} + 2>/dev/null || true
+find node_modules -type d -name "demo" -exec rm -rf {} + 2>/dev/null || true
+find node_modules -type d -name "demos" -exec rm -rf {} + 2>/dev/null || true
+find node_modules -type d -name "docs" -exec rm -rf {} + 2>/dev/null || true
+find node_modules -type d -name "doc" -exec rm -rf {} + 2>/dev/null || true
+find node_modules -type d -name ".github" -exec rm -rf {} + 2>/dev/null || true
 
 # Копирование зависимостей
 log_info "Копирование зависимостей..."
