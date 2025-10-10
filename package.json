@@ -1,6 +1,6 @@
 {
   "name": "safewheel",
-  "version": "1.0.0",
+  "version": "2.0.9",
   "description": "Desktop приложение SafeWheel с Electron, Vue и встроенным Node.js сервером",
   "author": "SafeWheel Team",
   "main": "electron/main.js",
