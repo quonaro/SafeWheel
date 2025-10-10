@@ -7,13 +7,12 @@
   "scripts": {
     "dev": "NODE_ENV=development electron . --no-sandbox",
     "dev:frontend": "cd frontend && npm run dev",
-    "build": "npm run build:frontend && npm run build:electron",
     "build:frontend": "cd frontend && npm run build",
-    "build:electron": "npm run copy:deps && npm run rebuild:native && electron-builder",
-    "build:win": "npm run clean && npm run build:frontend && npm run rebuild:win && npx --yes electron-builder --win --config.win.target=portable",
+    "build:linux": "./scripts/build-linux.sh",
+    "build:win": "./scripts/build-windows.sh",
     "clean": "rm -rf dist/win-unpacked dist/*.exe dist/*.AppImage build-deps",
     "start": "NODE_ENV=production electron . --no-sandbox",
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "electron-builder install-app-deps && electron-rebuild",
     "rebuild:native": "electron-rebuild",
     "rebuild:win": "node scripts/rebuild-for-platform.js win32",
     "rebuild:linux": "node scripts/rebuild-for-platform.js linux",
@@ -123,8 +122,9 @@
     "publish": null
   },
   "dependencies": {
-    "better-sqlite3": "^12.2.0",
+    "better-sqlite3": "^12.4.1",
     "docx": "^9.5.1",
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "vite": "^7.1.9"
   }
 }
