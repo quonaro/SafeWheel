@@ -25,31 +25,11 @@ jobs:
           npm install
           cd frontend && npm install && cd ..
 
-      - name: Build frontend
-        run: npm run build:frontend
-
-      - name: Clean build directory
-        run: |
-          rm -rf build-deps dist/
-          find node_modules -name ".package-lock.json" -delete 2>/dev/null || true
-          find node_modules -name "package-lock.json" -delete 2>/dev/null || true
-          find node_modules -name "*.log" -delete 2>/dev/null || true
-          find node_modules -name "*.tmp" -delete 2>/dev/null || true
-
-      - name: Copy dependencies
-        run: npm run copy:deps
-
-      - name: Rebuild native modules for Linux
-        run: npm run rebuild:linux
-
       - name: Build Linux AppImage
-        run: npx --yes electron-builder --linux --publish=never
-
-      - name: Rebuild native modules for Windows
-        run: npm run rebuild:win
+        run: npm run build:linux
 
       - name: Build Windows unpacked
-        run: npx --yes electron-builder --win --config.win.target=dir --publish=never
+        run: npm run build:win
 
       - name: Create Windows ZIP
         run: |

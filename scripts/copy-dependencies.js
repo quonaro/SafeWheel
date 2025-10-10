@@ -25,6 +25,19 @@ function copyDir(src, dest) {
     ".git*",
     "node_modules/.cache",
     "node_modules/.bin",
+    ".cache",
+    ".bin",
+    "*.lock",
+    "*.pid",
+    "*.seed",
+    "*.pid.lock",
+    ".eslintcache",
+    ".nyc_output",
+    "coverage",
+    ".nyc_output",
+    "node_modules/.hooks",
+    "node_modules/.modules",
+    "node_modules/.yarn",
   ];
 
   for (const entry of entries) {
