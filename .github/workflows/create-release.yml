@@ -1,0 +1,69 @@
+name: Create Release
+
+on:
+  workflow_run:
+    workflows: ["Build Linux", "Build Windows"]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    name: Create Release
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Linux AppImage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-appimage
+          path: artifacts/linux/
+
+      - name: Download Windows ZIP artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-zip
+          path: artifacts/windows/
+
+      - name: List downloaded artifacts
+        run: |
+          echo "=== Linux artifacts ==="
+          ls -la artifacts/linux/ || echo "No Linux artifacts found"
+          echo "=== Windows artifacts ==="
+          ls -la artifacts/windows/ || echo "No Windows artifacts found"
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release-files
+
+          # Copy Linux AppImage
+          if [ -d "artifacts/linux" ]; then
+            cp artifacts/linux/*.AppImage release-files/ 2>/dev/null || echo "No AppImage found"
+          fi
+
+          # Copy Windows ZIP
+          if [ -d "artifacts/windows" ]; then
+            cp artifacts/windows/*.zip release-files/ 2>/dev/null || echo "No Windows ZIP found"
+          fi
+
+          echo "=== Release files ==="
+          ls -la release-files/
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release-files/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup artifacts
+        if: always()
+        run: |
+          rm -rf artifacts/ release-files/

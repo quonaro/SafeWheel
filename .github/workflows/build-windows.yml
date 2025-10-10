@@ -1,0 +1,50 @@
+name: Build Windows
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    name: Build Windows
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: |
+          npm install
+          cd frontend && npm install && cd ..
+
+      - name: Build Windows unpacked
+        run: npm run build:win
+
+      - name: Create Windows ZIP
+        run: |
+          cd dist/win-unpacked
+          Compress-Archive -Path * -DestinationPath ../../SafeWheel-Windows.zip
+          cd ../..
+
+      - name: Upload Windows ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: SafeWheel-Windows.zip
+          retention-days: 30
+
+      - name: Upload Windows unpacked artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-unpacked
+          path: dist/win-unpacked/
+          retention-days: 30
