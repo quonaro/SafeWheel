@@ -83,18 +83,23 @@
       ]
     },
     "linux": {
-      "extraResources": [
-        {
-          "from": "build-deps/node_modules",
-          "to": "node_modules",
-          "filter": [
-            "!**/.package-lock.json",
-            "!**/package-lock.json",
-            "!**/.npm/**",
-            "!**/npm-debug.log*"
-          ]
-        }
-      ],
+        "extraResources": [
+          {
+            "from": "build-deps/node_modules",
+            "to": "node_modules",
+            "filter": [
+              "!**/.package-lock.json",
+              "!**/package-lock.json",
+              "!**/.npm/**",
+              "!**/npm-debug.log*",
+              "!**/*.log",
+              "!**/*.tmp",
+              "!**/.git*",
+              "!**/.cache/**",
+              "!**/.bin/**"
+            ]
+          }
+        ],
       "target": [
         {
           "target": "AppImage",

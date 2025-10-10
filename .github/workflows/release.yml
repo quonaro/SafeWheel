@@ -29,7 +29,12 @@ jobs:
         run: npm run build:frontend
 
       - name: Clean build directory
-        run: rm -rf build-deps dist/
+        run: |
+          rm -rf build-deps dist/
+          find node_modules -name ".package-lock.json" -delete 2>/dev/null || true
+          find node_modules -name "package-lock.json" -delete 2>/dev/null || true
+          find node_modules -name "*.log" -delete 2>/dev/null || true
+          find node_modules -name "*.tmp" -delete 2>/dev/null || true
 
       - name: Copy dependencies
         run: npm run copy:deps
