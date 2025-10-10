@@ -75,10 +75,14 @@ jobs:
     runs-on: ubuntu-latest
     name: Create Release
     needs: [build-linux, build-windows]
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Linux AppImage artifact
         uses: actions/download-artifact@v4
