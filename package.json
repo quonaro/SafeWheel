@@ -96,7 +96,17 @@
               "!**/*.tmp",
               "!**/.git*",
               "!**/.cache/**",
-              "!**/.bin/**"
+              "!**/.bin/**",
+              "!**/*.lock",
+              "!**/*.pid",
+              "!**/*.seed",
+              "!**/*.pid.lock",
+              "!**/.eslintcache",
+              "!**/.nyc_output/**",
+              "!**/coverage/**",
+              "!**/.hooks/**",
+              "!**/.modules/**",
+              "!**/.yarn/**"
             ]
           }
         ],

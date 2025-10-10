@@ -234,12 +234,6 @@ npm run build
 
 Проект настроен для автоматической сборки через GitHub Actions:
 
-### Автоматические сборки
-
-- **При push в master/main** - полная сборка для Linux и Windows
-- **При создании тега v*.*** - автоматическое создание релиза
-- **При pull request** - тестовая сборка
-
 ### Релизы
 
 При создании тега (например, `v1.0.0`) автоматически создается релиз с файлами:
@@ -247,13 +241,27 @@ npm run build
 - **SafeWheel-Linux.AppImage** - для Linux
 - **SafeWheel-Windows.zip** - для Windows
 
-### Ручной запуск
+### Создание релиза
 
-Можно запустить сборку вручную через GitHub Actions:
+```bash
+# Создать и отправить тег
+git tag v1.0.0
+git push origin v1.0.0
 
-1. Перейдите в раздел "Actions" в репозитории
-2. Выберите "Quick Build SafeWheel" или "Test Build"
-3. Нажмите "Run workflow"
+# GitHub Actions автоматически создаст релиз
+```
+
+### Локальная сборка
+
+Для тестирования используйте локальные скрипты:
+
+```bash
+# Сборка для Linux
+npm run build:linux
+
+# Сборка для Windows
+npm run build:win
+```
 
 ## 📜 Скрипты сборки
 
