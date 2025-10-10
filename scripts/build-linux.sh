@@ -94,6 +94,10 @@ fi
 
 log_success "Фронтенд успешно собран"
 
+# Очистка build директорий
+log_info "Очистка build директорий..."
+rm -rf build-deps dist/
+
 # Копирование зависимостей
 log_info "Копирование зависимостей..."
 npm run copy:deps

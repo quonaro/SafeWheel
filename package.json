@@ -86,7 +86,13 @@
       "extraResources": [
         {
           "from": "build-deps/node_modules",
-          "to": "node_modules"
+          "to": "node_modules",
+          "filter": [
+            "!**/.package-lock.json",
+            "!**/package-lock.json",
+            "!**/.npm/**",
+            "!**/npm-debug.log*"
+          ]
         }
       ],
       "target": [

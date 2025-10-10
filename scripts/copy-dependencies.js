@@ -11,13 +11,50 @@ function ensureDirSync(dirPath) {
 function copyDir(src, dest) {
   ensureDirSync(dest);
   const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  // Файлы и папки, которые нужно исключить
+  const excludePatterns = [
+    ".package-lock.json",
+    "package-lock.json",
+    ".npm",
+    "npm-debug.log*",
+    ".DS_Store",
+    "Thumbs.db",
+  ];
+
   for (const entry of entries) {
+    // Проверяем, нужно ли исключить файл/папку
+    const shouldExclude = excludePatterns.some((pattern) => {
+      if (pattern.includes("*")) {
+        const regex = new RegExp(pattern.replace(/\*/g, ".*"));
+        return regex.test(entry.name);
+      }
+      return entry.name === pattern;
+    });
+
+    if (shouldExclude) {
+      continue;
+    }
+
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
+
     if (entry.isDirectory()) {
       copyDir(srcPath, destPath);
     } else if (entry.isFile()) {
-      fs.copyFileSync(srcPath, destPath);
+      try {
+        fs.copyFileSync(srcPath, destPath);
+      } catch (error) {
+        // Игнорируем ошибки копирования для системных файлов
+        if (
+          !error.message.includes("EACCES") &&
+          !error.message.includes("EPERM")
+        ) {
+          console.warn(
+            `⚠️  Warning: Could not copy ${entry.name}: ${error.message}`
+          );
+        }
+      }
     }
   }
 }
