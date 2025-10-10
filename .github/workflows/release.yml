@@ -37,7 +37,7 @@ jobs:
           retention-days: 30
 
   build-windows:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     name: Build Windows
 
     steps:
@@ -61,7 +61,7 @@ jobs:
       - name: Create Windows ZIP
         run: |
           cd dist/win-unpacked
-          Compress-Archive -Path * -DestinationPath ../../SafeWheel-Windows.zip
+          zip -r ../../SafeWheel-Windows.zip .
           cd ../..
 
       - name: Upload Windows ZIP artifact
