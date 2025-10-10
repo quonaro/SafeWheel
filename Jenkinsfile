@@ -2,11 +2,11 @@ pipeline {
     agent any
     
     tools {
-        nodejs '18'
+        nodejs '22'
     }
     
     environment {
-        NODE_VERSION = '18'
+        NODE_VERSION = '22'
     }
     
     stages {
