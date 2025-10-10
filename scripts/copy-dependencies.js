@@ -20,6 +20,11 @@ function copyDir(src, dest) {
     "npm-debug.log*",
     ".DS_Store",
     "Thumbs.db",
+    "*.log",
+    "*.tmp",
+    ".git*",
+    "node_modules/.cache",
+    "node_modules/.bin",
   ];
 
   for (const entry of entries) {

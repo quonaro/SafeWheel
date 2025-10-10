@@ -98,6 +98,13 @@ log_success "Фронтенд успешно собран"
 log_info "Очистка build директорий..."
 rm -rf build-deps dist/
 
+# Дополнительная очистка проблемных файлов
+log_info "Очистка проблемных файлов..."
+find node_modules -name ".package-lock.json" -delete 2>/dev/null || true
+find node_modules -name "package-lock.json" -delete 2>/dev/null || true
+find node_modules -name "*.log" -delete 2>/dev/null || true
+find node_modules -name "*.tmp" -delete 2>/dev/null || true
+
 # Копирование зависимостей
 log_info "Копирование зависимостей..."
 npm run copy:deps
