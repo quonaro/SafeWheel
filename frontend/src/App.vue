@@ -1,1087 +1,415 @@
-<template>
-  <div id="app">
-    <div class="app-container">
-      <div class="sidebar" :class="{ expanded: isMenuExpanded }">
-        <div class="sidebar-content">
-          <nav class="nav-menu">
-            <div class="nav-item back-item" :class="{
-              disabled: !selectedCompetitionId
-            }" @click="selectedCompetitionId && backToSelector()">
-              <el-icon>
-                <ArrowLeft />
-              </el-icon>
-              <span v-if="isMenuExpanded" class="nav-text">Назад</span>
-            </div>
+<script lang="ts" setup>
+import { ref, onMounted, watch, computed } from "vue";
+import {
+  IconTrophy,
+  IconUsers,
+  IconFlag,
+  IconClipboardList,
+  IconChartBar,
+  IconPlus,
+  IconPencil,
+  IconTrash,
+  IconSun,
+  IconMoon,
+  IconX,
+  IconDeviceFloppy,
+} from "@tabler/icons-vue";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Toaster } from "vue-sonner";
+import { toast } from "@/composables/useToast";
+import { useCompetitions } from "@/composables/useApi";
+import { useTheme } from "@/composables/useTheme";
+import { useAppState } from "@/composables/useAppState";
+import TeamsParticipants from "@/components/competition/TeamsParticipants.vue";
+import StagesManager from "@/components/competition/StagesManager.vue";
+import ResultsInput from "@/components/competition/ResultsInput.vue";
+import StandingsTable from "@/components/competition/StandingsTable.vue";
 
-            <div class="nav-item stages-item" :class="{
-              active: activeTab === 'stages' && selectedCompetitionId,
-              disabled: !selectedCompetitionId
-            }" @click="selectedCompetitionId && setActiveTab('stages')">
-              <el-icon>
-                <List />
-              </el-icon>
-              <span v-if="isMenuExpanded" class="nav-text">Этапы</span>
-              <div v-if="selectedCompetitionId && stagesCount > 0" class="nav-badge">
-                {{ stagesCount }}
-              </div>
-            </div>
+const { load, create, update, remove, competitions } = useCompetitions();
+const { theme, toggleTheme } = useTheme();
+const { state } = useAppState();
 
-            <div class="nav-item teams-item" :class="{
-              active: activeTab === 'teams' && selectedCompetitionId,
-              disabled: !selectedCompetitionId
-            }" @click="selectedCompetitionId && setActiveTab('teams')">
-              <el-icon>
-                <UserFilled />
-              </el-icon>
-              <span v-if="isMenuExpanded" class="nav-text">Команды</span>
-              <div v-if="selectedCompetitionId && teamsCount > 0" class="nav-badge">
-                {{ teamsCount }}
-              </div>
-            </div>
+const selectedCompetition = ref<any>(null);
+const activeTab = ref<"teams" | "stages" | "results" | "standings">("teams");
 
-            <div class="nav-item results-item" :class="{
-              active: activeTab === 'results' && selectedCompetitionId,
-              disabled: !selectedCompetitionId
-            }" @click="selectedCompetitionId && setActiveTab('results')">
-              <el-icon>
-                <Edit />
-              </el-icon>
-              <span v-if="isMenuExpanded" class="nav-text">Заполнение результатов</span>
-            </div>
-
-            <div class="nav-item standings-item" :class="{
-              active: activeTab === 'standings' && selectedCompetitionId,
-              disabled: !selectedCompetitionId
-            }" @click="selectedCompetitionId && setActiveTab('standings')">
-              <el-icon>
-                <TrophyBase />
-              </el-icon>
-              <span v-if="isMenuExpanded" class="nav-text">Результаты</span>
-            </div>
-
-            <div class="nav-item settings-item" :class="{
-              active: activeTab === 'settings' && selectedCompetitionId,
-              disabled: !selectedCompetitionId
-            }" @click="selectedCompetitionId && setActiveTab('settings')">
-              <el-icon>
-                <Setting />
-              </el-icon>
-              <span v-if="isMenuExpanded" class="nav-text">Настройки</span>
-            </div>
-
-            <!-- Кнопка сворачивания/разворачивания меню -->
-            <div class="nav-item toggle-item" @click="toggleMenu">
-              <el-icon>
-                <Expand v-if="!isMenuExpanded" />
-                <Fold v-else />
-              </el-icon>
-              <span v-if="isMenuExpanded" class="nav-text">
-                {{ isMenuExpanded ? 'Свернуть' : 'Развернуть' }}
-              </span>
-            </div>
-          </nav>
-        </div>
-      </div>
-
-      <div class="main-content">
-        <div class="content-card">
-          <div v-if="!selectedCompetitionId" class="competition-selector">
-            <div class="selector-header">
-              <div class="header-content">
-                <div class="header-actions">
-                  <el-button type="primary" @click="openCreateDialog" class="create-button" size="large">
-                    <el-icon>
-                      <Plus />
-                    </el-icon>
-                    Создать конкурс
-                  </el-button>
-                </div>
-              </div>
-            </div>
-
-            <div class="competition-list">
-              <div v-for="competition in competitions" :key="competition.id" class="competition-card"
-                @click="selectCompetition(competition.id)">
-                <div class="competition-icon">{{ competition.emoji || '🏆' }}</div>
-                <div class="competition-info">
-                  <h3>{{ competition.name }}</h3>
-                  <p>{{ competition.description || 'Конкурс "Безопасное колесо"' }}</p>
-                </div>
-                <div class="competition-arrow">→</div>
-              </div>
-            </div>
-          </div>
-
-          <CompetitionsManager v-else :active-tab="activeTab" :competition-id="selectedCompetitionId"
-            :refresh-counts="refreshCounts" @tab-change="handleTabChange" @back-to-selector="backToSelector" />
-        </div>
-      </div>
-    </div>
-
-    <!-- Диалог создания конкурса -->
-    <el-dialog v-model="createDialogVisible" title="Создать новый конкурс" width="580px" class="custom-dialog">
-      <el-form :model="competitionForm" label-width="120px">
-        <el-form-item label="Название">
-          <el-input v-model="competitionForm.name" placeholder="Введите название конкурса" />
-        </el-form-item>
-        <el-form-item label="Описание">
-          <el-input v-model="competitionForm.description" type="textarea" :rows="3"
-            placeholder="Введите описание конкурса (необязательно)" maxlength="500" show-word-limit />
-        </el-form-item>
-        <el-form-item label="Эмодзи">
-          <div class="emoji-selector">
-            <div class="emoji-preview">
-              <span class="preview-emoji">{{ competitionForm.emoji }}</span>
-            </div>
-            <div class="emoji-grid">
-              <div v-for="emoji in availableEmojis" :key="emoji" class="emoji-option"
-                :class="{ active: competitionForm.emoji === emoji }" @click="competitionForm.emoji = emoji">
-                {{ emoji }}
-              </div>
-            </div>
-          </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createDialogVisible = false">Отмена</el-button>
-        <el-button type="primary" @click="createCompetition">Создать</el-button>
-      </template>
-    </el-dialog>
-  </div>
-</template>
-
-<script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import CompetitionsManager from './components/CompetitionsManager.vue'
-import { UserFilled, List, Edit, TrophyBase, Plus, ArrowLeft, Setting, Expand, Fold } from '@element-plus/icons-vue'
-
-const activeTab = ref('teams')
-const selectedCompetitionId = ref(null)
-const competitions = ref([])
-const createDialogVisible = ref(false)
-const competitionForm = reactive({ name: '', description: '', emoji: '🏆' })
-const isMenuExpanded = ref(true) // Меню развернуто по умолчанию
-const stagesCount = ref(0)
-const teamsCount = ref(0)
-
-// Список доступных эмодзи для выбора
-const availableEmojis = [
-  '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️',
-  '⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱',
-  '🚗', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒',
-  '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🛵', '🚲',
-  '🎯', '🎪', '🎨', '🎭', '🎪', '🎡', '🎢', '🎠',
-  '🌟', '⭐', '💫', '✨', '🔥', '💎', '🎊', '🎉',
-  '🏁', '🏃', '🏃‍♂️', '🏃‍♀️', '🚶', '🚶‍♂️', '🚶‍♀️', '💪',
-  '🎓', '👨‍🎓', '👩‍🎓', '🎖️', '🏆', '🥇', '🥈', '🥉'
-]
-
-const api = window.electronAPI?.database
-
-const setActiveTab = (tab) => {
-  activeTab.value = tab
-}
-
-const toggleMenu = () => {
-  isMenuExpanded.value = !isMenuExpanded.value
-}
-
-// Загрузка количества этапов и команд
-const loadCounts = async () => {
-  if (!selectedCompetitionId.value || !api) return
-
+const maxParticipants = computed(() => {
+  if (!selectedCompetition.value) return 4;
   try {
-    const stages = await api.listStages(selectedCompetitionId.value)
-    const teams = await api.listTeams(selectedCompetitionId.value)
-
-    stagesCount.value = stages?.length || 0
-    teamsCount.value = teams?.length || 0
-  } catch (error) {
-    console.error('Ошибка загрузки количества этапов и команд:', error)
-    stagesCount.value = 0
-    teamsCount.value = 0
+    const settings = JSON.parse(selectedCompetition.value.settings || "{}");
+    return settings.maxParticipantsPerTeam || 4;
+  } catch {
+    return 4;
   }
-}
+});
+const showCreateDialog = ref(false);
+const showDeleteDialog = ref(false);
+const showEditDialog = ref(false);
+const newCompName = ref("");
+const newCompDesc = ref("");
+const editCompName = ref("");
+const editCompDesc = ref("");
+const editMaxParticipants = ref(4);
 
-const handleTabChange = (tab) => {
-  activeTab.value = tab
-}
+const tabs = [
+  { key: "teams", label: "Команды", icon: IconUsers },
+  { key: "stages", label: "Этапы", icon: IconFlag },
+  { key: "results", label: "Результаты", icon: IconClipboardList },
+  { key: "standings", label: "Турнирная таблица", icon: IconChartBar },
+] as const;
 
-const selectCompetition = async (competitionId) => {
-  selectedCompetitionId.value = competitionId
-  activeTab.value = 'teams'
-  await loadCounts()
-}
+onMounted(async () => {
+  await load();
 
-const backToSelector = () => {
-  selectedCompetitionId.value = null
-}
-
-const openCreateDialog = () => {
-  competitionForm.name = ''
-  competitionForm.description = ''
-  competitionForm.emoji = '🏆'
-  createDialogVisible.value = true
-}
-
-const createCompetition = async () => {
-  try {
-    if (!competitionForm.name?.trim()) throw new Error('Укажите название')
-    const payload = {
-      name: String(competitionForm.name || '').trim(),
-      description: String(competitionForm.description || '').trim(),
-      emoji: String(competitionForm.emoji || '🏆')
+  const lastId = state.selectedCompetitionId;
+  if (lastId != null) {
+    const found = competitions.value.find((c) => c.id === lastId);
+    if (found) {
+      const savedTab = state.activeTab;
+      activeTab.value =
+        savedTab && tabs.some((t) => t.key === savedTab) ? savedTab : "teams";
+      selectedCompetition.value = found;
+      return;
     }
-    const created = await api.createCompetition(payload)
-    competitions.value.unshift(created)
-    createDialogVisible.value = false
-    ElMessage.success('Конкурс создан')
-    await selectCompetition(created.id)
-  } catch (e) {
-    ElMessage.error(e.message || 'Ошибка')
+  }
+
+  if (competitions.value.length > 0) {
+    selectCompetition(competitions.value[0]);
+  }
+});
+
+function selectCompetition(comp: any) {
+  selectedCompetition.value = comp;
+  activeTab.value = "teams";
+}
+
+watch([() => selectedCompetition.value?.id, activeTab], ([id, tab]) => {
+  if (id != null) state.selectedCompetitionId = id;
+  state.activeTab = tab;
+});
+
+async function handleCreate() {
+  if (!newCompName.value.trim()) return;
+  const result = await create({
+    name: newCompName.value,
+    description: newCompDesc.value,
+  });
+  if (result) {
+    showCreateDialog.value = false;
+    newCompName.value = "";
+    newCompDesc.value = "";
+    await load();
+    selectCompetition(result);
+    toast.success("Соревнование создано");
   }
 }
 
-const loadCompetitions = async () => {
-  if (!api) return
-  competitions.value = await api.listCompetitions()
+async function handleDelete() {
+  if (!selectedCompetition.value) return;
+  const result = await remove(selectedCompetition.value.id);
+  if (result === null) return;
+  showDeleteDialog.value = false;
+  selectedCompetition.value = null;
+  await load();
+  toast.success("Соревнование удалено");
 }
 
-// Функция для обновления количества (можно вызывать из дочерних компонентов)
-const refreshCounts = async () => {
-  if (selectedCompetitionId.value) {
-    await loadCounts()
+function openEditDialog() {
+  if (!selectedCompetition.value) return;
+  editCompName.value = selectedCompetition.value.name;
+  editCompDesc.value = selectedCompetition.value.description || "";
+  try {
+    const settings = JSON.parse(selectedCompetition.value.settings);
+    if (settings.maxParticipantsPerTeam) {
+      editMaxParticipants.value = settings.maxParticipantsPerTeam;
+    } else {
+      editMaxParticipants.value = 4;
+    }
+  } catch {
+    editMaxParticipants.value = 4;
   }
+  showEditDialog.value = true;
 }
 
-// Watcher для обновления количества при изменении активной вкладки
-watch(activeTab, async () => {
-  if (selectedCompetitionId.value) {
-    await loadCounts()
+async function handleEdit() {
+  if (!selectedCompetition.value) return;
+  if (!editCompName.value.trim()) return;
+  const settings = JSON.stringify({
+    maxParticipantsPerTeam: editMaxParticipants.value,
+  });
+  const result = await update(selectedCompetition.value.id, {
+    name: editCompName.value,
+    description: editCompDesc.value,
+    settings,
+  });
+  if (result) {
+    showEditDialog.value = false;
+    await load();
+    selectCompetition(result);
+    toast.success("Изменения сохранены");
   }
-})
-
-onMounted(() => {
-  loadCompetitions()
-})
+}
 </script>
 
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-#app {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  height: 100vh;
-  background: #f8fafc;
-  overflow: hidden;
-}
-
-.app-container {
-  display: flex;
-  height: 100vh;
-  gap: 20px;
-  padding: 20px;
-}
-
-
-.sidebar {
-  width: 70px;
-  background: #ffffff;
-  border-radius: 20px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  flex-shrink: 0;
-  min-width: 70px;
-  max-width: 70px;
-  transition: all 0.3s ease;
-}
-
-.sidebar.expanded {
-  width: 200px;
-  min-width: 200px;
-  max-width: 200px;
-}
-
-.sidebar-content {
-  padding: 16px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  height: 100%;
-  justify-content: center;
-}
-
-
-.nav-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-}
-
-.nav-item {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #8b5cf6;
-  margin-bottom: 8px;
-  position: relative;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  border: 1px solid rgba(139, 92, 246, 0.1);
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.08);
-  gap: 8px;
-  padding: 0 12px;
-  min-width: 48px;
-}
-
-/* Базовые стили применяются только к кнопкам без специальных классов */
-.nav-item:not(.stages-item):not(.teams-item):not(.results-item):not(.standings-item):not(.settings-item):not(.back-item):not(.toggle-item) {
-  color: #8b5cf6;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  border-color: rgba(139, 92, 246, 0.1);
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.08);
-}
-
-.sidebar.expanded .nav-item {
-  width: auto;
-  min-width: 48px;
-  justify-content: flex-start;
-}
-
-.nav-item:hover {
-  transform: translateY(-2px) scale(1.02);
-}
-
-.nav-item.active {
-  transform: translateY(-2px) scale(1.05);
-}
-
-/* Базовые стили hover и active применяются только к кнопкам без специальных классов */
-.nav-item:not(.stages-item):not(.teams-item):not(.results-item):not(.standings-item):not(.settings-item):not(.back-item):not(.toggle-item):hover {
-  background: linear-gradient(135deg, #ede9fe, #e0e7ff);
-  color: #7c3aed;
-  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.15);
-  border-color: rgba(139, 92, 246, 0.2);
-}
-
-.nav-item:not(.stages-item):not(.teams-item):not(.results-item):not(.standings-item):not(.settings-item):not(.back-item):not(.toggle-item).active {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  color: white;
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
-  border-color: transparent;
-}
-
-.nav-item.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  border-color: rgba(107, 114, 128, 0.1);
-  color: #9ca3af;
-  box-shadow: none;
-}
-
-.nav-item.disabled:hover {
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  transform: none;
-  color: #9ca3af;
-  box-shadow: none;
-}
-
-
-.nav-item .el-icon {
-  font-size: 20px;
-  position: relative;
-  z-index: 1;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.nav-item:hover .el-icon {
-  transform: scale(1.1);
-}
-
-.nav-item.active .el-icon {
-  transform: scale(1.15);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-}
-
-.nav-text {
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: all 0.3s ease;
-  opacity: 1;
-  max-width: 120px;
-  flex-shrink: 0;
-}
-
-.sidebar:not(.expanded) .nav-text {
-  opacity: 0;
-  width: 0;
-  max-width: 0;
-  margin: 0;
-  overflow: hidden;
-}
-
-.nav-badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: #ef4444;
-  color: white;
-  border-radius: 50%;
-  min-width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-  z-index: 10;
-  animation: badgePulse 2s infinite;
-}
-
-@keyframes badgePulse {
-
-  0%,
-  100% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.1);
-  }
-}
-
-.nav-item.disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  pointer-events: none;
-  background: rgba(107, 114, 128, 0.1);
-  border-color: rgba(107, 114, 128, 0.1);
-  box-shadow: none;
-}
-
-.nav-item.disabled:hover {
-  background: rgba(107, 114, 128, 0.1);
-  transform: none;
-  color: #6b7280;
-  box-shadow: none;
-}
-
-.nav-item.disabled::before {
-  opacity: 0;
-}
-
-/* Стили для кнопки "назад" */
-.nav-item.back-item {
-  background: linear-gradient(135deg, #fef2f2, #fee2e2);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #dc2626;
-  margin-bottom: 16px;
-}
-
-.nav-item.back-item:hover {
-  background: linear-gradient(135deg, #fecaca, #fca5a5);
-  color: #b91c1c;
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.nav-item.back-item.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  border-color: rgba(107, 114, 128, 0.1);
-  color: #9ca3af;
-  box-shadow: none;
-}
-
-.nav-item.back-item.disabled:hover {
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  transform: none;
-  color: #9ca3af;
-  box-shadow: none;
-}
-
-/* Стили для кнопки переключения меню */
-.nav-item.toggle-item {
-  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-  border: 1px solid rgba(14, 165, 233, 0.2);
-  color: #0ea5e9;
-  margin-top: auto;
-}
-
-.nav-item.toggle-item:hover {
-  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
-  color: #0284c7;
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.15);
-  border-color: rgba(14, 165, 233, 0.3);
-}
-
-/* Цвета для разных кнопок */
-.nav-item.stages-item {
-  color: #059669;
-  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-  border-color: rgba(5, 150, 105, 0.2);
-  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.08);
-}
-
-.nav-item.stages-item:hover {
-  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-  color: #047857;
-  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.15);
-  border-color: rgba(5, 150, 105, 0.3);
-}
-
-.nav-item.stages-item.active {
-  background: linear-gradient(135deg, #059669, #047857);
-  color: white;
-  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.3);
-}
-
-.nav-item.teams-item {
-  color: #dc2626;
-  background: linear-gradient(135deg, #fef2f2, #fee2e2);
-  border-color: rgba(220, 38, 38, 0.2);
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);
-}
-
-.nav-item.teams-item:hover {
-  background: linear-gradient(135deg, #fee2e2, #fecaca);
-  color: #b91c1c;
-  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.15);
-  border-color: rgba(220, 38, 38, 0.3);
-}
-
-.nav-item.teams-item.active {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-  color: white;
-  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
-}
-
-.nav-item.results-item {
-  color: #7c3aed;
-  background: linear-gradient(135deg, #faf5ff, #f3e8ff);
-  border-color: rgba(124, 58, 237, 0.2);
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.08);
-}
-
-.nav-item.results-item:hover {
-  background: linear-gradient(135deg, #f3e8ff, #e9d5ff);
-  color: #6d28d9;
-  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.15);
-  border-color: rgba(124, 58, 237, 0.3);
-}
-
-.nav-item.results-item.active {
-  background: linear-gradient(135deg, #7c3aed, #6d28d9);
-  color: white;
-  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
-}
-
-.nav-item.standings-item {
-  color: #ea580c;
-  background: linear-gradient(135deg, #fff7ed, #fed7aa);
-  border-color: rgba(234, 88, 12, 0.2);
-  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.08);
-}
-
-.nav-item.standings-item:hover {
-  background: linear-gradient(135deg, #fed7aa, #fdba74);
-  color: #c2410c;
-  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.15);
-  border-color: rgba(234, 88, 12, 0.3);
-}
-
-.nav-item.standings-item.active {
-  background: linear-gradient(135deg, #ea580c, #c2410c);
-  color: white;
-  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.3);
-}
-
-.nav-item.settings-item {
-  color: #0891b2;
-  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-  border-color: rgba(8, 145, 178, 0.2);
-  box-shadow: 0 2px 8px rgba(8, 145, 178, 0.08);
-}
-
-.nav-item.settings-item:hover {
-  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
-  color: #0e7490;
-  box-shadow: 0 8px 24px rgba(8, 145, 178, 0.15);
-  border-color: rgba(8, 145, 178, 0.3);
-}
-
-.nav-item.settings-item.active {
-  background: linear-gradient(135deg, #0891b2, #0e7490);
-  color: white;
-  box-shadow: 0 4px 16px rgba(8, 145, 178, 0.3);
-}
-
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.content-card {
-  background: #ffffff;
-  border-radius: 24px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  padding: 20px;
-  height: 100%;
-  overflow: visible;
-  position: relative;
-}
-
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-
-/* Стили для селектора конкурсов */
-.competition-selector {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 60px 40px;
-  background: #ffffff;
-  border-radius: 20px;
-  position: relative;
-  overflow: visible;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.selector-header {
-  margin-bottom: 30px;
-  position: relative;
-  z-index: 1;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 30px;
-}
-
-.header-text {
-  flex: 1;
-  text-align: left;
-}
-
-.header-text h1 {
-  font-size: 42px;
-  font-weight: 800;
-  margin: 0 0 16px 0;
-  color: #1f2937;
-}
-
-.header-text p {
-  color: #6b7280;
-  font-size: 18px;
-  margin: 0;
-  font-weight: 400;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.create-button {
-  background: #3b82f6;
-  border: none;
-  border-radius: 12px;
-  padding: 12px 24px;
-  font-weight: 600;
-  font-size: 16px;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-  transition: all 0.3s ease;
-}
-
-.create-button:hover {
-  background: #2563eb;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
-}
-
-.create-button .el-icon {
-  margin-right: 8px;
-  font-size: 18px;
-}
-
-.competition-list {
-  width: 100%;
-  max-width: 1400px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: clamp(16px, 2.5vw, 32px);
-  position: relative;
-  z-index: 1;
-  justify-content: flex-start;
-  align-items: flex-start;
-  padding: 40px 20px;
-  margin: 0;
-}
-
-
-
-
-
-
-.competition-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: clamp(14px, 1.8vw, 20px);
-  padding: clamp(16px, 2.5vw, 28px);
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  min-height: clamp(160px, 20vw, 220px);
-  width: clamp(200px, 16vw, 260px);
-  flex: 0 0 auto;
-}
-
-.competition-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
-  border-color: rgba(59, 130, 246, 0.3);
-}
-
-.competition-card.new-competition {
-  border: 2px dashed rgba(59, 130, 246, 0.4);
-  background: rgba(59, 130, 246, 0.02);
-}
-
-.competition-card.new-competition:hover {
-  border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.05);
-  transform: translateY(-8px) scale(1.05);
-}
-
-.competition-icon {
-  font-size: clamp(24px, 3vw, 40px);
-  width: clamp(45px, 6vw, 65px);
-  height: clamp(45px, 6vw, 65px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #3b82f6;
-  border-radius: clamp(10px, 1.2vw, 16px);
-  color: white;
-  margin-bottom: clamp(8px, 1.5vw, 16px);
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-  transition: all 0.3s ease;
-  position: relative;
-  z-index: 1;
-}
-
-.competition-card:hover .competition-icon {
-  transform: scale(1.1) rotate(5deg);
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
-}
-
-.competition-card.new-competition .competition-icon {
-  background: #10b981;
-  font-size: clamp(24px, 3vw, 40px);
-  font-weight: bold;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
-}
-
-.competition-card.new-competition:hover .competition-icon {
-  background: #059669;
-  transform: scale(1.15) rotate(-5deg);
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
-}
-
-.competition-info {
-  flex: 1;
-  position: relative;
-  z-index: 1;
-}
-
-.competition-info h3 {
-  font-size: clamp(14px, 1.8vw, 20px);
-  font-weight: 700;
-  margin: 0 0 clamp(3px, 0.6vw, 8px) 0;
-  color: #1f2937;
-  transition: color 0.3s ease;
-}
-
-.competition-card:hover .competition-info h3 {
-  color: #3b82f6;
-}
-
-.competition-info p {
-  font-size: clamp(10px, 1.2vw, 14px);
-  color: #6b7280;
-  margin: 0;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-.competition-arrow {
-  font-size: clamp(14px, 2vw, 22px);
-  color: #9ca3af;
-  transition: all 0.3s ease;
-  margin-top: clamp(6px, 1vw, 12px);
-  position: relative;
-  z-index: 1;
-}
-
-.competition-card:hover .competition-arrow {
-  color: #3b82f6;
-  transform: translateY(-2px) scale(1.2);
-}
-
-/* Стили для диалога */
-.custom-dialog :deep(.el-dialog) {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 24px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  position: relative;
-  overflow: hidden;
-}
-
-.custom-dialog :deep(.el-dialog__header) {
-  color: #1f2937;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 24px 32px 20px;
-  background: rgba(59, 130, 246, 0.02);
-  margin: 0;
-  border-radius: 24px 24px 0 0;
-}
-
-.custom-dialog :deep(.el-dialog__title) {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.custom-dialog :deep(.el-dialog__body) {
-  color: #374151;
-  padding: 32px;
-}
-
-.custom-dialog :deep(.el-form-item__label) {
-  color: #374151;
-  font-weight: 600;
-  font-size: 14px;
-  margin-bottom: 8px;
-}
-
-.custom-dialog :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.8);
-  border: 2px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-}
-
-.custom-dialog :deep(.el-input__wrapper:hover) {
-  border-color: rgba(59, 130, 246, 0.3);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
-}
-
-.custom-dialog :deep(.el-input__wrapper.is-focus) {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-}
-
-.custom-dialog :deep(.el-input__inner) {
-  color: #374151;
-  font-size: 16px;
-  padding: 12px 16px;
-}
-
-.custom-dialog :deep(.el-input__inner::placeholder) {
-  color: #9ca3af;
-  font-weight: 400;
-}
-
-.custom-dialog :deep(.el-textarea__inner) {
-  background: rgba(255, 255, 255, 0.8);
-  border: 2px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-  color: #374151;
-  font-size: 16px;
-  padding: 12px 16px;
-  resize: vertical;
-  min-height: 80px;
-}
-
-.custom-dialog :deep(.el-textarea__inner:hover) {
-  border-color: rgba(59, 130, 246, 0.3);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
-}
-
-.custom-dialog :deep(.el-textarea__inner:focus) {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-}
-
-.custom-dialog :deep(.el-textarea__inner::placeholder) {
-  color: #9ca3af;
-  font-weight: 400;
-}
-
-.custom-dialog :deep(.el-dialog__footer) {
-  padding: 20px 32px 32px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(248, 250, 252, 0.5);
-  border-radius: 0 0 24px 24px;
-}
-
-.custom-dialog :deep(.el-button) {
-  border-radius: 12px;
-  font-weight: 600;
-  padding: 12px 24px;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.custom-dialog :deep(.el-button--primary) {
-  background: #3b82f6;
-  border: none;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
-}
-
-.custom-dialog :deep(.el-button--primary:hover) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
-}
-
-.custom-dialog :deep(.el-button:not(.el-button--primary)) {
-  background: rgba(107, 114, 128, 0.1);
-  border: 1px solid rgba(107, 114, 128, 0.2);
-  color: #6b7280;
-}
-
-.custom-dialog :deep(.el-button:not(.el-button--primary):hover) {
-  background: rgba(107, 114, 128, 0.2);
-  color: #374151;
-  transform: translateY(-1px);
-}
-
-
-/* Стили для селектора эмодзи */
-.emoji-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.emoji-preview {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 50px;
-  height: 50px;
-  background: #3b82f6;
-  border-radius: 12px;
-  margin: 0 auto;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-}
-
-.preview-emoji {
-  font-size: 24px;
-  color: white;
-}
-
-.emoji-grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 6px;
-  max-height: 160px;
-  overflow-y: auto;
-  padding: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  background: rgba(248, 250, 252, 0.5);
-}
-
-.emoji-option {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  font-size: 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.emoji-option:hover {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
-  transform: scale(1.1);
-}
-
-.emoji-option.active {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
-  transform: scale(1.15);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-</style>
+<template>
+  <div
+    class="flex h-screen w-full overflow-hidden bg-background text-foreground"
+  >
+    <!-- Sidebar -->
+    <aside class="flex w-64 flex-col border-r bg-card">
+      <div class="flex h-16 shrink-0 items-center gap-3 px-4 border-b">
+        <img src="/logo-48x48.png" alt="SafeWheel" class="h-12 w-12 shrink-0" />
+        <div class="flex flex-col leading-tight">
+          <span class="text-base font-bold">Безопасное</span>
+          <span class="text-base font-bold">колесо</span>
+        </div>
+      </div>
+
+      <div class="px-2 py-3">
+        <Button class="w-full" @click="showCreateDialog = true">
+          <IconPlus class="h-4 w-4" />
+          Создать соревнование
+        </Button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-2 space-y-1">
+        <button
+          v-for="comp in competitions"
+          :key="comp.id"
+          @click="selectCompetition(comp)"
+          :class="[
+            'flex w-full items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium text-left transition-colors',
+            selectedCompetition?.id === comp.id
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground',
+          ]"
+        >
+          <span class="flex-1 truncate">{{ comp.name }}</span>
+        </button>
+        <p
+          v-if="competitions.length === 0"
+          class="px-3 py-4 text-sm text-muted-foreground text-center"
+        >
+          Нет соревнований
+        </p>
+      </div>
+
+      <div class="shrink-0 border-t p-2">
+        <button
+          @click="toggleTheme"
+          class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent"
+        >
+          <component
+            :is="theme === 'dark' ? IconSun : IconMoon"
+            class="h-4 w-4"
+          />
+          {{ theme === "dark" ? "Светлая тема" : "Тёмная тема" }}
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main
+      v-if="selectedCompetition"
+      class="flex flex-1 flex-col overflow-hidden"
+    >
+      <!-- Header -->
+      <header
+        class="flex h-16 shrink-0 items-center justify-between border-b bg-card px-6"
+      >
+        <div class="flex min-w-0 items-center gap-3">
+          <div class="min-w-0">
+            <h1 class="truncate text-xl font-bold">
+              {{ selectedCompetition.name }}
+            </h1>
+            <p
+              v-if="selectedCompetition.description"
+              class="truncate text-sm text-muted-foreground"
+            >
+              {{ selectedCompetition.description }}
+            </p>
+          </div>
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
+          <Button size="sm" @click="openEditDialog">
+            <IconPencil class="h-4 w-4" />
+            Изменить
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            @click="showDeleteDialog = true"
+          >
+            <IconTrash class="h-4 w-4" />
+            Удалить
+          </Button>
+        </div>
+      </header>
+
+      <!-- Tabs -->
+      <nav class="flex border-b bg-card px-6 gap-1">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          @click="activeTab = tab.key"
+          :class="[
+            'flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2',
+            activeTab === tab.key
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground',
+          ]"
+        >
+          <component :is="tab.icon" class="h-4 w-4" />
+          {{ tab.label }}
+        </button>
+      </nav>
+
+      <!-- Tab Content -->
+      <div class="flex-1 overflow-y-auto p-6">
+        <TeamsParticipants
+          v-if="activeTab === 'teams'"
+          :competition-id="selectedCompetition.id"
+          :max-participants="maxParticipants"
+        />
+        <StagesManager
+          v-else-if="activeTab === 'stages'"
+          :competition-id="selectedCompetition.id"
+        />
+        <ResultsInput
+          v-else-if="activeTab === 'results'"
+          :competition-id="selectedCompetition.id"
+        />
+        <StandingsTable
+          v-else-if="activeTab === 'standings'"
+          :competition-id="selectedCompetition.id"
+        />
+      </div>
+    </main>
+
+    <!-- Empty State -->
+    <main v-else class="flex flex-1 items-center justify-center">
+      <div class="text-center space-y-4">
+        <IconTrophy class="mx-auto h-16 w-16 text-muted-foreground" />
+        <h2 class="text-xl font-semibold">Выберите соревнование</h2>
+        <p class="text-muted-foreground">
+          Создайте новое или выберите существующее
+        </p>
+        <Button @click="showCreateDialog = true">
+          <IconPlus class="h-4 w-4" />
+          Создать соревнование
+        </Button>
+      </div>
+    </main>
+
+    <!-- Create Dialog -->
+    <Dialog v-model:open="showCreateDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Новое соревнование</DialogTitle>
+          <DialogDescription
+            >Создайте новое соревнование для управления</DialogDescription
+          >
+        </DialogHeader>
+        <div class="space-y-4 py-4">
+          <div class="space-y-2">
+            <Label>Название</Label>
+            <Input v-model="newCompName" placeholder="Название соревнования" />
+          </div>
+          <div class="space-y-2">
+            <Label>Описание</Label>
+            <Textarea
+              v-model="newCompDesc"
+              placeholder="Описание (необязательно)"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="showCreateDialog = false">
+            <IconX class="h-4 w-4" />
+            Отмена
+          </Button>
+          <Button @click="handleCreate">
+            <IconPlus class="h-4 w-4" />
+            Создать
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Edit Dialog -->
+    <Dialog v-model:open="showEditDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Изменить соревнование</DialogTitle>
+          <DialogDescription>Измените параметры соревнования</DialogDescription>
+        </DialogHeader>
+        <div class="space-y-4 py-4">
+          <div class="space-y-2">
+            <Label>Название</Label>
+            <Input v-model="editCompName" placeholder="Название соревнования" />
+          </div>
+          <div class="space-y-2">
+            <Label>Описание</Label>
+            <Textarea
+              v-model="editCompDesc"
+              placeholder="Описание (необязательно)"
+            />
+          </div>
+          <div class="space-y-2">
+            <Label>Максимум участников в команде</Label>
+            <Input
+              v-model="editMaxParticipants"
+              type="number"
+              min="1"
+              max="10"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="showEditDialog = false">
+            <IconX class="h-4 w-4" />
+            Отмена
+          </Button>
+          <Button @click="handleEdit">
+            <IconDeviceFloppy class="h-4 w-4" />
+            Сохранить
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Toaster position="bottom-right" rich-colors :theme="theme" />
+
+    <!-- Delete Dialog -->
+    <Dialog v-model:open="showDeleteDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Удалить соревнование?</DialogTitle>
+          <DialogDescription>
+            Это действие нельзя отменить. Все данные будут удалены.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" @click="showDeleteDialog = false">
+            <IconX class="h-4 w-4" />
+            Отмена
+          </Button>
+          <Button variant="destructive" @click="handleDelete">
+            <IconTrash class="h-4 w-4" />
+            Удалить
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </div>
+</template>

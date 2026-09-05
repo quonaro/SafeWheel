@@ -1,0 +1,29 @@
+dev:
+  desc: "Run in development mode"
+  vars:
+  - "SAFEWHEEL_DB_DIR=./"
+  script: $HOME/.go/bin/wails dev -tags webkit2_41
+
+build:
+  desc: "Build the application"
+
+  windows:
+    desc: "Build for Windows (amd64)"
+    script: $HOME/.go/bin/wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform windows/amd64 -o safe-wheel-windows-amd64.exe
+
+  linux:
+    desc: "Build for Linux (amd64)"
+    script: $HOME/.go/bin/wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform linux/amd64 -o safe-wheel-linux-amd64
+
+  all:
+    desc: "Build for all OS (Windows, Linux)"
+    script: echo "Start building for all OS"
+    depends:
+    - build.windows
+    - build.linux
+    parallel: true
+
+
+start:
+  windows:
+    script: wine ./build/bin/safe-wheel-windows-amd64.exe

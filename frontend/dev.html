@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>safe-wheel-dev</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      const emptyArray = () => Promise.resolve([]);
+      const emptyObj = () => Promise.resolve({});
+      const noop = () => Promise.resolve();
+      window.go = {
+        main: {
+          App: {
+            ListCompetitions: () =>
+              Promise.resolve([
+                { id: 1, name: "Да", description: "", settings: "" },
+              ]),
+            GetCompetitionByID: (id) =>
+              Promise.resolve({
+                id,
+                name: "Да",
+                description: "",
+                settings: "",
+              }),
+            CreateCompetition: (data) => Promise.resolve({ ...data, id: 2 }),
+            UpdateCompetition: () => Promise.resolve(),
+            DeleteCompetition: () => Promise.resolve(),
+            ListTeams: () =>
+              Promise.resolve([
+                {
+                  id: 1,
+                  name: "Команда 1",
+                  competition_id: 1,
+                  participant_count: 0,
+                },
+              ]),
+            CreateTeam: () => Promise.resolve({ id: 2, name: "Новая команда" }),
+            UpdateTeam: () => Promise.resolve(),
+            DeleteTeam: () => Promise.resolve(),
+            ListParticipants: () => Promise.resolve([]),
+            CreateParticipant: () => Promise.resolve({}),
+            UpdateParticipant: () => Promise.resolve(),
+            DeleteParticipant: () => Promise.resolve(),
+            ListStages: () => Promise.resolve([]),
+            CreateStage: () => Promise.resolve({}),
+            UpdateStage: () => Promise.resolve(),
+            DeleteStage: () => Promise.resolve(),
+            GetStageResults: emptyArray,
+            UpsertStageResult: noop,
+            GetParticipantsWithResults: emptyArray,
+            ComputeStandings: emptyArray,
+            GetStageStandings: emptyArray,
+            GetStageStandingsWithParticipants: emptyArray,
+            GetParticipantResults: emptyArray,
+            GetParticipantByID: emptyObj,
+            GetStageByID: emptyObj,
+            GetTeamByID: emptyObj,
+            ExportOverallResults: noop,
+            ExportStageResults: noop,
+            ExportAllCompetitionsResults: noop,
+            FormatTime: (s) =>
+              Promise.resolve(
+                `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`,
+              ),
+            ParseTimeToSeconds: () => Promise.resolve(0),
+          },
+        },
+      };
+    </script>
+    <script src="./src/main.ts" type="module"></script>
+  </body>
+</html>
