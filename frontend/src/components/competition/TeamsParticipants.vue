@@ -23,6 +23,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useTeams, useParticipants } from "@/composables/useApi";
+import { useAppState } from "@/composables/useAppState";
 const props = defineProps<{ competitionId: number }>();
 
 const {
@@ -39,6 +40,7 @@ const {
   update: updateParticipant,
   remove: deleteParticipant,
 } = useParticipants();
+const { state } = useAppState();
 
 const expandedTeam = ref<number | null>(null);
 const showTeamDialog = ref(false);
@@ -55,11 +57,20 @@ const participantGender = ref("");
 const participantBirthDate = ref("");
 const participantAge = ref(0);
 
-onMounted(() => loadTeams(props.competitionId));
-watch(
-  () => props.competitionId,
-  () => loadTeams(props.competitionId),
-);
+async function initialize() {
+  await loadTeams(props.competitionId);
+
+  const saved = state.teams?.[props.competitionId]?.expandedTeam;
+  if (saved != null && teams.value.some((t) => t.id === saved)) {
+    expandedTeam.value = saved;
+    await loadParticipants(saved);
+  } else {
+    expandedTeam.value = null;
+  }
+}
+
+onMounted(initialize);
+watch(() => props.competitionId, initialize);
 
 async function toggleTeam(teamId: number) {
   if (expandedTeam.value === teamId) {
@@ -69,6 +80,12 @@ async function toggleTeam(teamId: number) {
     await loadParticipants(teamId);
   }
 }
+
+watch(expandedTeam, (teamId) => {
+  if (!state.teams) state.teams = {};
+  const current = state.teams[props.competitionId] ?? {};
+  state.teams[props.competitionId] = { ...current, expandedTeam: teamId };
+});
 
 function openCreateTeam() {
   editingTeam.value = null;

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import {
   IconTrophy,
   IconUsers,
@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Toaster, toast } from "vue-sonner";
 import { useCompetitions } from "@/composables/useApi";
 import { useTheme } from "@/composables/useTheme";
+import { useAppState } from "@/composables/useAppState";
 import TeamsParticipants from "@/components/competition/TeamsParticipants.vue";
 import StagesManager from "@/components/competition/StagesManager.vue";
 import ResultsInput from "@/components/competition/ResultsInput.vue";
@@ -34,6 +35,7 @@ import StandingsTable from "@/components/competition/StandingsTable.vue";
 
 const { load, create, update, remove, competitions } = useCompetitions();
 const { theme, toggleTheme } = useTheme();
+const { state } = useAppState();
 
 const selectedCompetition = ref<any>(null);
 const activeTab = ref<"teams" | "stages" | "results" | "standings">("teams");
@@ -55,6 +57,20 @@ const tabs = [
 
 onMounted(async () => {
   await load();
+
+  const lastId = state.selectedCompetitionId;
+  if (lastId != null) {
+    const found = competitions.value.find((c) => c.id === lastId);
+    if (found) {
+      selectedCompetition.value = found;
+
+      const savedTab = state.activeTab;
+      activeTab.value =
+        savedTab && tabs.some((t) => t.key === savedTab) ? savedTab : "teams";
+      return;
+    }
+  }
+
   if (competitions.value.length > 0) {
     selectCompetition(competitions.value[0]);
   }
@@ -64,6 +80,11 @@ function selectCompetition(comp: any) {
   selectedCompetition.value = comp;
   activeTab.value = "teams";
 }
+
+watch([() => selectedCompetition.value?.id, activeTab], ([id, tab]) => {
+  if (id != null) state.selectedCompetitionId = id;
+  state.activeTab = tab;
+});
 
 async function handleCreate() {
   if (!newCompName.value.trim()) return;

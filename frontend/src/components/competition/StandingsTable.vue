@@ -14,6 +14,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { useStandings, useExport, useFormat } from "@/composables/useApi";
+import { useAppState } from "@/composables/useAppState";
 
 const props = defineProps<{ competitionId: number }>();
 
@@ -27,8 +28,11 @@ const {
 } = useStandings();
 const { exportOverall, exportStages } = useExport();
 const { formatTimeLocal } = useFormat();
+const { state } = useAppState();
 
-const view = ref<"overall" | "stages" | "individual">("overall");
+const view = ref<"overall" | "stages" | "individual">(
+  state.standings?.[props.competitionId]?.view ?? "overall",
+);
 
 onMounted(() => {
   loadStandings(props.competitionId);
@@ -38,12 +42,19 @@ onMounted(() => {
 
 watch(
   () => props.competitionId,
-  () => {
-    loadStandings(props.competitionId);
-    loadStageStandings(props.competitionId);
-    loadIndividualStandings(props.competitionId);
+  (competitionId) => {
+    view.value = state.standings?.[competitionId]?.view ?? "overall";
+    loadStandings(competitionId);
+    loadStageStandings(competitionId);
+    loadIndividualStandings(competitionId);
   },
 );
+
+watch(view, (value) => {
+  if (!state.standings) state.standings = {};
+  const current = state.standings[props.competitionId] ?? {};
+  state.standings[props.competitionId] = { ...current, view: value };
+});
 
 const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-400"];
 

@@ -15,11 +15,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useStages, useResults, useFormat } from "@/composables/useApi";
+import { useAppState } from "@/composables/useAppState";
 const props = defineProps<{ competitionId: number }>();
 
 const { stages, load: loadStages } = useStages();
 const { getParticipantsWithResults, upsert } = useResults();
 const { formatTimeLocal } = useFormat();
+const { state } = useAppState();
 
 const selectedStageId = ref<number | null>(null);
 const participants = ref<any[]>([]);
@@ -39,24 +41,31 @@ function queueSave(participantId: number) {
   debouncedSave();
 }
 
-onMounted(async () => {
-  await loadStages(props.competitionId);
-  if (stages.value.length > 0) {
+function restoreSelectedStage() {
+  if (stages.value.length === 0) {
+    selectedStageId.value = null;
+    return;
+  }
+
+  const saved = state.results?.[props.competitionId]?.selectedStageId;
+  if (saved != null && stages.value.some((s) => s.id === saved)) {
+    selectedStageId.value = saved;
+  } else {
     selectedStageId.value = stages.value[0].id;
+  }
+}
+
+async function initialize() {
+  await loadStages(props.competitionId);
+  restoreSelectedStage();
+  if (selectedStageId.value != null) {
     await loadResults();
   }
-});
+}
 
-watch(
-  () => props.competitionId,
-  async () => {
-    await loadStages(props.competitionId);
-    if (stages.value.length > 0) {
-      selectedStageId.value = stages.value[0].id;
-      await loadResults();
-    }
-  },
-);
+onMounted(initialize);
+
+watch(() => props.competitionId, initialize);
 
 async function loadResults() {
   if (!selectedStageId.value) return;
@@ -83,6 +92,12 @@ async function selectStage(stageId: number) {
   selectedStageId.value = stageId;
   await loadResults();
 }
+
+watch(selectedStageId, (id) => {
+  if (!state.results) state.results = {};
+  const current = state.results[props.competitionId] ?? {};
+  state.results[props.competitionId] = { ...current, selectedStageId: id };
+});
 
 const groupedByTeam = computed(() => {
   const groups: Record<string, any[]> = {};
