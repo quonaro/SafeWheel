@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { Primitive, type PrimitiveProps } from 'reka-ui'
-import { cn } from '@/lib/utils'
-import { buttonVariants, type ButtonVariants } from '.'
+import { Primitive, type PrimitiveProps } from "reka-ui";
+import { cn } from "@/lib/utils";
+import { buttonVariants, type ButtonVariants } from ".";
 
 interface Props extends PrimitiveProps {
-  variant?: ButtonVariants['variant']
-  size?: ButtonVariants['size']
-  class?: string
+  variant?: ButtonVariants["variant"];
+  size?: ButtonVariants["size"];
+  class?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  as: 'button',
-})
+  as: "button",
+});
 </script>
 
 <template>

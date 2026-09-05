@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { DialogDescription, type DialogDescriptionProps } from 'reka-ui'
-import { cn } from '@/lib/utils'
+import { DialogDescription, type DialogDescriptionProps } from "reka-ui";
+import { cn } from "@/lib/utils";
 
-const props = defineProps<DialogDescriptionProps & { class?: string }>()
+const props = defineProps<DialogDescriptionProps & { class?: string }>();
 </script>
 
 <template>
-  <DialogDescription :as-child="asChild" :class="cn('text-sm text-muted-foreground', props.class)">
+  <DialogDescription
+    :as-child="asChild"
+    :class="cn('text-sm text-muted-foreground', props.class)"
+  >
     <slot />
   </DialogDescription>
 </template>

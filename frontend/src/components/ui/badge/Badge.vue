@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { cn } from '@/lib/utils'
-import { badgeVariants, type BadgeVariants } from '.'
+import { cn } from "@/lib/utils";
+import { badgeVariants, type BadgeVariants } from ".";
 
 const props = defineProps<{
-  variant?: BadgeVariants['variant']
-  class?: string
-}>()
+  variant?: BadgeVariants["variant"];
+  class?: string;
+}>();
 </script>
 
 <template>

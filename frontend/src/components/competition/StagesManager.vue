@@ -1,6 +1,13 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted } from "vue";
-import { IconPlus, IconTrash, IconPencil, IconFlag } from "@tabler/icons-vue";
+import {
+  IconPlus,
+  IconTrash,
+  IconPencil,
+  IconFlag,
+  IconX,
+  IconDeviceFloppy,
+} from "@tabler/icons-vue";
 import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { useStages } from "@/composables/useApi";
 const props = defineProps<{ competitionId: number }>();
@@ -20,7 +28,9 @@ const props = defineProps<{ competitionId: number }>();
 const { stages, load, create, update, remove } = useStages();
 
 const showDialog = ref(false);
+const showDeleteDialog = ref(false);
 const editingStage = ref<any>(null);
+const deleteTarget = ref<any>(null);
 const stageName = ref("");
 
 onMounted(() => load(props.competitionId));
@@ -55,11 +65,20 @@ async function save() {
   });
 }
 
-async function removeStage(stage: any) {
-  const result = await remove(stage.id);
+function confirmRemoveStage(stage: any) {
+  deleteTarget.value = stage;
+  showDeleteDialog.value = true;
+}
+
+async function performDelete() {
+  const target = deleteTarget.value;
+  if (!target) return;
+  showDeleteDialog.value = false;
+  const result = await remove(target.id);
   if (result === null) return;
   await load(props.competitionId);
-  toast.success("Этап удалён", { description: stage.name });
+  toast.success("Этап удалён", { description: target.name });
+  deleteTarget.value = null;
 }
 </script>
 
@@ -93,7 +112,11 @@ async function removeStage(stage: any) {
               <IconPencil class="mr-1 h-4 w-4" />
               Изменить
             </Button>
-            <Button variant="destructive" size="sm" @click="removeStage(stage)">
+            <Button
+              variant="destructive"
+              size="sm"
+              @click="confirmRemoveStage(stage)"
+            >
               <IconTrash class="mr-1 h-4 w-4" />
               Удалить
             </Button>
@@ -116,8 +139,37 @@ async function removeStage(stage: any) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showDialog = false">Отмена</Button>
-          <Button @click="save">Сохранить</Button>
+          <Button variant="outline" @click="showDialog = false">
+            <IconX class="mr-2 h-4 w-4" />
+            Отмена
+          </Button>
+          <Button @click="save">
+            <IconDeviceFloppy class="mr-2 h-4 w-4" />
+            Сохранить
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="showDeleteDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Подтвердите удаление</DialogTitle>
+          <DialogDescription>
+            Вы уверены, что хотите удалить этап
+            <strong>{{ deleteTarget?.name }}</strong
+            >? Это действие нельзя отменить.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" @click="showDeleteDialog = false">
+            <IconX class="mr-2 h-4 w-4" />
+            Отмена
+          </Button>
+          <Button variant="destructive" @click="performDelete">
+            <IconTrash class="mr-2 h-4 w-4" />
+            Удалить
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

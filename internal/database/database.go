@@ -22,19 +22,19 @@ func Open(dbPath string) (*DB, error) {
 
 	if err := applyPragmas(db); err != nil {
 		slog.Error("failed to apply pragmas", "error", err)
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 
 	if err := createTables(db); err != nil {
 		slog.Error("failed to create tables", "error", err)
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 
 	if err := runMigrations(db); err != nil {
 		slog.Error("failed to run migrations", "error", err)
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 
@@ -144,9 +144,8 @@ func runMigrations(db *sqlx.DB) error {
 	}
 
 	for _, m := range migrations {
-		if _, err := db.Exec(m.sql); err != nil {
-			// already applied — skip silently
-		}
+		// already applied — skip silently
+		_, _ = db.Exec(m.sql)
 	}
 
 	// Migrate stages: add order_index
@@ -155,7 +154,7 @@ func runMigrations(db *sqlx.DB) error {
 	if err != nil {
 		return fmt.Errorf("check stages schema: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var cid int
 		var name, ctype string

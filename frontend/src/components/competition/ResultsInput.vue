@@ -1,11 +1,12 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted, computed } from "vue";
+import { useDebounceFn } from "@vueuse/core";
 import {
   IconAlertTriangle,
   IconCircleCheck,
   IconClipboardList,
   IconClock,
-  IconDeviceFloppy,
+  IconUser,
 } from "@tabler/icons-vue";
 import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,18 @@ const participants = ref<any[]>([]);
 const resultsMap = ref<
   Record<number, { time: string; penalties: number; correctAnswers: number }>
 >({});
+
+const dirtyIds = new Set<number>();
+const debouncedSave = useDebounceFn(async () => {
+  const ids = Array.from(dirtyIds);
+  dirtyIds.clear();
+  await Promise.all(ids.map((id) => saveResult(id)));
+}, 400);
+
+function queueSave(participantId: number) {
+  dirtyIds.add(participantId);
+  debouncedSave();
+}
 
 onMounted(async () => {
   await loadStages(props.competitionId);
@@ -47,6 +60,8 @@ watch(
 
 async function loadResults() {
   if (!selectedStageId.value) return;
+  debouncedSave.cancel();
+  dirtyIds.clear();
   const result = await getParticipantsWithResults(
     props.competitionId,
     selectedStageId.value,
@@ -100,11 +115,17 @@ async function saveResult(participantId: number) {
 }
 
 function parseTimeString(time: string): number {
-  const parts = time.split(":");
-  if (parts.length === 2) {
-    return parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+  const trimmed = time.trim();
+  if (!trimmed) return 0;
+  const parts = trimmed.split(":");
+  if (parts.length >= 2) {
+    const m = parseInt(parts[0], 10) || 0;
+    const s = parseFloat(parts[1]) || 0;
+    return m * 60 + s;
   }
-  return parseFloat(time) || 0;
+  // Single number is treated as minutes
+  const m = parseFloat(trimmed);
+  return isNaN(m) ? 0 : m * 60;
 }
 </script>
 
@@ -156,7 +177,7 @@ function parseTimeString(time: string): number {
             <div class="space-y-2">
               <!-- Column headers -->
               <div
-                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem_auto] items-center gap-2 px-2 text-xs text-muted-foreground"
+                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem] items-center gap-2 px-2 text-xs text-muted-foreground"
               >
                 <span>Участник</span>
                 <span class="flex items-center justify-center gap-1">
@@ -171,21 +192,26 @@ function parseTimeString(time: string): number {
                   <IconAlertTriangle class="h-3.5 w-3.5 text-amber-500" />
                   Штраф
                 </span>
-                <span></span>
               </div>
               <div
                 v-for="p in teamParticipants"
                 :key="p.id"
-                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem_auto] items-center gap-2 rounded-md border p-2"
+                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem] items-center gap-2 rounded-md border p-2"
               >
-                <span class="truncate text-sm font-medium">{{
-                  p.full_name
-                }}</span>
+                <div class="flex min-w-0 items-center gap-2">
+                  <IconUser class="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span class="truncate text-sm font-medium">{{
+                    p.full_name
+                  }}</span>
+                </div>
                 <Input
                   v-model="resultsMap[p.id].time"
                   placeholder="MM:SS"
                   class="text-center"
                   title="Время прохождения (MM:SS)"
+                  @update:model-value="queueSave(p.id)"
+                  @blur="saveResult(p.id)"
+                  @keydown.enter="saveResult(p.id)"
                 />
                 <Input
                   v-model.number="resultsMap[p.id].correctAnswers"
@@ -193,6 +219,7 @@ function parseTimeString(time: string): number {
                   placeholder="0"
                   class="text-center"
                   title="Правильные ответы"
+                  @update:model-value="queueSave(p.id)"
                 />
                 <Input
                   v-model.number="resultsMap[p.id].penalties"
@@ -200,15 +227,8 @@ function parseTimeString(time: string): number {
                   placeholder="0"
                   class="text-center"
                   title="Штрафные баллы"
+                  @update:model-value="queueSave(p.id)"
                 />
-                <Button
-                  size="sm"
-                  title="Сохранить результат"
-                  @click="saveResult(p.id)"
-                >
-                  <IconDeviceFloppy class="h-4 w-4" />
-                  Сохранить
-                </Button>
               </div>
             </div>
           </CardContent>

@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { DialogTitle, type DialogTitleProps } from 'reka-ui'
-import { cn } from '@/lib/utils'
+import { DialogTitle, type DialogTitleProps } from "reka-ui";
+import { cn } from "@/lib/utils";
 
-const props = defineProps<DialogTitleProps & { class?: string }>()
+const props = defineProps<DialogTitleProps & { class?: string }>();
 </script>
 
 <template>
-  <DialogTitle :as-child="asChild" :class="cn('text-lg font-semibold leading-none tracking-tight', props.class)">
+  <DialogTitle
+    :as-child="asChild"
+    :class="
+      cn('text-lg font-semibold leading-none tracking-tight', props.class)
+    "
+  >
     <slot />
   </DialogTitle>
 </template>

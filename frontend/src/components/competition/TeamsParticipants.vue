@@ -1,6 +1,13 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted } from "vue";
-import { IconPlus, IconTrash, IconPencil, IconUsers } from "@tabler/icons-vue";
+import {
+  IconPlus,
+  IconTrash,
+  IconPencil,
+  IconUsers,
+  IconX,
+  IconDeviceFloppy,
+} from "@tabler/icons-vue";
 import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -262,10 +269,14 @@ async function saveParticipant() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showTeamDialog = false"
-            >Отмена</Button
-          >
-          <Button @click="saveTeam">Сохранить</Button>
+          <Button variant="outline" @click="showTeamDialog = false">
+            <IconX class="mr-2 h-4 w-4" />
+            Отмена
+          </Button>
+          <Button @click="saveTeam">
+            <IconDeviceFloppy class="mr-2 h-4 w-4" />
+            Сохранить
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -302,10 +313,14 @@ async function saveParticipant() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showParticipantDialog = false"
-            >Отмена</Button
-          >
-          <Button @click="saveParticipant">Сохранить</Button>
+          <Button variant="outline" @click="showParticipantDialog = false">
+            <IconX class="mr-2 h-4 w-4" />
+            Отмена
+          </Button>
+          <Button @click="saveParticipant">
+            <IconDeviceFloppy class="mr-2 h-4 w-4" />
+            Сохранить
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -327,10 +342,14 @@ async function saveParticipant() {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" @click="showDeleteDialog = false"
-            >Отмена</Button
-          >
-          <Button variant="destructive" @click="performDelete">Удалить</Button>
+          <Button variant="outline" @click="showDeleteDialog = false">
+            <IconX class="mr-2 h-4 w-4" />
+            Отмена
+          </Button>
+          <Button variant="destructive" @click="performDelete">
+            <IconTrash class="mr-2 h-4 w-4" />
+            Удалить
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
