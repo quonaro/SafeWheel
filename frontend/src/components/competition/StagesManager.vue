@@ -87,7 +87,7 @@ async function performDelete() {
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-semibold">Этапы соревнования</h2>
       <Button size="sm" @click="openCreate">
-        <IconPlus class="mr-2 h-4 w-4" />
+        <IconPlus class="h-4 w-4" />
         Добавить этап
       </Button>
     </div>
@@ -101,7 +101,11 @@ async function performDelete() {
     </div>
 
     <div v-else class="space-y-2">
-      <Card v-for="(stage, idx) in stages" :key="stage.id">
+      <Card
+        v-for="(stage, idx) in stages"
+        :key="stage.id"
+        class="transition-all duration-200 hover:shadow-md hover:border-primary/50"
+      >
         <CardContent class="flex items-center justify-between py-3">
           <div class="flex items-center gap-3">
             <Badge variant="secondary">{{ idx + 1 }}</Badge>
@@ -109,7 +113,7 @@ async function performDelete() {
           </div>
           <div class="flex gap-1">
             <Button size="sm" @click="openEdit(stage)">
-              <IconPencil class="mr-1 h-4 w-4" />
+              <IconPencil class="h-4 w-4" />
               Изменить
             </Button>
             <Button
@@ -117,7 +121,7 @@ async function performDelete() {
               size="sm"
               @click="confirmRemoveStage(stage)"
             >
-              <IconTrash class="mr-1 h-4 w-4" />
+              <IconTrash class="h-4 w-4" />
               Удалить
             </Button>
           </div>
@@ -139,12 +143,12 @@ async function performDelete() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="destructive" @click="showDialog = false">
-            <IconX class="mr-2 h-4 w-4" />
+          <Button variant="outline" @click="showDialog = false">
+            <IconX class="h-4 w-4" />
             Отмена
           </Button>
           <Button @click="save">
-            <IconDeviceFloppy class="mr-2 h-4 w-4" />
+            <IconDeviceFloppy class="h-4 w-4" />
             Сохранить
           </Button>
         </DialogFooter>
@@ -162,12 +166,12 @@ async function performDelete() {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="destructive" @click="showDeleteDialog = false">
-            <IconX class="mr-2 h-4 w-4" />
+          <Button variant="outline" @click="showDeleteDialog = false">
+            <IconX class="h-4 w-4" />
             Отмена
           </Button>
           <Button variant="destructive" @click="performDelete">
-            <IconTrash class="mr-2 h-4 w-4" />
+            <IconTrash class="h-4 w-4" />
             Удалить
           </Button>
         </DialogFooter>

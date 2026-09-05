@@ -194,7 +194,7 @@ async function saveParticipant() {
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-semibold">Команды и участники</h2>
       <Button size="sm" @click="openCreateTeam">
-        <IconPlus class="mr-2 h-4 w-4" />
+        <IconPlus class="h-4 w-4" />
         Добавить команду
       </Button>
     </div>
@@ -213,7 +213,7 @@ async function saveParticipant() {
       class="overflow-hidden transition-all duration-200 hover:shadow-md hover:border-primary/50"
     >
       <CardHeader
-        class="flex h-[60px] flex-row items-center justify-between overflow-hidden py-3 cursor-pointer"
+        class="flex h-15 flex-row items-center justify-between overflow-hidden py-3 cursor-pointer"
         @click="toggleTeam(team.id)"
       >
         <div class="flex min-w-0 items-center gap-3">
@@ -237,7 +237,7 @@ async function saveParticipant() {
         </div>
         <div class="flex gap-1" @click.stop>
           <Button size="sm" @click="openEditTeam(team)">
-            <IconPencil class="mr-1 h-4 w-4" />
+            <IconPencil class="h-4 w-4" />
             Изменить
           </Button>
           <Button
@@ -245,7 +245,7 @@ async function saveParticipant() {
             size="sm"
             @click="confirmRemoveTeam(team)"
           >
-            <IconTrash class="mr-1 h-4 w-4" />
+            <IconTrash class="h-4 w-4" />
             Удалить
           </Button>
         </div>
@@ -259,7 +259,7 @@ async function saveParticipant() {
             variant="outline"
             @click="openCreateParticipant(team.id)"
           >
-            <IconPlus class="mr-1 h-3 w-3" />
+            <IconPlus class="h-3 w-3" />
             Добавить
           </Button>
         </div>
@@ -282,7 +282,7 @@ async function saveParticipant() {
             </div>
             <div class="flex gap-1">
               <Button size="sm" @click="openEditParticipant(p)">
-                <IconPencil class="mr-1 h-3 w-3" />
+                <IconPencil class="h-3 w-3" />
                 Изменить
               </Button>
               <Button
@@ -290,7 +290,7 @@ async function saveParticipant() {
                 size="sm"
                 @click="confirmRemoveParticipant(p)"
               >
-                <IconTrash class="mr-1 h-3 w-3" />
+                <IconTrash class="h-3 w-3" />
                 Удалить
               </Button>
             </div>
@@ -314,12 +314,12 @@ async function saveParticipant() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="destructive" @click="showTeamDialog = false">
-            <IconX class="mr-2 h-4 w-4" />
+          <Button variant="outline" @click="showTeamDialog = false">
+            <IconX class="h-4 w-4" />
             Отмена
           </Button>
           <Button @click="saveTeam">
-            <IconDeviceFloppy class="mr-2 h-4 w-4" />
+            <IconDeviceFloppy class="h-4 w-4" />
             Сохранить
           </Button>
         </DialogFooter>
@@ -358,12 +358,12 @@ async function saveParticipant() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="destructive" @click="showParticipantDialog = false">
-            <IconX class="mr-2 h-4 w-4" />
+          <Button variant="outline" @click="showParticipantDialog = false">
+            <IconX class="h-4 w-4" />
             Отмена
           </Button>
           <Button @click="saveParticipant">
-            <IconDeviceFloppy class="mr-2 h-4 w-4" />
+            <IconDeviceFloppy class="h-4 w-4" />
             Сохранить
           </Button>
         </DialogFooter>
@@ -387,12 +387,12 @@ async function saveParticipant() {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="destructive" @click="showDeleteDialog = false">
-            <IconX class="mr-2 h-4 w-4" />
+          <Button variant="outline" @click="showDeleteDialog = false">
+            <IconX class="h-4 w-4" />
             Отмена
           </Button>
           <Button variant="destructive" @click="performDelete">
-            <IconTrash class="mr-2 h-4 w-4" />
+            <IconTrash class="h-4 w-4" />
             Удалить
           </Button>
         </DialogFooter>

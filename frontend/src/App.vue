@@ -242,7 +242,7 @@ async function handleEdit() {
         </div>
         <div class="flex shrink-0 items-center gap-2">
           <Button size="sm" @click="openEditDialog">
-            <IconPencil class="mr-2 h-4 w-4" />
+            <IconPencil class="h-4 w-4" />
             Изменить
           </Button>
           <Button
@@ -250,7 +250,7 @@ async function handleEdit() {
             size="sm"
             @click="showDeleteDialog = true"
           >
-            <IconTrash class="mr-2 h-4 w-4" />
+            <IconTrash class="h-4 w-4" />
             Удалить
           </Button>
         </div>
@@ -305,7 +305,7 @@ async function handleEdit() {
           Создайте новое или выберите существующее
         </p>
         <Button @click="showCreateDialog = true">
-          <IconPlus class="mr-2 h-4 w-4" />
+          <IconPlus class="h-4 w-4" />
           Создать соревнование
         </Button>
       </div>
@@ -334,12 +334,12 @@ async function handleEdit() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="destructive" @click="showCreateDialog = false">
-            <IconX class="mr-2 h-4 w-4" />
+          <Button variant="outline" @click="showCreateDialog = false">
+            <IconX class="h-4 w-4" />
             Отмена
           </Button>
           <Button @click="handleCreate">
-            <IconPlus class="mr-2 h-4 w-4" />
+            <IconPlus class="h-4 w-4" />
             Создать
           </Button>
         </DialogFooter>
@@ -376,12 +376,12 @@ async function handleEdit() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="destructive" @click="showEditDialog = false">
-            <IconX class="mr-2 h-4 w-4" />
+          <Button variant="outline" @click="showEditDialog = false">
+            <IconX class="h-4 w-4" />
             Отмена
           </Button>
           <Button @click="handleEdit">
-            <IconDeviceFloppy class="mr-2 h-4 w-4" />
+            <IconDeviceFloppy class="h-4 w-4" />
             Сохранить
           </Button>
         </DialogFooter>
@@ -400,12 +400,12 @@ async function handleEdit() {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="destructive" @click="showDeleteDialog = false">
-            <IconX class="mr-2 h-4 w-4" />
+          <Button variant="outline" @click="showDeleteDialog = false">
+            <IconX class="h-4 w-4" />
             Отмена
           </Button>
           <Button variant="destructive" @click="handleDelete">
-            <IconTrash class="mr-2 h-4 w-4" />
+            <IconTrash class="h-4 w-4" />
             Удалить
           </Button>
         </DialogFooter>

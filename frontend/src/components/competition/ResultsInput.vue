@@ -201,10 +201,10 @@ function parseTimeString(time: string): number {
         <Card
           v-for="(teamParticipants, teamName) in groupedByTeam"
           :key="teamName"
-          class="mb-3 overflow-hidden transition-all duration-200 hover:shadow-md hover:border-primary/50"
+          class="mb-3 transition-all duration-200 hover:shadow-md hover:border-primary/50"
         >
           <CardHeader
-            class="flex h-[60px] flex-row items-center justify-between overflow-hidden py-3 cursor-pointer"
+            class="flex h-15 flex-row items-center justify-between overflow-hidden py-3 cursor-pointer"
             @click="toggleTeam(teamName)"
           >
             <div class="flex min-w-0 items-center gap-3">
@@ -231,19 +231,21 @@ function parseTimeString(time: string): number {
                 class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem] items-center gap-2 px-2 text-xs text-muted-foreground"
               >
                 <span class="flex items-center gap-1">
-                  <IconUser class="h-3.5 w-3.5 text-indigo-500" />
+                  <IconUser class="h-3.5 w-3.5 text-muted-foreground" />
                   Участник
                 </span>
                 <span class="flex items-center justify-center gap-1">
-                  <IconClock class="h-3.5 w-3.5 text-sky-500" />
+                  <IconClock class="h-3.5 w-3.5 text-muted-foreground" />
                   Время
                 </span>
                 <span class="flex items-center justify-center gap-1">
-                  <IconCircleCheck class="h-3.5 w-3.5 text-green-500" />
+                  <IconCircleCheck class="h-3.5 w-3.5 text-muted-foreground" />
                   Ответы
                 </span>
                 <span class="flex items-center justify-center gap-1">
-                  <IconAlertTriangle class="h-3.5 w-3.5 text-amber-500" />
+                  <IconAlertTriangle
+                    class="h-3.5 w-3.5 text-muted-foreground"
+                  />
                   Штраф
                 </span>
               </div>

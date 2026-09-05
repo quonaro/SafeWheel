@@ -80,6 +80,7 @@ async function handleExportStages() {
 <template>
   <div class="space-y-4">
     <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold">Турнирная таблица</h2>
       <div class="flex gap-2">
         <Button
           :variant="view === 'overall' ? 'default' : 'outline'"
@@ -105,11 +106,11 @@ async function handleExportStages() {
       </div>
       <div class="flex gap-2">
         <Button variant="outline" size="sm" @click="handleExportOverall">
-          <IconFileDownload class="mr-2 h-4 w-4" />
+          <IconFileDownload class="h-4 w-4" />
           Экспорт
         </Button>
         <Button variant="outline" size="sm" @click="handleExportStages">
-          <IconFileDownload class="mr-2 h-4 w-4" />
+          <IconFileDownload class="h-4 w-4" />
           По этапам
         </Button>
       </div>
@@ -124,7 +125,7 @@ async function handleExportStages() {
         <IconChartBar class="mx-auto mb-3 h-12 w-12" />
         <p>Нет данных. Добавьте результаты.</p>
       </div>
-      <Card v-else>
+      <Card v-else class="transition-all duration-200 hover:shadow-md">
         <CardContent class="p-0">
           <Table>
             <TableHeader>
@@ -173,7 +174,11 @@ async function handleExportStages() {
         <IconChartBar class="mx-auto mb-3 h-12 w-12" />
         <p>Нет данных по этапам</p>
       </div>
-      <Card v-for="stage in stageStandings" :key="stage.stage_id">
+      <Card
+        v-for="stage in stageStandings"
+        :key="stage.stage_id"
+        class="transition-all duration-200 hover:shadow-md"
+      >
         <CardHeader class="py-3">
           <CardTitle class="text-sm">{{ stage.stage_name }}</CardTitle>
         </CardHeader>
@@ -223,7 +228,11 @@ async function handleExportStages() {
         <IconChartBar class="mx-auto mb-3 h-12 w-12" />
         <p>Нет данных по личному первенству</p>
       </div>
-      <Card v-for="stage in individualStandings" :key="stage.stage_id">
+      <Card
+        v-for="stage in individualStandings"
+        :key="stage.stage_id"
+        class="transition-all duration-200 hover:shadow-md"
+      >
         <CardHeader class="py-3">
           <CardTitle class="text-sm">{{ stage.stage_name }}</CardTitle>
         </CardHeader>
