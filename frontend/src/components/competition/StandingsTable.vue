@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted, computed } from "vue";
-import { IconChartBar, IconFileDownload } from "@tabler/icons-vue";
+import { IconChartBar, IconFileDownload, IconTrophy } from "@tabler/icons-vue";
 import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -131,10 +131,11 @@ async function handleExportStages() {
                 <TableCell class="text-center">
                   <span
                     :class="[
-                      'font-bold',
+                      'inline-flex items-center gap-1 font-bold',
                       s.rank <= 3 ? medalColors[s.rank - 1] : '',
                     ]"
                   >
+                    <IconTrophy v-if="s.rank <= 3" class="h-4 w-4" />
                     {{ s.rank }}
                   </span>
                 </TableCell>
@@ -180,10 +181,11 @@ async function handleExportStages() {
                 <TableCell class="text-center">
                   <span
                     :class="[
-                      'font-bold',
+                      'inline-flex items-center gap-1 font-bold',
                       r.rank <= 3 ? medalColors[r.rank - 1] : '',
                     ]"
                   >
+                    <IconTrophy v-if="r.rank <= 3" class="h-4 w-4" />
                     {{ r.rank }}
                   </span>
                 </TableCell>
@@ -235,10 +237,11 @@ async function handleExportStages() {
                     <TableCell class="text-center">
                       <span
                         :class="[
-                          'font-bold',
+                          'inline-flex items-center gap-1 font-bold',
                           b.rank <= 3 ? medalColors[b.rank - 1] : '',
                         ]"
                       >
+                        <IconTrophy v-if="b.rank <= 3" class="h-4 w-4" />
                         {{ b.rank }}
                       </span>
                     </TableCell>
@@ -276,10 +279,11 @@ async function handleExportStages() {
                     <TableCell class="text-center">
                       <span
                         :class="[
-                          'font-bold',
+                          'inline-flex items-center gap-1 font-bold',
                           g.rank <= 3 ? medalColors[g.rank - 1] : '',
                         ]"
                       >
+                        <IconTrophy v-if="g.rank <= 3" class="h-4 w-4" />
                         {{ g.rank }}
                       </span>
                     </TableCell>

@@ -229,11 +229,15 @@ async function saveParticipant() {
               <Badge v-if="p.age" variant="outline">{{ p.age }} лет</Badge>
             </div>
             <div class="flex gap-1">
-              <Button variant="ghost" size="sm" @click="openEditParticipant(p)">
+              <Button size="sm" @click="openEditParticipant(p)">
                 <IconPencil class="mr-1 h-3 w-3" />
                 Изменить
               </Button>
-              <Button size="sm" @click="openEditParticipant(p)">
+              <Button
+                variant="destructive"
+                size="sm"
+                @click="confirmRemoveParticipant(p)"
+              >
                 <IconTrash class="mr-1 h-3 w-3" />
                 Удалить
               </Button>

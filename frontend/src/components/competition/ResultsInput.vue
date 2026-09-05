@@ -156,7 +156,7 @@ function parseTimeString(time: string): number {
             <div class="space-y-2">
               <!-- Column headers -->
               <div
-                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem_2.25rem] items-center gap-2 px-2 text-xs text-muted-foreground"
+                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem_auto] items-center gap-2 px-2 text-xs text-muted-foreground"
               >
                 <span>Участник</span>
                 <span class="flex items-center justify-center gap-1">
@@ -176,7 +176,7 @@ function parseTimeString(time: string): number {
               <div
                 v-for="p in teamParticipants"
                 :key="p.id"
-                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem_2.25rem] items-center gap-2 rounded-md border p-2"
+                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem_auto] items-center gap-2 rounded-md border p-2"
               >
                 <span class="truncate text-sm font-medium">{{
                   p.full_name

@@ -9,6 +9,8 @@ import {
   IconPlus,
   IconPencil,
   IconTrash,
+  IconSun,
+  IconMoon,
 } from "@tabler/icons-vue";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,12 +26,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Toaster, toast } from "vue-sonner";
 import { useCompetitions } from "@/composables/useApi";
+import { useTheme } from "@/composables/useTheme";
 import TeamsParticipants from "@/components/competition/TeamsParticipants.vue";
 import StagesManager from "@/components/competition/StagesManager.vue";
 import ResultsInput from "@/components/competition/ResultsInput.vue";
 import StandingsTable from "@/components/competition/StandingsTable.vue";
 
 const { load, create, update, remove, competitions } = useCompetitions();
+const { theme, toggleTheme } = useTheme();
 
 const selectedCompetition = ref<any>(null);
 const activeTab = ref<"teams" | "stages" | "results" | "standings">("teams");
@@ -163,6 +167,19 @@ async function handleEdit() {
         >
           Нет соревнований
         </p>
+      </div>
+
+      <div class="shrink-0 border-t p-2">
+        <button
+          @click="toggleTheme"
+          class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent"
+        >
+          <component
+            :is="theme === 'dark' ? IconSun : IconMoon"
+            class="h-4 w-4"
+          />
+          {{ theme === "dark" ? "Светлая тема" : "Тёмная тема" }}
+        </button>
       </div>
     </aside>
 
@@ -335,7 +352,7 @@ async function handleEdit() {
       </DialogContent>
     </Dialog>
 
-    <Toaster position="bottom-right" rich-colors />
+    <Toaster position="bottom-right" rich-colors :theme="theme" />
 
     <!-- Delete Dialog -->
     <Dialog v-model:open="showDeleteDialog">
