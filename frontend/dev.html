@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>safe-wheel-dev</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
   </head>
   <body>
     <div id="app"></div>
@@ -30,7 +34,12 @@
             DeleteCompetition: () => Promise.resolve(),
             ListTeams: () =>
               Promise.resolve([
-                { id: 1, name: "Команда 1", competition_id: 1 },
+                {
+                  id: 1,
+                  name: "Команда 1",
+                  competition_id: 1,
+                  participant_count: 0,
+                },
               ]),
             CreateTeam: () => Promise.resolve({ id: 2, name: "Новая команда" }),
             UpdateTeam: () => Promise.resolve(),

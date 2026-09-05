@@ -1,5 +1,5 @@
 import { ref, type Ref } from "vue";
-import { toast } from "vue-sonner";
+import { toast } from "@/composables/useToast";
 import * as wails from "../../wailsjs/go/main/App";
 
 export function useApi() {

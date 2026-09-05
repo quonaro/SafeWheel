@@ -18,11 +18,25 @@ function applyTheme(value: Theme) {
   document.documentElement.classList.toggle("dark", value === "dark");
 }
 
+function withoutTransitions(action: () => void) {
+  const style = document.createElement("style");
+  style.textContent = "* { transition: none !important; }";
+  document.head.appendChild(style);
+
+  action();
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      style.remove();
+    });
+  });
+}
+
 applyTheme(theme.value);
 
 watch(theme, (value) => {
   localStorage.setItem(STORAGE_KEY, value);
-  applyTheme(value);
+  withoutTransitions(() => applyTheme(value));
 });
 
 export function useTheme() {

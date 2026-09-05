@@ -2,13 +2,18 @@ package database
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jmoiron/sqlx"
 )
+
+const defaultMaxParticipantsPerTeam = 4
 
 type Repository struct {
 	db *DB
@@ -82,7 +87,7 @@ func (r *Repository) DeleteCompetition(id int64) error {
 
 func (r *Repository) ListTeams(competitionID int64) ([]Team, error) {
 	var teams []Team
-	if err := r.db.Select(&teams, "SELECT id, competition_id, name, created_at, updated_at FROM teams WHERE competition_id = ? ORDER BY name ASC", competitionID); err != nil {
+	if err := r.db.Select(&teams, "SELECT t.id, t.competition_id, t.name, t.created_at, t.updated_at, COALESCE(pc.participant_count, 0) AS participant_count FROM teams t LEFT JOIN (SELECT team_id, COUNT(*) AS participant_count FROM participants GROUP BY team_id) pc ON pc.team_id = t.id WHERE t.competition_id = ? ORDER BY t.name ASC", competitionID); err != nil {
 		slog.Error("ListTeams", "error", err)
 		return nil, err
 	}
@@ -155,13 +160,34 @@ func (r *Repository) GetParticipantByID(id int64) (*Participant, error) {
 }
 
 func (r *Repository) CreateParticipant(teamID int64, p Participant) (*Participant, error) {
+	tx, err := r.db.Beginx()
+	if err != nil {
+		slog.Error("CreateParticipant begin tx", "teamID", teamID, "error", err)
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var competitionID int64
+	if err := tx.Get(&competitionID, "SELECT competition_id FROM teams WHERE id = ?", teamID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("команда не найдена")
+		}
+		slog.Error("CreateParticipant get competition", "teamID", teamID, "error", err)
+		return nil, err
+	}
+
+	maxParticipants, err := r.maxParticipantsForCompetitionTx(tx, competitionID)
+	if err != nil {
+		return nil, err
+	}
+
 	var count int
-	if err := r.db.Get(&count, "SELECT COUNT(1) FROM participants WHERE team_id = ?", teamID); err != nil {
+	if err := tx.Get(&count, "SELECT COUNT(1) FROM participants WHERE team_id = ?", teamID); err != nil {
 		slog.Error("failed to count participants", "teamID", teamID, "error", err)
 		return nil, err
 	}
-	if count >= 4 {
-		return nil, fmt.Errorf("в команде не может быть больше 4 участников")
+	if count >= maxParticipants {
+		return nil, fmt.Errorf("в команде не может быть больше %d участников", maxParticipants)
 	}
 
 	age := p.Age
@@ -169,7 +195,7 @@ func (r *Repository) CreateParticipant(teamID int64, p Participant) (*Participan
 		age = calcAge(*p.BirthDate)
 	}
 
-	res, err := r.db.Exec(
+	res, err := tx.Exec(
 		"INSERT INTO participants (team_id, full_name, gender, birth_date, age, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
 		teamID, strings.TrimSpace(p.FullName), p.Gender, p.BirthDate, age,
 	)
@@ -178,6 +204,11 @@ func (r *Repository) CreateParticipant(teamID int64, p Participant) (*Participan
 		return nil, err
 	}
 	id, _ := res.LastInsertId()
+	if err := tx.Commit(); err != nil {
+		slog.Error("CreateParticipant commit", "teamID", teamID, "error", err)
+		return nil, err
+	}
+
 	return r.GetParticipantByID(id)
 }
 
@@ -195,6 +226,28 @@ func (r *Repository) UpdateParticipant(id int64, p Participant) (*Participant, e
 		return nil, err
 	}
 	return r.GetParticipantByID(id)
+}
+
+func (r *Repository) maxParticipantsForCompetitionTx(tx *sqlx.Tx, competitionID int64) (int, error) {
+	var settingsJSON string
+	if err := tx.Get(&settingsJSON, "SELECT settings FROM competitions WHERE id = ?", competitionID); err != nil {
+		if err == sql.ErrNoRows {
+			return defaultMaxParticipantsPerTeam, nil
+		}
+		slog.Error("maxParticipantsForCompetition", "competitionID", competitionID, "error", err)
+		return 0, err
+	}
+	if settingsJSON == "" {
+		return defaultMaxParticipantsPerTeam, nil
+	}
+	var settings CompetitionSettings
+	if err := json.Unmarshal([]byte(settingsJSON), &settings); err != nil {
+		return defaultMaxParticipantsPerTeam, nil
+	}
+	if settings.MaxParticipantsPerTeam <= 0 {
+		return defaultMaxParticipantsPerTeam, nil
+	}
+	return settings.MaxParticipantsPerTeam, nil
 }
 
 func (r *Repository) DeleteParticipant(id int64) error {

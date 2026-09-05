@@ -8,7 +8,7 @@ import {
   IconX,
   IconDeviceFloppy,
 } from "@tabler/icons-vue";
-import { toast } from "vue-sonner";
+import { toast } from "@/composables/useToast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,7 +139,7 @@ async function performDelete() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showDialog = false">
+          <Button variant="destructive" @click="showDialog = false">
             <IconX class="mr-2 h-4 w-4" />
             Отмена
           </Button>
@@ -162,7 +162,7 @@ async function performDelete() {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" @click="showDeleteDialog = false">
+          <Button variant="destructive" @click="showDeleteDialog = false">
             <IconX class="mr-2 h-4 w-4" />
             Отмена
           </Button>

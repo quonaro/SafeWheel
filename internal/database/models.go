@@ -14,11 +14,12 @@ type Competition struct {
 }
 
 type Team struct {
-	ID            int64     `json:"id" db:"id"`
-	CompetitionID int64     `json:"competition_id" db:"competition_id"`
-	Name          string    `json:"name" db:"name"`
-	CreatedAt     time.Time `json:"created_at" ts_type:"string" db:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at" ts_type:"string" db:"updated_at"`
+	ID               int64     `json:"id" db:"id"`
+	CompetitionID    int64     `json:"competition_id" db:"competition_id"`
+	Name             string    `json:"name" db:"name"`
+	CreatedAt        time.Time `json:"created_at" ts_type:"string" db:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at" ts_type:"string" db:"updated_at"`
+	ParticipantCount int       `json:"participant_count" db:"participant_count"`
 }
 
 type Participant struct {

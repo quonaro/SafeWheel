@@ -3,12 +3,13 @@ import { ref, watch, onMounted, computed } from "vue";
 import { useDebounceFn } from "@vueuse/core";
 import {
   IconAlertTriangle,
+  IconChevronDown,
   IconCircleCheck,
   IconClipboardList,
   IconClock,
   IconUser,
 } from "@tabler/icons-vue";
-import { toast } from "vue-sonner";
+import { toast } from "@/composables/useToast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,7 @@ const participants = ref<any[]>([]);
 const resultsMap = ref<
   Record<number, { time: string; penalties: number; correctAnswers: number }>
 >({});
+const expandedTeams = ref<Set<string>>(new Set());
 
 const dirtyIds = new Set<number>();
 const debouncedSave = useDebounceFn(async () => {
@@ -56,6 +58,7 @@ function restoreSelectedStage() {
 }
 
 async function initialize() {
+  expandedTeams.value = new Set();
   await loadStages(props.competitionId);
   restoreSelectedStage();
   if (selectedStageId.value != null) {
@@ -85,6 +88,7 @@ async function loadResults() {
         correctAnswers: p.correct_answers || 0,
       };
     }
+    resetExpandedTeams();
   }
 }
 
@@ -107,6 +111,20 @@ const groupedByTeam = computed(() => {
   }
   return groups;
 });
+
+function resetExpandedTeams() {
+  expandedTeams.value = new Set();
+}
+
+function toggleTeam(teamName: string) {
+  const next = new Set(expandedTeams.value);
+  if (next.has(teamName)) {
+    next.delete(teamName);
+  } else {
+    next.add(teamName);
+  }
+  expandedTeams.value = next;
+}
 
 async function saveResult(participantId: number) {
   if (!selectedStageId.value) return;
@@ -183,18 +201,39 @@ function parseTimeString(time: string): number {
         <Card
           v-for="(teamParticipants, teamName) in groupedByTeam"
           :key="teamName"
-          class="mb-3"
+          class="mb-3 overflow-hidden transition-all duration-200 hover:shadow-md hover:border-primary/50"
         >
-          <CardHeader class="py-3">
-            <CardTitle class="text-sm">{{ teamName }}</CardTitle>
+          <CardHeader
+            class="flex h-[60px] flex-row items-center justify-between overflow-hidden py-3 cursor-pointer"
+            @click="toggleTeam(teamName)"
+          >
+            <div class="flex min-w-0 items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                class="h-8 w-8 shrink-0 px-0"
+                :title="expandedTeams.has(teamName) ? 'Свернуть' : 'Развернуть'"
+                :aria-expanded="expandedTeams.has(teamName)"
+                @click.stop="toggleTeam(teamName)"
+              >
+                <IconChevronDown
+                  class="h-4 w-4 transition-transform duration-200"
+                  :class="{ 'rotate-180': expandedTeams.has(teamName) }"
+                />
+              </Button>
+              <CardTitle class="text-sm truncate">{{ teamName }}</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent class="pt-0">
+          <CardContent v-if="expandedTeams.has(teamName)" class="pt-0">
             <div class="space-y-2">
               <!-- Column headers -->
               <div
                 class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem] items-center gap-2 px-2 text-xs text-muted-foreground"
               >
-                <span>Участник</span>
+                <span class="flex items-center gap-1">
+                  <IconUser class="h-3.5 w-3.5 text-indigo-500" />
+                  Участник
+                </span>
                 <span class="flex items-center justify-center gap-1">
                   <IconClock class="h-3.5 w-3.5 text-sky-500" />
                   Время
@@ -211,7 +250,7 @@ function parseTimeString(time: string): number {
               <div
                 v-for="p in teamParticipants"
                 :key="p.id"
-                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem] items-center gap-2 rounded-md border p-2"
+                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem] items-center gap-2 rounded-md border bg-muted p-2"
               >
                 <div class="flex min-w-0 items-center gap-2">
                   <IconUser class="h-4 w-4 shrink-0 text-muted-foreground" />

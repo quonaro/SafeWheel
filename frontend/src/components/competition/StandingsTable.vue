@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted, computed } from "vue";
 import { IconChartBar, IconFileDownload, IconTrophy } from "@tabler/icons-vue";
-import { toast } from "vue-sonner";
+import { toast } from "@/composables/useToast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

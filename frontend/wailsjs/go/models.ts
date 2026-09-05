@@ -431,6 +431,7 @@ export namespace database {
 	    name: string;
 	    created_at: string;
 	    updated_at: string;
+	    participant_count: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Team(source);
@@ -443,6 +444,7 @@ export namespace database {
 	        this.name = source["name"];
 	        this.created_at = source["created_at"];
 	        this.updated_at = source["updated_at"];
+	        this.participant_count = source["participant_count"];
 	    }
 	}
 

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import {
   IconTrophy,
   IconUsers,
@@ -11,6 +11,8 @@ import {
   IconTrash,
   IconSun,
   IconMoon,
+  IconX,
+  IconDeviceFloppy,
 } from "@tabler/icons-vue";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +26,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Toaster, toast } from "vue-sonner";
+import { Toaster } from "vue-sonner";
+import { toast } from "@/composables/useToast";
 import { useCompetitions } from "@/composables/useApi";
 import { useTheme } from "@/composables/useTheme";
 import { useAppState } from "@/composables/useAppState";
@@ -39,6 +42,16 @@ const { state } = useAppState();
 
 const selectedCompetition = ref<any>(null);
 const activeTab = ref<"teams" | "stages" | "results" | "standings">("teams");
+
+const maxParticipants = computed(() => {
+  if (!selectedCompetition.value) return 4;
+  try {
+    const settings = JSON.parse(selectedCompetition.value.settings || "{}");
+    return settings.maxParticipantsPerTeam || 4;
+  } catch {
+    return 4;
+  }
+});
 const showCreateDialog = ref(false);
 const showDeleteDialog = ref(false);
 const showEditDialog = ref(false);
@@ -62,11 +75,10 @@ onMounted(async () => {
   if (lastId != null) {
     const found = competitions.value.find((c) => c.id === lastId);
     if (found) {
-      selectedCompetition.value = found;
-
       const savedTab = state.activeTab;
       activeTab.value =
         savedTab && tabs.some((t) => t.key === savedTab) ? savedTab : "teams";
+      selectedCompetition.value = found;
       return;
     }
   }
@@ -155,16 +167,18 @@ async function handleEdit() {
   >
     <!-- Sidebar -->
     <aside class="flex w-64 flex-col border-r bg-card">
-      <div class="flex h-16 shrink-0 items-center px-4 border-b">
-        <span class="text-lg font-bold">Безопасное колесо</span>
+      <div class="flex h-16 shrink-0 items-center gap-3 px-4 border-b">
+        <img src="/logo-48x48.png" alt="SafeWheel" class="h-12 w-12 shrink-0" />
+        <div class="flex flex-col leading-tight">
+          <span class="text-base font-bold">Безопасное</span>
+          <span class="text-base font-bold">колесо</span>
+        </div>
       </div>
 
-      <div class="flex items-center justify-between px-4 py-3">
-        <span class="text-sm font-medium text-muted-foreground"
-          >Соревнования</span
-        >
-        <Button variant="ghost" size="icon" @click="showCreateDialog = true">
+      <div class="px-2 py-3">
+        <Button class="w-full" @click="showCreateDialog = true">
           <IconPlus class="h-4 w-4" />
+          Создать соревнование
         </Button>
       </div>
 
@@ -174,10 +188,10 @@ async function handleEdit() {
           :key="comp.id"
           @click="selectCompetition(comp)"
           :class="[
-            'flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors text-left',
+            'flex w-full items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium text-left transition-colors',
             selectedCompetition?.id === comp.id
-              ? 'bg-primary text-primary-foreground'
-              : 'hover:bg-accent',
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground',
           ]"
         >
           <span class="flex-1 truncate">{{ comp.name }}</span>
@@ -265,6 +279,7 @@ async function handleEdit() {
         <TeamsParticipants
           v-if="activeTab === 'teams'"
           :competition-id="selectedCompetition.id"
+          :max-participants="maxParticipants"
         />
         <StagesManager
           v-else-if="activeTab === 'stages'"
@@ -319,10 +334,14 @@ async function handleEdit() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showCreateDialog = false"
-            >Отмена</Button
-          >
-          <Button @click="handleCreate">Создать</Button>
+          <Button variant="destructive" @click="showCreateDialog = false">
+            <IconX class="mr-2 h-4 w-4" />
+            Отмена
+          </Button>
+          <Button @click="handleCreate">
+            <IconPlus class="mr-2 h-4 w-4" />
+            Создать
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -357,10 +376,14 @@ async function handleEdit() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showEditDialog = false"
-            >Отмена</Button
-          >
-          <Button @click="handleEdit">Сохранить</Button>
+          <Button variant="destructive" @click="showEditDialog = false">
+            <IconX class="mr-2 h-4 w-4" />
+            Отмена
+          </Button>
+          <Button @click="handleEdit">
+            <IconDeviceFloppy class="mr-2 h-4 w-4" />
+            Сохранить
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -377,10 +400,14 @@ async function handleEdit() {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" @click="showDeleteDialog = false"
-            >Отмена</Button
-          >
-          <Button variant="destructive" @click="handleDelete">Удалить</Button>
+          <Button variant="destructive" @click="showDeleteDialog = false">
+            <IconX class="mr-2 h-4 w-4" />
+            Отмена
+          </Button>
+          <Button variant="destructive" @click="handleDelete">
+            <IconTrash class="mr-2 h-4 w-4" />
+            Удалить
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

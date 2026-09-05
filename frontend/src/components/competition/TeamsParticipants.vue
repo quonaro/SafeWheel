@@ -7,8 +7,9 @@ import {
   IconUsers,
   IconX,
   IconDeviceFloppy,
+  IconChevronDown,
 } from "@tabler/icons-vue";
-import { toast } from "vue-sonner";
+import { toast } from "@/composables/useToast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +25,12 @@ import {
 } from "@/components/ui/dialog";
 import { useTeams, useParticipants } from "@/composables/useApi";
 import { useAppState } from "@/composables/useAppState";
-const props = defineProps<{ competitionId: number }>();
+const props = withDefaults(
+  defineProps<{ competitionId: number; maxParticipants?: number }>(),
+  {
+    maxParticipants: 4,
+  },
+);
 
 const {
   teams,
@@ -136,6 +142,7 @@ async function performDelete() {
     const result = await deleteParticipant(target.item.id);
     if (result === null) return;
     if (expandedTeam.value) await loadParticipants(expandedTeam.value);
+    await loadTeams(props.competitionId);
     toast.success("Участник удалён", { description: target.item.full_name });
   }
   deleteTarget.value = null;
@@ -175,6 +182,7 @@ async function saveParticipant() {
   if (result === null) return;
   showParticipantDialog.value = false;
   await loadParticipants(teamId);
+  await loadTeams(props.competitionId);
   toast.success(isEdit ? "Участник обновлён" : "Участник добавлен", {
     description: participantName.value,
   });
@@ -199,14 +207,33 @@ async function saveParticipant() {
       <p>Нет команд. Создайте первую команду.</p>
     </div>
 
-    <Card v-for="team in teams" :key="team.id" class="overflow-hidden">
+    <Card
+      v-for="team in teams"
+      :key="team.id"
+      class="overflow-hidden transition-all duration-200 hover:shadow-md hover:border-primary/50"
+    >
       <CardHeader
-        class="flex flex-row items-center justify-between cursor-pointer py-3"
+        class="flex h-[60px] flex-row items-center justify-between overflow-hidden py-3 cursor-pointer"
         @click="toggleTeam(team.id)"
       >
-        <div class="flex items-center gap-3">
-          <CardTitle class="text-base">{{ team.name }}</CardTitle>
-          <Badge variant="secondary">{{ participants.length }}/4</Badge>
+        <div class="flex min-w-0 items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            class="h-8 w-8 shrink-0 px-0"
+            :title="expandedTeam === team.id ? 'Свернуть' : 'Развернуть'"
+            :aria-expanded="expandedTeam === team.id"
+            @click.stop="toggleTeam(team.id)"
+          >
+            <IconChevronDown
+              class="h-4 w-4 transition-transform duration-200"
+              :class="{ 'rotate-180': expandedTeam === team.id }"
+            />
+          </Button>
+          <CardTitle class="text-base truncate">{{ team.name }}</CardTitle>
+          <Badge variant="secondary" class="shrink-0"
+            >{{ team.participant_count }}/{{ props.maxParticipants }}</Badge
+          >
         </div>
         <div class="flex gap-1" @click.stop>
           <Button size="sm" @click="openEditTeam(team)">
@@ -227,6 +254,7 @@ async function saveParticipant() {
         <div class="flex items-center justify-between mb-3">
           <span class="text-sm font-medium">Участники</span>
           <Button
+            v-if="participants.length < props.maxParticipants"
             size="sm"
             variant="outline"
             @click="openCreateParticipant(team.id)"
@@ -245,7 +273,7 @@ async function saveParticipant() {
           <div
             v-for="p in participants"
             :key="p.id"
-            class="flex items-center justify-between rounded-md border p-2"
+            class="flex items-center justify-between rounded-md border bg-muted p-2"
           >
             <div class="flex items-center gap-3">
               <span class="text-sm font-medium">{{ p.full_name }}</span>
@@ -286,7 +314,7 @@ async function saveParticipant() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showTeamDialog = false">
+          <Button variant="destructive" @click="showTeamDialog = false">
             <IconX class="mr-2 h-4 w-4" />
             Отмена
           </Button>
@@ -330,7 +358,7 @@ async function saveParticipant() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" @click="showParticipantDialog = false">
+          <Button variant="destructive" @click="showParticipantDialog = false">
             <IconX class="mr-2 h-4 w-4" />
             Отмена
           </Button>
@@ -359,7 +387,7 @@ async function saveParticipant() {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" @click="showDeleteDialog = false">
+          <Button variant="destructive" @click="showDeleteDialog = false">
             <IconX class="mr-2 h-4 w-4" />
             Отмена
           </Button>
