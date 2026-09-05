@@ -1,0 +1,2 @@
+dev:
+  script: $HOME/.go/bin/wails dev -tags webkit2_41
