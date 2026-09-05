@@ -6,10 +6,7 @@ import {
   IconFlag,
   IconClipboardList,
   IconChartBar,
-  IconSettings,
   IconPlus,
-  IconSun,
-  IconMoon,
   IconPencil,
 } from "@tabler/icons-vue";
 import { Button } from "@/components/ui/button";
@@ -30,15 +27,11 @@ import TeamsParticipants from "@/components/competition/TeamsParticipants.vue";
 import StagesManager from "@/components/competition/StagesManager.vue";
 import ResultsInput from "@/components/competition/ResultsInput.vue";
 import StandingsTable from "@/components/competition/StandingsTable.vue";
-import SettingsPanel from "@/components/competition/SettingsPanel.vue";
 
 const { load, create, update, remove, competitions } = useCompetitions();
 
 const selectedCompetition = ref<any>(null);
-const activeTab = ref<
-  "teams" | "stages" | "results" | "standings" | "settings"
->("teams");
-const isDark = ref(false);
+const activeTab = ref<"teams" | "stages" | "results" | "standings">("teams");
 const showCreateDialog = ref(false);
 const showDeleteDialog = ref(false);
 const showEditDialog = ref(false);
@@ -46,13 +39,13 @@ const newCompName = ref("");
 const newCompDesc = ref("");
 const editCompName = ref("");
 const editCompDesc = ref("");
+const editMaxParticipants = ref(4);
 
 const tabs = [
   { key: "teams", label: "Команды", icon: IconUsers },
   { key: "stages", label: "Этапы", icon: IconFlag },
   { key: "results", label: "Результаты", icon: IconClipboardList },
   { key: "standings", label: "Турнирная таблица", icon: IconChartBar },
-  { key: "settings", label: "Настройки", icon: IconSettings },
 ] as const;
 
 onMounted(async () => {
@@ -60,23 +53,7 @@ onMounted(async () => {
   if (competitions.value.length > 0) {
     selectCompetition(competitions.value[0]);
   }
-  const savedTheme = localStorage.getItem("safewheel-theme");
-  if (savedTheme === "dark") {
-    isDark.value = true;
-    document.documentElement.classList.add("dark");
-  }
 });
-
-function toggleTheme() {
-  isDark.value = !isDark.value;
-  if (isDark.value) {
-    document.documentElement.classList.add("dark");
-    localStorage.setItem("safewheel-theme", "dark");
-  } else {
-    document.documentElement.classList.remove("dark");
-    localStorage.setItem("safewheel-theme", "light");
-  }
-}
 
 function selectCompetition(comp: any) {
   selectedCompetition.value = comp;
@@ -113,16 +90,29 @@ function openEditDialog() {
   if (!selectedCompetition.value) return;
   editCompName.value = selectedCompetition.value.name;
   editCompDesc.value = selectedCompetition.value.description || "";
+  try {
+    const settings = JSON.parse(selectedCompetition.value.settings);
+    if (settings.maxParticipantsPerTeam) {
+      editMaxParticipants.value = settings.maxParticipantsPerTeam;
+    } else {
+      editMaxParticipants.value = 4;
+    }
+  } catch {
+    editMaxParticipants.value = 4;
+  }
   showEditDialog.value = true;
 }
 
 async function handleEdit() {
   if (!selectedCompetition.value) return;
   if (!editCompName.value.trim()) return;
+  const settings = JSON.stringify({
+    maxParticipantsPerTeam: editMaxParticipants.value,
+  });
   const result = await update(selectedCompetition.value.id, {
     name: editCompName.value,
     description: editCompDesc.value,
-    settings: selectedCompetition.value.settings,
+    settings,
   });
   if (result) {
     showEditDialog.value = false;
@@ -139,9 +129,8 @@ async function handleEdit() {
   >
     <!-- Sidebar -->
     <aside class="flex w-64 flex-col border-r bg-card">
-      <div class="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
-        <IconTrophy class="h-6 w-6 text-primary" />
-        <span class="text-lg font-bold">SafeWheel</span>
+      <div class="flex h-16 shrink-0 items-center px-4 border-b">
+        <span class="text-lg font-bold">Безопасное колесо</span>
       </div>
 
       <div class="flex items-center justify-between px-4 py-3">
@@ -173,19 +162,6 @@ async function handleEdit() {
         >
           Нет соревнований
         </p>
-      </div>
-
-      <div class="border-t p-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          class="w-full justify-start"
-          @click="toggleTheme"
-        >
-          <IconSun v-if="isDark" class="mr-2 h-4 w-4" />
-          <IconMoon v-else class="mr-2 h-4 w-4" />
-          {{ isDark ? "Светлая тема" : "Тёмная тема" }}
-        </Button>
       </div>
     </aside>
 
@@ -258,10 +234,6 @@ async function handleEdit() {
           v-else-if="activeTab === 'standings'"
           :competition-id="selectedCompetition.id"
         />
-        <SettingsPanel
-          v-else-if="activeTab === 'settings'"
-          :competition="selectedCompetition"
-        />
       </div>
     </main>
 
@@ -316,9 +288,7 @@ async function handleEdit() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Изменить соревнование</DialogTitle>
-          <DialogDescription
-            >Измените название и описание соревнования</DialogDescription
-          >
+          <DialogDescription>Измените параметры соревнования</DialogDescription>
         </DialogHeader>
         <div class="space-y-4 py-4">
           <div class="space-y-2">
@@ -332,6 +302,23 @@ async function handleEdit() {
               placeholder="Описание (необязательно)"
             />
           </div>
+          <div class="space-y-2">
+            <Label>Максимум участников в команде</Label>
+            <Input
+              v-model="editMaxParticipants"
+              type="number"
+              min="1"
+              max="10"
+            />
+          </div>
+          <div class="space-y-2">
+            <Label>Критерии ранжирования</Label>
+            <ol class="space-y-1 text-sm text-muted-foreground">
+              <li>1. Штрафные очки (по возрастанию)</li>
+              <li>2. Время (по возрастанию)</li>
+              <li>3. Средний возраст (по возрастанию)</li>
+            </ol>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" @click="showEditDialog = false"
@@ -342,12 +329,7 @@ async function handleEdit() {
       </DialogContent>
     </Dialog>
 
-    <Toaster
-      position="bottom-right"
-      :theme="isDark ? 'dark' : 'light'"
-      rich-colors
-      close-button
-    />
+    <Toaster position="bottom-right" rich-colors />
 
     <!-- Delete Dialog -->
     <Dialog v-model:open="showDeleteDialog">

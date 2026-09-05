@@ -36,6 +36,10 @@ const {
 const expandedTeam = ref<number | null>(null);
 const showTeamDialog = ref(false);
 const showParticipantDialog = ref(false);
+const showDeleteDialog = ref(false);
+const deleteTarget = ref<{ type: "team" | "participant"; item: any } | null>(
+  null,
+);
 const editingTeam = ref<any>(null);
 const editingParticipant = ref<any>(null);
 const teamName = ref("");
@@ -85,11 +89,32 @@ async function saveTeam() {
   });
 }
 
-async function removeTeam(team: any) {
-  const result = await deleteTeam(team.id);
-  if (result === null) return;
-  await loadTeams(props.competitionId);
-  toast.success("Команда удалена", { description: team.name });
+function confirmRemoveTeam(team: any) {
+  deleteTarget.value = { type: "team", item: team };
+  showDeleteDialog.value = true;
+}
+
+function confirmRemoveParticipant(p: any) {
+  deleteTarget.value = { type: "participant", item: p };
+  showDeleteDialog.value = true;
+}
+
+async function performDelete() {
+  const target = deleteTarget.value;
+  if (!target) return;
+  showDeleteDialog.value = false;
+  if (target.type === "team") {
+    const result = await deleteTeam(target.item.id);
+    if (result === null) return;
+    await loadTeams(props.competitionId);
+    toast.success("Команда удалена", { description: target.item.name });
+  } else {
+    const result = await deleteParticipant(target.item.id);
+    if (result === null) return;
+    if (expandedTeam.value) await loadParticipants(expandedTeam.value);
+    toast.success("Участник удалён", { description: target.item.full_name });
+  }
+  deleteTarget.value = null;
 }
 
 function openCreateParticipant(teamId: number) {
@@ -130,13 +155,6 @@ async function saveParticipant() {
     description: participantName.value,
   });
 }
-
-async function removeParticipant(p: any) {
-  const result = await deleteParticipant(p.id);
-  if (result === null) return;
-  if (expandedTeam.value) await loadParticipants(expandedTeam.value);
-  toast.success("Участник удалён", { description: p.full_name });
-}
 </script>
 
 <template>
@@ -175,7 +193,7 @@ async function removeParticipant(p: any) {
           <Button variant="ghost" size="icon" @click="openEditTeam(team)">
             <IconPencil class="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" @click="removeTeam(team)">
+          <Button variant="ghost" size="icon" @click="confirmRemoveTeam(team)">
             <IconTrash class="h-4 w-4" />
           </Button>
         </div>
@@ -217,7 +235,11 @@ async function removeParticipant(p: any) {
               >
                 <IconPencil class="h-3 w-3" />
               </Button>
-              <Button variant="ghost" size="icon" @click="removeParticipant(p)">
+              <Button
+                variant="ghost"
+                size="icon"
+                @click="confirmRemoveParticipant(p)"
+              >
                 <IconTrash class="h-3 w-3" />
               </Button>
             </div>
@@ -285,6 +307,31 @@ async function removeParticipant(p: any) {
             >Отмена</Button
           >
           <Button @click="saveParticipant">Сохранить</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Delete Confirmation Dialog -->
+    <Dialog v-model:open="showDeleteDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Подтвердите удаление</DialogTitle>
+          <DialogDescription>
+            Вы уверены, что хотите удалить
+            {{ deleteTarget?.type === "team" ? "команду" : "участника" }}
+            <strong>{{
+              deleteTarget?.type === "team"
+                ? deleteTarget?.item?.name
+                : deleteTarget?.item?.full_name
+            }}</strong
+            >? Это действие нельзя отменить.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" @click="showDeleteDialog = false"
+            >Отмена</Button
+          >
+          <Button variant="destructive" @click="performDelete">Удалить</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

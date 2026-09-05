@@ -17,11 +17,10 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "SafeWheel",
-		Width:  1280,
-		Height: 832,
-		MinWidth: 1024,
-		MinHeight: 700,
+		Title:         "SafeWheel",
+		Width:         1280,
+		Height:        720,
+		DisableResize: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

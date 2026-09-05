@@ -10,7 +10,8 @@ export function useApi() {
     loading.value = true
     error.value = null
     try {
-      return await fn()
+      const result = await fn()
+      return result === null || result === undefined ? (true as unknown as T) : result
     } catch (e: any) {
       error.value = typeof e === 'string' ? e : e?.message || 'Unknown error'
       console.error(error.value)

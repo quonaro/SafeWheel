@@ -96,6 +96,14 @@
       -apple-system,
       sans-serif;
   }
+  h1, h2, h3, h4, h5, h6 {
+    font-family:
+      "Manrope",
+      "Inter",
+      system-ui,
+      -apple-system,
+      sans-serif;
+  }
 }
 
 .overflow-y-auto {
@@ -103,16 +111,21 @@
   overscroll-behavior: contain;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 4px;
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
