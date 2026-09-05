@@ -1,7 +1,6 @@
 package database
 
 import (
-	"database/sql"
 	"time"
 )
 
@@ -10,27 +9,27 @@ type Competition struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Settings    string    `json:"settings"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedAt   time.Time `json:"created_at" ts_type:"string"`
+	UpdatedAt   time.Time `json:"updated_at" ts_type:"string"`
 }
 
 type Team struct {
 	ID            int64     `json:"id"`
 	CompetitionID int64     `json:"competition_id"`
 	Name          string    `json:"name"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	CreatedAt     time.Time `json:"created_at" ts_type:"string"`
+	UpdatedAt     time.Time `json:"updated_at" ts_type:"string"`
 }
 
 type Participant struct {
-	ID        int64          `json:"id"`
-	TeamID    int64          `json:"team_id"`
-	FullName  string         `json:"full_name"`
-	Gender    sql.NullString `json:"gender"`
-	BirthDate sql.NullString `json:"birth_date"`
-	Age       int            `json:"age"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	ID        int64     `json:"id"`
+	TeamID    int64     `json:"team_id"`
+	FullName  string    `json:"full_name"`
+	Gender    *string   `json:"gender"`
+	BirthDate *string   `json:"birth_date"`
+	Age       int       `json:"age"`
+	CreatedAt time.Time `json:"created_at" ts_type:"string"`
+	UpdatedAt time.Time `json:"updated_at" ts_type:"string"`
 }
 
 type Stage struct {
@@ -38,18 +37,19 @@ type Stage struct {
 	CompetitionID int64     `json:"competition_id"`
 	Name          string    `json:"name"`
 	OrderIndex    int       `json:"order_index"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	CreatedAt     time.Time `json:"created_at" ts_type:"string"`
+	UpdatedAt     time.Time `json:"updated_at" ts_type:"string"`
 }
 
 type StageResult struct {
-	ID            int64     `json:"id"`
-	StageID       int64     `json:"stage_id"`
-	ParticipantID int64     `json:"participant_id"`
-	TimeSeconds   float64   `json:"time_seconds"`
-	PenaltyPoints int       `json:"penalty_points"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID             int64     `json:"id"`
+	StageID        int64     `json:"stage_id"`
+	ParticipantID  int64     `json:"participant_id"`
+	TimeSeconds    float64   `json:"time_seconds"`
+	PenaltyPoints  int       `json:"penalty_points"`
+	CorrectAnswers int       `json:"correct_answers"`
+	CreatedAt      time.Time `json:"created_at" ts_type:"string"`
+	UpdatedAt      time.Time `json:"updated_at" ts_type:"string"`
 }
 
 type Standing struct {
@@ -77,6 +77,7 @@ type StageTeamResult struct {
 	OrderIndex     int     `json:"order_index"`
 	TeamID         int64   `json:"team_id"`
 	TeamName       string  `json:"team_name"`
+	TotalPoints    int     `json:"total_points"`
 	TotalPenalties int     `json:"total_penalties"`
 	TotalTime      float64 `json:"total_time"`
 	AvgAge         float64 `json:"avg_age"`
@@ -92,6 +93,7 @@ type StageStandingWithParticipants struct {
 type TeamResultWithParticipants struct {
 	TeamID             int64               `json:"team_id"`
 	TeamName           string              `json:"team_name"`
+	TeamTotalPoints    int                 `json:"team_total_points"`
 	TeamTotalPenalties int                 `json:"team_total_penalties"`
 	TeamTotalTime      float64             `json:"team_total_time"`
 	ParticipantCount   int                 `json:"participant_count"`
@@ -100,25 +102,29 @@ type TeamResultWithParticipants struct {
 }
 
 type ParticipantResult struct {
-	ParticipantID int64   `json:"participant_id"`
-	FullName      string  `json:"full_name"`
-	Gender        string  `json:"gender"`
-	Age           int     `json:"age"`
-	PenaltyPoints int     `json:"penalty_points"`
-	TimeSeconds   float64 `json:"time_seconds"`
+	ParticipantID  int64   `json:"participant_id"`
+	FullName       string  `json:"full_name"`
+	Gender         string  `json:"gender"`
+	Age            int     `json:"age"`
+	PenaltyPoints  int     `json:"penalty_points"`
+	CorrectAnswers int     `json:"correct_answers"`
+	Points         int     `json:"points"`
+	TimeSeconds    float64 `json:"time_seconds"`
 }
 
 type ParticipantStageDetail struct {
-	StageID       int64   `json:"stage_id"`
-	StageName     string  `json:"stage_name"`
-	OrderIndex    int     `json:"order_index"`
-	ParticipantID int64   `json:"participant_id"`
-	FullName      string  `json:"full_name"`
-	Gender        string  `json:"gender"`
-	Age           int     `json:"age"`
-	TeamName      string  `json:"team_name"`
-	PenaltyPoints int     `json:"penalty_points"`
-	TimeSeconds   float64 `json:"time_seconds"`
+	StageID        int64   `json:"stage_id"`
+	StageName      string  `json:"stage_name"`
+	OrderIndex     int     `json:"order_index"`
+	ParticipantID  int64   `json:"participant_id"`
+	FullName       string  `json:"full_name"`
+	Gender         string  `json:"gender"`
+	Age            int     `json:"age"`
+	TeamName       string  `json:"team_name"`
+	PenaltyPoints  int     `json:"penalty_points"`
+	CorrectAnswers int     `json:"correct_answers"`
+	Points         int     `json:"points"`
+	TimeSeconds    float64 `json:"time_seconds"`
 }
 
 type CompetitionSettings struct {
@@ -126,15 +132,16 @@ type CompetitionSettings struct {
 }
 
 type ParticipantWithResults struct {
-	ID            int64   `json:"id"`
-	TeamID        int64   `json:"team_id"`
-	FullName      string  `json:"full_name"`
-	Gender        string  `json:"gender"`
-	BirthDate     string  `json:"birth_date"`
-	Age           int     `json:"age"`
-	TeamName      string  `json:"team_name"`
-	TimeSeconds   float64 `json:"time_seconds"`
-	PenaltyPoints int     `json:"penalty_points"`
+	ID             int64   `json:"id"`
+	TeamID         int64   `json:"team_id"`
+	FullName       string  `json:"full_name"`
+	Gender         string  `json:"gender"`
+	BirthDate      string  `json:"birth_date"`
+	Age            int     `json:"age"`
+	TeamName       string  `json:"team_name"`
+	TimeSeconds    float64 `json:"time_seconds"`
+	PenaltyPoints  int     `json:"penalty_points"`
+	CorrectAnswers int     `json:"correct_answers"`
 }
 
 type AllCompetitionStanding struct {
@@ -144,4 +151,35 @@ type AllCompetitionStanding struct {
 	RankInCompetition int     `json:"rank"`
 	TotalPenalties    int     `json:"total_penalties"`
 	TotalTime         float64 `json:"total_time"`
+}
+
+type IndividualStanding struct {
+	StageID   int64              `json:"stage_id"`
+	StageName string             `json:"stage_name"`
+	Boys      []IndividualResult `json:"boys"`
+	Girls     []IndividualResult `json:"girls"`
+}
+
+type IndividualResult struct {
+	ParticipantID  int64   `json:"participant_id"`
+	FullName       string  `json:"full_name"`
+	TeamName       string  `json:"team_name"`
+	Gender         string  `json:"gender"`
+	Age            int     `json:"age"`
+	BirthDate      string  `json:"birth_date"`
+	CorrectAnswers int     `json:"correct_answers"`
+	PenaltyPoints  int     `json:"penalty_points"`
+	Points         int     `json:"points"`
+	TimeSeconds    float64 `json:"time_seconds"`
+	Rank           int     `json:"rank"`
+}
+
+type OverallStanding struct {
+	Rank             int    `json:"rank"`
+	TeamID           int64  `json:"team_id"`
+	TeamName         string `json:"team_name"`
+	TotalPlacePoints int    `json:"total_place_points"`
+	FirstPlaces      int    `json:"first_places"`
+	SecondPlaces     int    `json:"second_places"`
+	ThirdPlaces      int    `json:"third_places"`
 }

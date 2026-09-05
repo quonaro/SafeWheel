@@ -23,9 +23,7 @@ func (s *ExportService) ExportOverallResults(competitionID int64) ([]byte, error
 		return nil, fmt.Errorf("соревнование не найдено")
 	}
 
-	settings := database.CompetitionSettings{MaxParticipantsPerTeam: 4}
-
-	standings, err := s.repo.ComputeStandings(competitionID, settings.MaxParticipantsPerTeam)
+	standings, err := s.repo.ComputeStandings(competitionID, 4)
 	if err != nil {
 		return nil, err
 	}
@@ -34,12 +32,12 @@ func (s *ExportService) ExportOverallResults(competitionID int64) ([]byte, error
 	addTitle(d, fmt.Sprintf("%s — Общие результаты", comp.Name))
 	addSubtitle(d, "Итоговая таблица результатов соревнования")
 
-	addParagraph(d, "Место | Команда | Штрафы | Время | Участников", true)
+	addParagraph(d, "Место | Команда | Сумма мест | 1-х | 2-х | 3-х", true)
 
 	for _, st := range standings {
-		line := fmt.Sprintf("%d | %s | %d | %s | %d",
-			st.Rank, st.TeamName, st.TotalPenalties,
-			database.FormatTime(st.TotalTime), st.ParticipantCount)
+		line := fmt.Sprintf("%d | %s | %d | %d | %d | %d",
+			st.Rank, st.TeamName, st.TotalPlacePoints,
+			st.FirstPlaces, st.SecondPlaces, st.ThirdPlaces)
 		addParagraph(d, line, false)
 	}
 
@@ -67,10 +65,10 @@ func (s *ExportService) ExportStageResults(competitionID int64) ([]byte, error) 
 
 	for _, stage := range stageStandings {
 		addSubtitle(d, fmt.Sprintf("Этап: %s", stage.StageName))
-		addParagraph(d, "Место | Команда | Штрафы | Время", true)
+		addParagraph(d, "Место | Команда | Очки | Время", true)
 		for _, res := range stage.Results {
 			line := fmt.Sprintf("%d | %s | %d | %s",
-				res.Rank, res.TeamName, res.TotalPenalties,
+				res.Rank, res.TeamName, res.TotalPoints,
 				database.FormatTime(res.TotalTime))
 			addParagraph(d, line, false)
 		}

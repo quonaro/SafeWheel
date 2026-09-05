@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted } from "vue";
 import { IconPlus, IconTrash, IconPencil, IconUsers } from "@tabler/icons-vue";
+import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,18 +73,23 @@ function openEditTeam(team: any) {
 
 async function saveTeam() {
   if (!teamName.value.trim()) return;
-  if (editingTeam.value) {
-    await updateTeam(editingTeam.value.id, teamName.value);
-  } else {
-    await createTeam(props.competitionId, teamName.value);
-  }
+  const isEdit = !!editingTeam.value;
+  const result = isEdit
+    ? await updateTeam(editingTeam.value.id, teamName.value)
+    : await createTeam(props.competitionId, teamName.value);
+  if (result === null) return;
   showTeamDialog.value = false;
   await loadTeams(props.competitionId);
+  toast.success(isEdit ? "Команда обновлена" : "Команда создана", {
+    description: teamName.value,
+  });
 }
 
 async function removeTeam(team: any) {
-  await deleteTeam(team.id);
+  const result = await deleteTeam(team.id);
+  if (result === null) return;
   await loadTeams(props.competitionId);
+  toast.success("Команда удалена", { description: team.name });
 }
 
 function openCreateParticipant(teamId: number) {
@@ -109,22 +115,27 @@ async function saveParticipant() {
   const teamId = expandedTeam.value!;
   const data = {
     full_name: participantName.value,
-    gender: participantGender.value,
+    gender: participantGender.value || null,
     birth_date: participantBirthDate.value || null,
     age: participantAge.value,
   };
-  if (editingParticipant.value) {
-    await updateParticipant(editingParticipant.value.id, data);
-  } else {
-    await createParticipant(teamId, data);
-  }
+  const isEdit = !!editingParticipant.value;
+  const result = isEdit
+    ? await updateParticipant(editingParticipant.value.id, data)
+    : await createParticipant(teamId, data);
+  if (result === null) return;
   showParticipantDialog.value = false;
   await loadParticipants(teamId);
+  toast.success(isEdit ? "Участник обновлён" : "Участник добавлен", {
+    description: participantName.value,
+  });
 }
 
 async function removeParticipant(p: any) {
-  await deleteParticipant(p.id);
+  const result = await deleteParticipant(p.id);
+  if (result === null) return;
   if (expandedTeam.value) await loadParticipants(expandedTeam.value);
+  toast.success("Участник удалён", { description: p.full_name });
 }
 </script>
 
@@ -146,7 +157,12 @@ async function removeParticipant(p: any) {
       <p>Нет команд. Создайте первую команду.</p>
     </div>
 
-    <Card v-for="team in teams" :key="team.id" class="overflow-hidden">
+    <Card
+      v-for="team in teams"
+      :key="team.id"
+      class="overflow-hidden"
+      style="content-visibility: auto; contain-intrinsic-size: auto 56px"
+    >
       <CardHeader
         class="flex flex-row items-center justify-between cursor-pointer py-3"
         @click="toggleTeam(team.id)"
@@ -189,14 +205,8 @@ async function removeParticipant(p: any) {
             class="flex items-center justify-between rounded-md border p-2"
           >
             <div class="flex items-center gap-3">
-              <div>
-                <span class="text-sm font-medium">{{ p.full_name }}</span>
-                <span
-                  v-if="p.gender"
-                  class="text-xs text-muted-foreground ml-2"
-                  >{{ p.gender }}</span
-                >
-              </div>
+              <span class="text-sm font-medium">{{ p.full_name }}</span>
+              <Badge v-if="p.gender" variant="outline">{{ p.gender }}</Badge>
               <Badge v-if="p.age" variant="outline">{{ p.age }} лет</Badge>
             </div>
             <div class="flex gap-1">

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -217,11 +216,11 @@ func (a *App) DeleteStage(id int64) error {
 
 // ===== Results =====
 
-func (a *App) UpsertStageResult(stageID, participantID int64, timeSeconds float64, penaltyPoints int) (*database.StageResult, error) {
+func (a *App) UpsertStageResult(stageID, participantID int64, timeSeconds float64, penaltyPoints int, correctAnswers int) (*database.StageResult, error) {
 	if err := a.ensureRepo(); err != nil {
 		return nil, err
 	}
-	return a.repo.UpsertStageResult(stageID, participantID, timeSeconds, penaltyPoints)
+	return a.repo.UpsertStageResult(stageID, participantID, timeSeconds, penaltyPoints, correctAnswers)
 }
 
 func (a *App) GetStageResults(stageID int64) ([]database.StageResult, error) {
@@ -233,19 +232,11 @@ func (a *App) GetStageResults(stageID int64) ([]database.StageResult, error) {
 
 // ===== Standings =====
 
-func (a *App) ComputeStandings(competitionID int64) ([]database.Standing, error) {
+func (a *App) ComputeStandings(competitionID int64) ([]database.OverallStanding, error) {
 	if err := a.ensureRepo(); err != nil {
 		return nil, err
 	}
-	comp, _ := a.repo.GetCompetitionByID(competitionID)
-	maxParticipants := 4
-	if comp != nil && comp.Settings != "" && comp.Settings != "{}" {
-		var settings database.CompetitionSettings
-		if err := json.Unmarshal([]byte(comp.Settings), &settings); err == nil && settings.MaxParticipantsPerTeam > 0 {
-			maxParticipants = settings.MaxParticipantsPerTeam
-		}
-	}
-	return a.repo.ComputeStandings(competitionID, maxParticipants)
+	return a.repo.ComputeStandings(competitionID, 4)
 }
 
 func (a *App) GetStageStandings(competitionID int64) ([]database.StageStanding, error) {
@@ -260,6 +251,13 @@ func (a *App) GetStageStandingsWithParticipants(competitionID int64) ([]database
 		return nil, err
 	}
 	return a.repo.GetStageStandingsWithParticipants(competitionID)
+}
+
+func (a *App) GetIndividualStandings(competitionID int64) ([]database.IndividualStanding, error) {
+	if err := a.ensureRepo(); err != nil {
+		return nil, err
+	}
+	return a.repo.GetIndividualStandings(competitionID)
 }
 
 func (a *App) GetParticipantResults(competitionID int64, participantID int64) ([]database.ParticipantStageDetail, error) {

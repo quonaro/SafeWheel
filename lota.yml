@@ -1,2 +1,4 @@
 dev:
+  vars:
+    - "SAFEWHEEL_DB_DIR=./"
   script: $HOME/.go/bin/wails dev -tags webkit2_41

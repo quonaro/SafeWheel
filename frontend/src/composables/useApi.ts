@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue'
+import { toast } from 'vue-sonner'
 import * as wails from '../../wailsjs/go/main/App'
 
 export function useApi() {
@@ -13,6 +14,7 @@ export function useApi() {
     } catch (e: any) {
       error.value = typeof e === 'string' ? e : e?.message || 'Unknown error'
       console.error(error.value)
+      toast.error('Ошибка', { description: error.value ?? undefined })
       return null
     } finally {
       loading.value = false
@@ -134,8 +136,8 @@ export function useStages() {
 export function useResults() {
   const { loading, error, call } = useApi()
 
-  async function upsert(stageId: number, participantId: number, timeSeconds: number, penaltyPoints: number) {
-    return call(() => wails.UpsertStageResult(stageId, participantId, timeSeconds, penaltyPoints))
+  async function upsert(stageId: number, participantId: number, timeSeconds: number, penaltyPoints: number, correctAnswers: number) {
+    return call(() => wails.UpsertStageResult(stageId, participantId, timeSeconds, penaltyPoints, correctAnswers))
   }
 
   async function getStageResults(stageId: number) {
@@ -153,6 +155,7 @@ export function useResults() {
 export function useStandings() {
   const standings: Ref<any[]> = ref([])
   const stageStandings: Ref<any[]> = ref([])
+  const individualStandings: Ref<any[]> = ref([])
   const { loading, error, call } = useApi()
 
   async function loadStandings(competitionId: number) {
@@ -163,6 +166,11 @@ export function useStandings() {
   async function loadStageStandings(competitionId: number) {
     const result = await call(() => wails.GetStageStandings(competitionId))
     if (result) stageStandings.value = result
+  }
+
+  async function loadIndividualStandings(competitionId: number) {
+    const result = await call(() => wails.GetIndividualStandings(competitionId))
+    if (result) individualStandings.value = result
   }
 
   async function getStageStandingsWithParticipants(competitionId: number) {
@@ -176,10 +184,12 @@ export function useStandings() {
   return {
     standings,
     stageStandings,
+    individualStandings,
     loading,
     error,
     loadStandings,
     loadStageStandings,
+    loadIndividualStandings,
     getStageStandingsWithParticipants,
     getParticipantResults,
   }

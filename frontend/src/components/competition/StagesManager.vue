@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted } from "vue";
 import { IconPlus, IconTrash, IconPencil, IconFlag } from "@tabler/icons-vue";
+import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,18 +43,23 @@ function openEdit(stage: any) {
 
 async function save() {
   if (!stageName.value.trim()) return;
-  if (editingStage.value) {
-    await update(editingStage.value.id, stageName.value);
-  } else {
-    await create(props.competitionId, stageName.value);
-  }
+  const isEdit = !!editingStage.value;
+  const result = isEdit
+    ? await update(editingStage.value.id, stageName.value)
+    : await create(props.competitionId, stageName.value);
+  if (result === null) return;
   showDialog.value = false;
   await load(props.competitionId);
+  toast.success(isEdit ? "Этап обновлён" : "Этап создан", {
+    description: stageName.value,
+  });
 }
 
 async function removeStage(stage: any) {
-  await remove(stage.id);
+  const result = await remove(stage.id);
+  if (result === null) return;
   await load(props.competitionId);
+  toast.success("Этап удалён", { description: stage.name });
 }
 </script>
 

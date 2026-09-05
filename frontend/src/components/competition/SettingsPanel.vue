@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted } from "vue";
 import { IconDeviceFloppy } from "@tabler/icons-vue";
+import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,11 +54,14 @@ async function save() {
   const settings = JSON.stringify({
     maxParticipantsPerTeam: maxParticipants.value,
   });
-  await update(props.competition.id, {
+  const result = await update(props.competition.id, {
     name: name.value,
     description: description.value,
     settings,
   });
+  if (result !== null) {
+    toast.success("Настройки сохранены");
+  }
 }
 </script>
 

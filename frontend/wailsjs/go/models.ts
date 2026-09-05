@@ -5,10 +5,8 @@ export namespace database {
 	    name: string;
 	    description: string;
 	    settings: string;
-	    // Go type: time
-	    created_at: any;
-	    // Go type: time
-	    updated_at: any;
+	    created_at: string;
+	    updated_at: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Competition(source);
@@ -20,8 +18,58 @@ export namespace database {
 	        this.name = source["name"];
 	        this.description = source["description"];
 	        this.settings = source["settings"];
-	        this.created_at = this.convertValues(source["created_at"], null);
-	        this.updated_at = this.convertValues(source["updated_at"], null);
+	        this.created_at = source["created_at"];
+	        this.updated_at = source["updated_at"];
+	    }
+	}
+	export class IndividualResult {
+	    participant_id: number;
+	    full_name: string;
+	    team_name: string;
+	    gender: string;
+	    age: number;
+	    birth_date: string;
+	    correct_answers: number;
+	    penalty_points: number;
+	    points: number;
+	    time_seconds: number;
+	    rank: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new IndividualResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.participant_id = source["participant_id"];
+	        this.full_name = source["full_name"];
+	        this.team_name = source["team_name"];
+	        this.gender = source["gender"];
+	        this.age = source["age"];
+	        this.birth_date = source["birth_date"];
+	        this.correct_answers = source["correct_answers"];
+	        this.penalty_points = source["penalty_points"];
+	        this.points = source["points"];
+	        this.time_seconds = source["time_seconds"];
+	        this.rank = source["rank"];
+	    }
+	}
+	export class IndividualStanding {
+	    stage_id: number;
+	    stage_name: string;
+	    boys: IndividualResult[];
+	    girls: IndividualResult[];
+	
+	    static createFrom(source: any = {}) {
+	        return new IndividualStanding(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.stage_id = source["stage_id"];
+	        this.stage_name = source["stage_name"];
+	        this.boys = this.convertValues(source["boys"], IndividualResult);
+	        this.girls = this.convertValues(source["girls"], IndividualResult);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -42,17 +90,39 @@ export namespace database {
 		    return a;
 		}
 	}
+	export class OverallStanding {
+	    rank: number;
+	    team_id: number;
+	    team_name: string;
+	    total_place_points: number;
+	    first_places: number;
+	    second_places: number;
+	    third_places: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new OverallStanding(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.rank = source["rank"];
+	        this.team_id = source["team_id"];
+	        this.team_name = source["team_name"];
+	        this.total_place_points = source["total_place_points"];
+	        this.first_places = source["first_places"];
+	        this.second_places = source["second_places"];
+	        this.third_places = source["third_places"];
+	    }
+	}
 	export class Participant {
 	    id: number;
 	    team_id: number;
 	    full_name: string;
-	    gender: sql.NullString;
-	    birth_date: sql.NullString;
+	    gender?: string;
+	    birth_date?: string;
 	    age: number;
-	    // Go type: time
-	    created_at: any;
-	    // Go type: time
-	    updated_at: any;
+	    created_at: string;
+	    updated_at: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Participant(source);
@@ -63,30 +133,12 @@ export namespace database {
 	        this.id = source["id"];
 	        this.team_id = source["team_id"];
 	        this.full_name = source["full_name"];
-	        this.gender = this.convertValues(source["gender"], sql.NullString);
-	        this.birth_date = this.convertValues(source["birth_date"], sql.NullString);
+	        this.gender = source["gender"];
+	        this.birth_date = source["birth_date"];
 	        this.age = source["age"];
-	        this.created_at = this.convertValues(source["created_at"], null);
-	        this.updated_at = this.convertValues(source["updated_at"], null);
+	        this.created_at = source["created_at"];
+	        this.updated_at = source["updated_at"];
 	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
 	}
 	export class ParticipantResult {
 	    participant_id: number;
@@ -94,6 +146,8 @@ export namespace database {
 	    gender: string;
 	    age: number;
 	    penalty_points: number;
+	    correct_answers: number;
+	    points: number;
 	    time_seconds: number;
 	
 	    static createFrom(source: any = {}) {
@@ -107,6 +161,8 @@ export namespace database {
 	        this.gender = source["gender"];
 	        this.age = source["age"];
 	        this.penalty_points = source["penalty_points"];
+	        this.correct_answers = source["correct_answers"];
+	        this.points = source["points"];
 	        this.time_seconds = source["time_seconds"];
 	    }
 	}
@@ -120,6 +176,8 @@ export namespace database {
 	    age: number;
 	    team_name: string;
 	    penalty_points: number;
+	    correct_answers: number;
+	    points: number;
 	    time_seconds: number;
 	
 	    static createFrom(source: any = {}) {
@@ -137,6 +195,8 @@ export namespace database {
 	        this.age = source["age"];
 	        this.team_name = source["team_name"];
 	        this.penalty_points = source["penalty_points"];
+	        this.correct_answers = source["correct_answers"];
+	        this.points = source["points"];
 	        this.time_seconds = source["time_seconds"];
 	    }
 	}
@@ -150,6 +210,7 @@ export namespace database {
 	    team_name: string;
 	    time_seconds: number;
 	    penalty_points: number;
+	    correct_answers: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new ParticipantWithResults(source);
@@ -166,6 +227,7 @@ export namespace database {
 	        this.team_name = source["team_name"];
 	        this.time_seconds = source["time_seconds"];
 	        this.penalty_points = source["penalty_points"];
+	        this.correct_answers = source["correct_answers"];
 	    }
 	}
 	export class Stage {
@@ -173,10 +235,8 @@ export namespace database {
 	    competition_id: number;
 	    name: string;
 	    order_index: number;
-	    // Go type: time
-	    created_at: any;
-	    // Go type: time
-	    updated_at: any;
+	    created_at: string;
+	    updated_at: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Stage(source);
@@ -188,27 +248,9 @@ export namespace database {
 	        this.competition_id = source["competition_id"];
 	        this.name = source["name"];
 	        this.order_index = source["order_index"];
-	        this.created_at = this.convertValues(source["created_at"], null);
-	        this.updated_at = this.convertValues(source["updated_at"], null);
+	        this.created_at = source["created_at"];
+	        this.updated_at = source["updated_at"];
 	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
 	}
 	export class StageResult {
 	    id: number;
@@ -216,10 +258,9 @@ export namespace database {
 	    participant_id: number;
 	    time_seconds: number;
 	    penalty_points: number;
-	    // Go type: time
-	    created_at: any;
-	    // Go type: time
-	    updated_at: any;
+	    correct_answers: number;
+	    created_at: string;
+	    updated_at: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new StageResult(source);
@@ -232,27 +273,10 @@ export namespace database {
 	        this.participant_id = source["participant_id"];
 	        this.time_seconds = source["time_seconds"];
 	        this.penalty_points = source["penalty_points"];
-	        this.created_at = this.convertValues(source["created_at"], null);
-	        this.updated_at = this.convertValues(source["updated_at"], null);
+	        this.correct_answers = source["correct_answers"];
+	        this.created_at = source["created_at"];
+	        this.updated_at = source["updated_at"];
 	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
 	}
 	export class StageTeamResult {
 	    rank: number;
@@ -261,6 +285,7 @@ export namespace database {
 	    order_index: number;
 	    team_id: number;
 	    team_name: string;
+	    total_points: number;
 	    total_penalties: number;
 	    total_time: number;
 	    avg_age: number;
@@ -277,6 +302,7 @@ export namespace database {
 	        this.order_index = source["order_index"];
 	        this.team_id = source["team_id"];
 	        this.team_name = source["team_name"];
+	        this.total_points = source["total_points"];
 	        this.total_penalties = source["total_penalties"];
 	        this.total_time = source["total_time"];
 	        this.avg_age = source["avg_age"];
@@ -321,6 +347,7 @@ export namespace database {
 	export class TeamResultWithParticipants {
 	    team_id: number;
 	    team_name: string;
+	    team_total_points: number;
 	    team_total_penalties: number;
 	    team_total_time: number;
 	    participant_count: number;
@@ -335,6 +362,7 @@ export namespace database {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.team_id = source["team_id"];
 	        this.team_name = source["team_name"];
+	        this.team_total_points = source["team_total_points"];
 	        this.team_total_penalties = source["team_total_penalties"];
 	        this.team_total_time = source["team_total_time"];
 	        this.participant_count = source["participant_count"];
@@ -397,40 +425,12 @@ export namespace database {
 		}
 	}
 	
-	export class Standing {
-	    rank: number;
-	    team_id: number;
-	    team_name: string;
-	    participant_count: number;
-	    total_penalties: number;
-	    total_time: number;
-	    avg_age: number;
-	    is_incomplete_team: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new Standing(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.rank = source["rank"];
-	        this.team_id = source["team_id"];
-	        this.team_name = source["team_name"];
-	        this.participant_count = source["participant_count"];
-	        this.total_penalties = source["total_penalties"];
-	        this.total_time = source["total_time"];
-	        this.avg_age = source["avg_age"];
-	        this.is_incomplete_team = source["is_incomplete_team"];
-	    }
-	}
 	export class Team {
 	    id: number;
 	    competition_id: number;
 	    name: string;
-	    // Go type: time
-	    created_at: any;
-	    // Go type: time
-	    updated_at: any;
+	    created_at: string;
+	    updated_at: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Team(source);
@@ -441,45 +441,8 @@ export namespace database {
 	        this.id = source["id"];
 	        this.competition_id = source["competition_id"];
 	        this.name = source["name"];
-	        this.created_at = this.convertValues(source["created_at"], null);
-	        this.updated_at = this.convertValues(source["updated_at"], null);
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-
-}
-
-export namespace sql {
-	
-	export class NullString {
-	    String: string;
-	    Valid: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new NullString(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.String = source["String"];
-	        this.Valid = source["Valid"];
+	        this.created_at = source["created_at"];
+	        this.updated_at = source["updated_at"];
 	    }
 	}
 

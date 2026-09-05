@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Toaster, toast } from "vue-sonner";
 import { useCompetitions } from "@/composables/useApi";
 import TeamsParticipants from "@/components/competition/TeamsParticipants.vue";
 import StagesManager from "@/components/competition/StagesManager.vue";
@@ -94,15 +95,18 @@ async function handleCreate() {
     newCompDesc.value = "";
     await load();
     selectCompetition(result);
+    toast.success("Соревнование создано");
   }
 }
 
 async function handleDelete() {
   if (!selectedCompetition.value) return;
-  await remove(selectedCompetition.value.id);
+  const result = await remove(selectedCompetition.value.id);
+  if (result === null) return;
   showDeleteDialog.value = false;
   selectedCompetition.value = null;
   await load();
+  toast.success("Соревнование удалено");
 }
 
 function openEditDialog() {
@@ -124,6 +128,7 @@ async function handleEdit() {
     showEditDialog.value = false;
     await load();
     selectCompetition(result);
+    toast.success("Изменения сохранены");
   }
 }
 </script>
@@ -336,6 +341,13 @@ async function handleEdit() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <Toaster
+      position="bottom-right"
+      :theme="isDark ? 'dark' : 'light'"
+      rich-colors
+      close-button
+    />
 
     <!-- Delete Dialog -->
     <Dialog v-model:open="showDeleteDialog">

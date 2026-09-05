@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted, computed } from "vue";
 import { IconClipboardList, IconDeviceFloppy } from "@tabler/icons-vue";
+import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,9 @@ const { formatTimeLocal } = useFormat();
 
 const selectedStageId = ref<number | null>(null);
 const participants = ref<any[]>([]);
-const resultsMap = ref<Record<number, { time: string; penalties: number }>>({});
+const resultsMap = ref<
+  Record<number, { time: string; penalties: number; correctAnswers: number }>
+>({});
 
 onMounted(async () => {
   await loadStages(props.competitionId);
@@ -49,6 +52,7 @@ async function loadResults() {
       resultsMap.value[p.id] = {
         time: p.time_seconds > 0 ? formatTimeLocal(p.time_seconds) : "",
         penalties: p.penalty_points,
+        correctAnswers: p.correct_answers || 0,
       };
     }
   }
@@ -74,12 +78,19 @@ async function saveResult(participantId: number) {
   if (!r) return;
 
   const timeSeconds = r.time ? parseTimeString(r.time) : 0;
-  await upsert(
+  const result = await upsert(
     selectedStageId.value,
     participantId,
     timeSeconds,
     r.penalties || 0,
+    r.correctAnswers || 0,
   );
+  if (result !== null) {
+    const p = participants.value.find((x) => x.id === participantId);
+    toast.success("Результат сохранён", {
+      description: p?.full_name ?? undefined,
+    });
+  }
 }
 
 function parseTimeString(time: string): number {
@@ -150,6 +161,12 @@ function parseTimeString(time: string): number {
                     v-model="resultsMap[p.id].time"
                     placeholder="MM:SS"
                     class="w-24 text-center"
+                  />
+                  <Input
+                    v-model.number="resultsMap[p.id].correctAnswers"
+                    type="number"
+                    placeholder="0"
+                    class="w-16 text-center"
                   />
                   <Input
                     v-model.number="resultsMap[p.id].penalties"

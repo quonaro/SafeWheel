@@ -58,6 +58,10 @@ export function GetCompetitionByID(arg1) {
   return window['go']['main']['App']['GetCompetitionByID'](arg1);
 }
 
+export function GetIndividualStandings(arg1) {
+  return window['go']['main']['App']['GetIndividualStandings'](arg1);
+}
+
 export function GetParticipantByID(arg1) {
   return window['go']['main']['App']['GetParticipantByID'](arg1);
 }
@@ -126,6 +130,6 @@ export function UpdateTeam(arg1, arg2) {
   return window['go']['main']['App']['UpdateTeam'](arg1, arg2);
 }
 
-export function UpsertStageResult(arg1, arg2, arg3, arg4) {
-  return window['go']['main']['App']['UpsertStageResult'](arg1, arg2, arg3, arg4);
+export function UpsertStageResult(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['UpsertStageResult'](arg1, arg2, arg3, arg4, arg5);
 }

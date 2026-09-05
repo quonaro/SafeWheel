@@ -104,6 +104,7 @@ func createTables(db *sql.DB) error {
 			participant_id INTEGER NOT NULL,
 			time_seconds REAL NOT NULL DEFAULT 0,
 			penalty_points INTEGER NOT NULL DEFAULT 0,
+			correct_answers INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			UNIQUE(stage_id, participant_id),
@@ -139,6 +140,7 @@ func runMigrations(db *sql.DB) error {
 		{"ALTER TABLE competitions ADD COLUMN description TEXT DEFAULT ''"},
 		{"ALTER TABLE competitions ADD COLUMN settings TEXT DEFAULT '{}'"},
 		{"ALTER TABLE participants ADD COLUMN birth_date DATE"},
+		{"ALTER TABLE stage_results ADD COLUMN correct_answers INTEGER NOT NULL DEFAULT 0"},
 	}
 
 	for _, m := range migrations {
@@ -163,6 +165,9 @@ func runMigrations(db *sql.DB) error {
 		if name == "order_index" {
 			hasOrderIndex = true
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate stages schema: %w", err)
 	}
 	if !hasOrderIndex {
 		if _, err := db.Exec("ALTER TABLE stages ADD COLUMN order_index INTEGER DEFAULT 0"); err != nil {

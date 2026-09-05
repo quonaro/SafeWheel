@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted, computed } from "vue";
 import { IconChartBar, IconFileDownload } from "@tabler/icons-vue";
+import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,16 +17,23 @@ import { useStandings, useExport, useFormat } from "@/composables/useApi";
 
 const props = defineProps<{ competitionId: number }>();
 
-const { standings, stageStandings, loadStandings, loadStageStandings } =
-  useStandings();
+const {
+  standings,
+  stageStandings,
+  individualStandings,
+  loadStandings,
+  loadStageStandings,
+  loadIndividualStandings,
+} = useStandings();
 const { exportOverall, exportStages } = useExport();
 const { formatTimeLocal } = useFormat();
 
-const view = ref<"overall" | "stages">("overall");
+const view = ref<"overall" | "stages" | "individual">("overall");
 
 onMounted(() => {
   loadStandings(props.competitionId);
   loadStageStandings(props.competitionId);
+  loadIndividualStandings(props.competitionId);
 });
 
 watch(
@@ -33,10 +41,29 @@ watch(
   () => {
     loadStandings(props.competitionId);
     loadStageStandings(props.competitionId);
+    loadIndividualStandings(props.competitionId);
   },
 );
 
 const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-400"];
+
+async function handleExportOverall() {
+  const result = await exportOverall(props.competitionId);
+  if (result !== null) {
+    toast.success("Экспорт завершён", {
+      description: "Общие результаты сохранены в файл",
+    });
+  }
+}
+
+async function handleExportStages() {
+  const result = await exportStages(props.competitionId);
+  if (result !== null) {
+    toast.success("Экспорт завершён", {
+      description: "Результаты по этапам сохранены в файл",
+    });
+  }
+}
 </script>
 
 <template>
@@ -57,21 +84,20 @@ const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-400"];
         >
           По этапам
         </Button>
+        <Button
+          :variant="view === 'individual' ? 'default' : 'outline'"
+          size="sm"
+          @click="view = 'individual'"
+        >
+          Личное первенство
+        </Button>
       </div>
       <div class="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          @click="exportOverall(competitionId)"
-        >
+        <Button variant="outline" size="sm" @click="handleExportOverall">
           <IconFileDownload class="mr-2 h-4 w-4" />
           Экспорт
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          @click="exportStages(competitionId)"
-        >
+        <Button variant="outline" size="sm" @click="handleExportStages">
           <IconFileDownload class="mr-2 h-4 w-4" />
           По этапам
         </Button>
@@ -94,10 +120,10 @@ const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-400"];
               <TableRow>
                 <TableHead class="w-16 text-center">Место</TableHead>
                 <TableHead>Команда</TableHead>
-                <TableHead class="text-center">Штрафы</TableHead>
-                <TableHead class="text-center">Время</TableHead>
-                <TableHead class="text-center">Участников</TableHead>
-                <TableHead class="text-center">Ср. возраст</TableHead>
+                <TableHead class="text-center">Сумма мест</TableHead>
+                <TableHead class="text-center">1-х мест</TableHead>
+                <TableHead class="text-center">2-х мест</TableHead>
+                <TableHead class="text-center">3-х мест</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -113,24 +139,12 @@ const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-400"];
                   </span>
                 </TableCell>
                 <TableCell class="font-medium">{{ s.team_name }}</TableCell>
-                <TableCell class="text-center">{{
-                  s.total_penalties
+                <TableCell class="text-center font-bold">{{
+                  s.total_place_points
                 }}</TableCell>
-                <TableCell class="text-center font-mono">{{
-                  formatTimeLocal(s.total_time)
-                }}</TableCell>
-                <TableCell class="text-center">
-                  <Badge
-                    :variant="
-                      s.is_incomplete_team ? 'destructive' : 'secondary'
-                    "
-                  >
-                    {{ s.participant_count }}
-                  </Badge>
-                </TableCell>
-                <TableCell class="text-center">{{
-                  s.avg_age ? s.avg_age.toFixed(1) : "-"
-                }}</TableCell>
+                <TableCell class="text-center">{{ s.first_places }}</TableCell>
+                <TableCell class="text-center">{{ s.second_places }}</TableCell>
+                <TableCell class="text-center">{{ s.third_places }}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
@@ -139,7 +153,7 @@ const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-400"];
     </div>
 
     <!-- Stage Standings -->
-    <div v-else class="space-y-4">
+    <div v-else-if="view === 'stages'" class="space-y-4">
       <div
         v-if="stageStandings.length === 0"
         class="text-center py-12 text-muted-foreground"
@@ -157,7 +171,7 @@ const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-400"];
               <TableRow>
                 <TableHead class="w-12 text-center">Место</TableHead>
                 <TableHead>Команда</TableHead>
-                <TableHead class="text-center">Штрафы</TableHead>
+                <TableHead class="text-center">Очки</TableHead>
                 <TableHead class="text-center">Время</TableHead>
               </TableRow>
             </TableHeader>
@@ -174,8 +188,8 @@ const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-400"];
                   </span>
                 </TableCell>
                 <TableCell class="font-medium">{{ r.team_name }}</TableCell>
-                <TableCell class="text-center">{{
-                  r.total_penalties
+                <TableCell class="text-center font-bold">{{
+                  r.total_points
                 }}</TableCell>
                 <TableCell class="text-center font-mono">{{
                   formatTimeLocal(r.total_time)
@@ -183,6 +197,108 @@ const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-400"];
               </TableRow>
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+    </div>
+
+    <!-- Individual Standings -->
+    <div v-else class="space-y-4">
+      <div
+        v-if="individualStandings.length === 0"
+        class="text-center py-12 text-muted-foreground"
+      >
+        <IconChartBar class="mx-auto mb-3 h-12 w-12" />
+        <p>Нет данных по личному первенству</p>
+      </div>
+      <Card v-for="stage in individualStandings" :key="stage.stage_id">
+        <CardHeader class="py-3">
+          <CardTitle class="text-sm">{{ stage.stage_name }}</CardTitle>
+        </CardHeader>
+        <CardContent class="pt-0">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs font-semibold mb-2 text-muted-foreground">
+                Юноши
+              </h4>
+              <Table v-if="stage.boys && stage.boys.length > 0">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead class="w-12 text-center">Место</TableHead>
+                    <TableHead>ФИО</TableHead>
+                    <TableHead>Команда</TableHead>
+                    <TableHead class="text-center">Очки</TableHead>
+                    <TableHead class="text-center">Время</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="b in stage.boys" :key="b.participant_id">
+                    <TableCell class="text-center">
+                      <span
+                        :class="[
+                          'font-bold',
+                          b.rank <= 3 ? medalColors[b.rank - 1] : '',
+                        ]"
+                      >
+                        {{ b.rank }}
+                      </span>
+                    </TableCell>
+                    <TableCell class="font-medium">{{ b.full_name }}</TableCell>
+                    <TableCell class="text-sm">{{ b.team_name }}</TableCell>
+                    <TableCell class="text-center font-bold">{{
+                      b.points
+                    }}</TableCell>
+                    <TableCell class="text-center font-mono">{{
+                      formatTimeLocal(b.time_seconds)
+                    }}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+              <p v-else class="text-sm text-muted-foreground py-2">
+                Нет данных
+              </p>
+            </div>
+            <div>
+              <h4 class="text-xs font-semibold mb-2 text-muted-foreground">
+                Девушки
+              </h4>
+              <Table v-if="stage.girls && stage.girls.length > 0">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead class="w-12 text-center">Место</TableHead>
+                    <TableHead>ФИО</TableHead>
+                    <TableHead>Команда</TableHead>
+                    <TableHead class="text-center">Очки</TableHead>
+                    <TableHead class="text-center">Время</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="g in stage.girls" :key="g.participant_id">
+                    <TableCell class="text-center">
+                      <span
+                        :class="[
+                          'font-bold',
+                          g.rank <= 3 ? medalColors[g.rank - 1] : '',
+                        ]"
+                      >
+                        {{ g.rank }}
+                      </span>
+                    </TableCell>
+                    <TableCell class="font-medium">{{ g.full_name }}</TableCell>
+                    <TableCell class="text-sm">{{ g.team_name }}</TableCell>
+                    <TableCell class="text-center font-bold">{{
+                      g.points
+                    }}</TableCell>
+                    <TableCell class="text-center font-mono">{{
+                      formatTimeLocal(g.time_seconds)
+                    }}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+              <p v-else class="text-sm text-muted-foreground py-2">
+                Нет данных
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

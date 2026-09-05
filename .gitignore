@@ -1,3 +1,7 @@
 node_modules
 frontend/dist
 /build/
+/private/
+*.db
+*.db-wal
+*.db-shm
