@@ -334,14 +334,6 @@ async function handleEdit() {
               max="10"
             />
           </div>
-          <div class="space-y-2">
-            <Label>Критерии ранжирования</Label>
-            <ol class="space-y-1 text-sm text-muted-foreground">
-              <li>1. Штрафные очки (по возрастанию)</li>
-              <li>2. Время (по возрастанию)</li>
-              <li>3. Средний возраст (по возрастанию)</li>
-            </ol>
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" @click="showEditDialog = false"
