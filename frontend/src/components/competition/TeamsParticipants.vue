@@ -185,11 +185,17 @@ async function saveParticipant() {
           <Badge variant="secondary">{{ participants.length }}/4</Badge>
         </div>
         <div class="flex gap-1" @click.stop>
-          <Button variant="ghost" size="icon" @click="openEditTeam(team)">
-            <IconPencil class="h-4 w-4" />
+          <Button size="sm" @click="openEditTeam(team)">
+            <IconPencil class="mr-1 h-4 w-4" />
+            Изменить
           </Button>
-          <Button variant="ghost" size="icon" @click="confirmRemoveTeam(team)">
-            <IconTrash class="h-4 w-4" />
+          <Button
+            variant="destructive"
+            size="sm"
+            @click="confirmRemoveTeam(team)"
+          >
+            <IconTrash class="mr-1 h-4 w-4" />
+            Удалить
           </Button>
         </div>
       </CardHeader>
@@ -223,19 +229,13 @@ async function saveParticipant() {
               <Badge v-if="p.age" variant="outline">{{ p.age }} лет</Badge>
             </div>
             <div class="flex gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                @click="openEditParticipant(p)"
-              >
-                <IconPencil class="h-3 w-3" />
+              <Button variant="ghost" size="sm" @click="openEditParticipant(p)">
+                <IconPencil class="mr-1 h-3 w-3" />
+                Изменить
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                @click="confirmRemoveParticipant(p)"
-              >
-                <IconTrash class="h-3 w-3" />
+              <Button size="sm" @click="openEditParticipant(p)">
+                <IconTrash class="mr-1 h-3 w-3" />
+                Удалить
               </Button>
             </div>
           </div>

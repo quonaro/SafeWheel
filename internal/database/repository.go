@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,22 +21,25 @@ func NewRepository(db *DB) *Repository {
 // ===== Competitions =====
 
 func (r *Repository) ListCompetitions() ([]Competition, error) {
-	rows, err := r.db.Query("SELECT id, name, description, settings, created_at, updated_at FROM competitions ORDER BY created_at DESC")
-	if err != nil {
+	var comps []Competition
+	if err := r.db.Select(&comps, "SELECT id, name, description, settings, created_at, updated_at FROM competitions ORDER BY created_at DESC"); err != nil {
+		slog.Error("ListCompetitions", "error", err)
 		return nil, err
 	}
-	defer rows.Close()
-	return scanCompetitions(rows)
+	return comps, nil
 }
 
 func (r *Repository) GetCompetitionByID(id int64) (*Competition, error) {
-	row := r.db.QueryRow("SELECT id, name, description, settings, created_at, updated_at FROM competitions WHERE id = ?", id)
-	c := &Competition{}
-	err := row.Scan(&c.ID, &c.Name, &c.Description, &c.Settings, &c.CreatedAt, &c.UpdatedAt)
+	var c Competition
+	err := r.db.Get(&c, "SELECT id, name, description, settings, created_at, updated_at FROM competitions WHERE id = ?", id)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	return c, err
+	if err != nil {
+		slog.Error("GetCompetitionByID", "id", id, "error", err)
+		return nil, err
+	}
+	return &c, nil
 }
 
 func (r *Repository) CreateCompetition(data Competition) (*Competition, error) {
@@ -43,11 +47,9 @@ func (r *Repository) CreateCompetition(data Competition) (*Competition, error) {
 	if settings == "" {
 		settings = `{"maxParticipantsPerTeam":4}`
 	}
-	res, err := r.db.Exec(
-		"INSERT INTO competitions (name, description, settings, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-		strings.TrimSpace(data.Name), strings.TrimSpace(data.Description), settings,
-	)
+	res, err := r.db.Exec("INSERT INTO competitions (name, description, settings, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", strings.TrimSpace(data.Name), strings.TrimSpace(data.Description), settings)
 	if err != nil {
+		slog.Error("CreateCompetition", "name", data.Name, "error", err)
 		return nil, err
 	}
 	id, _ := res.LastInsertId()
@@ -59,11 +61,9 @@ func (r *Repository) UpdateCompetition(id int64, data Competition) (*Competition
 	if settings == "" {
 		settings = `{"maxParticipantsPerTeam":4}`
 	}
-	_, err := r.db.Exec(
-		"UPDATE competitions SET name = ?, description = ?, settings = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-		strings.TrimSpace(data.Name), strings.TrimSpace(data.Description), settings, id,
-	)
+	_, err := r.db.Exec("UPDATE competitions SET name = ?, description = ?, settings = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", strings.TrimSpace(data.Name), strings.TrimSpace(data.Description), settings, id)
 	if err != nil {
+		slog.Error("UpdateCompetition", "id", id, "error", err)
 		return nil, err
 	}
 	return r.GetCompetitionByID(id)
@@ -71,44 +71,41 @@ func (r *Repository) UpdateCompetition(id int64, data Competition) (*Competition
 
 func (r *Repository) DeleteCompetition(id int64) error {
 	_, err := r.db.Exec("DELETE FROM competitions WHERE id = ?", id)
-	return err
+	if err != nil {
+		slog.Error("DeleteCompetition", "id", id, "error", err)
+		return err
+	}
+	return nil
 }
 
 // ===== Teams =====
 
 func (r *Repository) ListTeams(competitionID int64) ([]Team, error) {
-	rows, err := r.db.Query("SELECT id, competition_id, name, created_at, updated_at FROM teams WHERE competition_id = ? ORDER BY name ASC", competitionID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 	var teams []Team
-	for rows.Next() {
-		var t Team
-		if err := rows.Scan(&t.ID, &t.CompetitionID, &t.Name, &t.CreatedAt, &t.UpdatedAt); err != nil {
-			return nil, err
-		}
-		teams = append(teams, t)
-	}
-	if err := rows.Err(); err != nil {
+	if err := r.db.Select(&teams, "SELECT id, competition_id, name, created_at, updated_at FROM teams WHERE competition_id = ? ORDER BY name ASC", competitionID); err != nil {
+		slog.Error("ListTeams", "error", err)
 		return nil, err
 	}
 	return teams, nil
 }
 
 func (r *Repository) GetTeamByID(id int64) (*Team, error) {
-	t := &Team{}
-	err := r.db.QueryRow("SELECT id, competition_id, name, created_at, updated_at FROM teams WHERE id = ?", id).
-		Scan(&t.ID, &t.CompetitionID, &t.Name, &t.CreatedAt, &t.UpdatedAt)
+	var t Team
+	err := r.db.Get(&t, "SELECT id, competition_id, name, created_at, updated_at FROM teams WHERE id = ?", id)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	return t, err
+	if err != nil {
+		slog.Error("GetTeamByID", "id", id, "error", err)
+		return nil, err
+	}
+	return &t, nil
 }
 
 func (r *Repository) CreateTeam(competitionID int64, name string) (*Team, error) {
 	res, err := r.db.Exec("INSERT INTO teams (competition_id, name, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", competitionID, strings.TrimSpace(name))
 	if err != nil {
+		slog.Error("CreateTeam", "name", name, "error", err)
 		return nil, err
 	}
 	id, _ := res.LastInsertId()
@@ -118,6 +115,7 @@ func (r *Repository) CreateTeam(competitionID int64, name string) (*Team, error)
 func (r *Repository) UpdateTeam(id int64, name string) (*Team, error) {
 	_, err := r.db.Exec("UPDATE teams SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", strings.TrimSpace(name), id)
 	if err != nil {
+		slog.Error("UpdateTeam", "id", id, "error", err)
 		return nil, err
 	}
 	return r.GetTeamByID(id)
@@ -125,33 +123,43 @@ func (r *Repository) UpdateTeam(id int64, name string) (*Team, error) {
 
 func (r *Repository) DeleteTeam(id int64) error {
 	_, err := r.db.Exec("DELETE FROM teams WHERE id = ?", id)
-	return err
+	if err != nil {
+		slog.Error("DeleteTeam", "id", id, "error", err)
+		return err
+	}
+	return nil
 }
 
 // ===== Participants =====
 
 func (r *Repository) ListParticipants(teamID int64) ([]Participant, error) {
-	rows, err := r.db.Query("SELECT id, team_id, full_name, gender, birth_date, age, created_at, updated_at FROM participants WHERE team_id = ? ORDER BY id ASC", teamID)
-	if err != nil {
+	var participants []Participant
+	if err := r.db.Select(&participants, "SELECT id, team_id, full_name, gender, birth_date, age, created_at, updated_at FROM participants WHERE team_id = ? ORDER BY id ASC", teamID); err != nil {
+		slog.Error("ListParticipants", "teamID", teamID, "error", err)
 		return nil, err
 	}
-	defer rows.Close()
-	return scanParticipants(rows)
+	return participants, nil
 }
 
 func (r *Repository) GetParticipantByID(id int64) (*Participant, error) {
-	p := &Participant{}
-	err := r.db.QueryRow("SELECT id, team_id, full_name, gender, birth_date, age, created_at, updated_at FROM participants WHERE id = ?", id).
-		Scan(&p.ID, &p.TeamID, &p.FullName, &p.Gender, &p.BirthDate, &p.Age, &p.CreatedAt, &p.UpdatedAt)
+	var p Participant
+	err := r.db.Get(&p, "SELECT id, team_id, full_name, gender, birth_date, age, created_at, updated_at FROM participants WHERE id = ?", id)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	return p, err
+	if err != nil {
+		slog.Error("GetParticipantByID", "id", id, "error", err)
+		return nil, err
+	}
+	return &p, nil
 }
 
 func (r *Repository) CreateParticipant(teamID int64, p Participant) (*Participant, error) {
 	var count int
-	r.db.QueryRow("SELECT COUNT(1) FROM participants WHERE team_id = ?", teamID).Scan(&count)
+	if err := r.db.Get(&count, "SELECT COUNT(1) FROM participants WHERE team_id = ?", teamID); err != nil {
+		slog.Error("failed to count participants", "teamID", teamID, "error", err)
+		return nil, err
+	}
 	if count >= 4 {
 		return nil, fmt.Errorf("в команде не может быть больше 4 участников")
 	}
@@ -166,6 +174,7 @@ func (r *Repository) CreateParticipant(teamID int64, p Participant) (*Participan
 		teamID, strings.TrimSpace(p.FullName), p.Gender, p.BirthDate, age,
 	)
 	if err != nil {
+		slog.Error("CreateParticipant", "teamID", teamID, "name", p.FullName, "error", err)
 		return nil, err
 	}
 	id, _ := res.LastInsertId()
@@ -182,6 +191,7 @@ func (r *Repository) UpdateParticipant(id int64, p Participant) (*Participant, e
 		strings.TrimSpace(p.FullName), p.Gender, p.BirthDate, age, id,
 	)
 	if err != nil {
+		slog.Error("UpdateParticipant", "id", id, "error", err)
 		return nil, err
 	}
 	return r.GetParticipantByID(id)
@@ -189,44 +199,41 @@ func (r *Repository) UpdateParticipant(id int64, p Participant) (*Participant, e
 
 func (r *Repository) DeleteParticipant(id int64) error {
 	_, err := r.db.Exec("DELETE FROM participants WHERE id = ?", id)
-	return err
+	if err != nil {
+		slog.Error("DeleteParticipant", "id", id, "error", err)
+		return err
+	}
+	return nil
 }
 
 // ===== Stages =====
 
 func (r *Repository) ListStages(competitionID int64) ([]Stage, error) {
-	rows, err := r.db.Query("SELECT id, competition_id, name, order_index, created_at, updated_at FROM stages WHERE competition_id = ? ORDER BY id ASC", competitionID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 	var stages []Stage
-	for rows.Next() {
-		var s Stage
-		if err := rows.Scan(&s.ID, &s.CompetitionID, &s.Name, &s.OrderIndex, &s.CreatedAt, &s.UpdatedAt); err != nil {
-			return nil, err
-		}
-		stages = append(stages, s)
-	}
-	if err := rows.Err(); err != nil {
+	if err := r.db.Select(&stages, "SELECT id, competition_id, name, order_index, created_at, updated_at FROM stages WHERE competition_id = ? ORDER BY id ASC", competitionID); err != nil {
+		slog.Error("ListStages", "error", err)
 		return nil, err
 	}
 	return stages, nil
 }
 
 func (r *Repository) GetStageByID(id int64) (*Stage, error) {
-	s := &Stage{}
-	err := r.db.QueryRow("SELECT id, competition_id, name, order_index, created_at, updated_at FROM stages WHERE id = ?", id).
-		Scan(&s.ID, &s.CompetitionID, &s.Name, &s.OrderIndex, &s.CreatedAt, &s.UpdatedAt)
+	var s Stage
+	err := r.db.Get(&s, "SELECT id, competition_id, name, order_index, created_at, updated_at FROM stages WHERE id = ?", id)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	return s, err
+	if err != nil {
+		slog.Error("GetStageByID", "id", id, "error", err)
+		return nil, err
+	}
+	return &s, nil
 }
 
 func (r *Repository) CreateStage(competitionID int64, name string) (*Stage, error) {
 	res, err := r.db.Exec("INSERT INTO stages (competition_id, name, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", competitionID, strings.TrimSpace(name))
 	if err != nil {
+		slog.Error("CreateStage", "name", name, "error", err)
 		return nil, err
 	}
 	id, _ := res.LastInsertId()
@@ -236,6 +243,7 @@ func (r *Repository) CreateStage(competitionID int64, name string) (*Stage, erro
 func (r *Repository) UpdateStage(id int64, name string) (*Stage, error) {
 	_, err := r.db.Exec("UPDATE stages SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", strings.TrimSpace(name), id)
 	if err != nil {
+		slog.Error("UpdateStage", "id", id, "error", err)
 		return nil, err
 	}
 	return r.GetStageByID(id)
@@ -243,51 +251,49 @@ func (r *Repository) UpdateStage(id int64, name string) (*Stage, error) {
 
 func (r *Repository) DeleteStage(id int64) error {
 	_, err := r.db.Exec("DELETE FROM stages WHERE id = ?", id)
-	return err
+	if err != nil {
+		slog.Error("DeleteStage", "id", id, "error", err)
+		return err
+	}
+	return nil
 }
 
 // ===== Results =====
 
 func (r *Repository) UpsertStageResult(stageID, participantID int64, timeSeconds float64, penaltyPoints int, correctAnswers int) (*StageResult, error) {
 	var existingID int64
-	err := r.db.QueryRow("SELECT id FROM stage_results WHERE stage_id = ? AND participant_id = ?", stageID, participantID).Scan(&existingID)
+	err := r.db.Get(&existingID, "SELECT id FROM stage_results WHERE stage_id = ? AND participant_id = ?", stageID, participantID)
 	switch err {
 	case nil:
 		_, err = r.db.Exec("UPDATE stage_results SET time_seconds = ?, penalty_points = ?, correct_answers = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", timeSeconds, penaltyPoints, correctAnswers, existingID)
 		if err != nil {
+			slog.Error("UpsertStageResult update", "stageID", stageID, "participantID", participantID, "error", err)
 			return nil, err
 		}
 	case sql.ErrNoRows:
 		res, err := r.db.Exec("INSERT INTO stage_results (stage_id, participant_id, time_seconds, penalty_points, correct_answers, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", stageID, participantID, timeSeconds, penaltyPoints, correctAnswers)
 		if err != nil {
+			slog.Error("UpsertStageResult insert", "stageID", stageID, "participantID", participantID, "error", err)
 			return nil, err
 		}
 		existingID, _ = res.LastInsertId()
 	default:
+		slog.Error("UpsertStageResult lookup", "stageID", stageID, "participantID", participantID, "error", err)
 		return nil, err
 	}
 
-	sr := &StageResult{}
-	err = r.db.QueryRow("SELECT id, stage_id, participant_id, time_seconds, penalty_points, correct_answers, created_at, updated_at FROM stage_results WHERE id = ?", existingID).
-		Scan(&sr.ID, &sr.StageID, &sr.ParticipantID, &sr.TimeSeconds, &sr.PenaltyPoints, &sr.CorrectAnswers, &sr.CreatedAt, &sr.UpdatedAt)
-	return sr, err
+	var sr StageResult
+	if err := r.db.Get(&sr, "SELECT id, stage_id, participant_id, time_seconds, penalty_points, correct_answers, created_at, updated_at FROM stage_results WHERE id = ?", existingID); err != nil {
+		slog.Error("UpsertStageResult refetch", "id", existingID, "error", err)
+		return nil, err
+	}
+	return &sr, nil
 }
 
 func (r *Repository) GetStageResults(stageID int64) ([]StageResult, error) {
-	rows, err := r.db.Query("SELECT id, stage_id, participant_id, time_seconds, penalty_points, correct_answers, created_at, updated_at FROM stage_results WHERE stage_id = ?", stageID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 	var results []StageResult
-	for rows.Next() {
-		var sr StageResult
-		if err := rows.Scan(&sr.ID, &sr.StageID, &sr.ParticipantID, &sr.TimeSeconds, &sr.PenaltyPoints, &sr.CorrectAnswers, &sr.CreatedAt, &sr.UpdatedAt); err != nil {
-			return nil, err
-		}
-		results = append(results, sr)
-	}
-	if err := rows.Err(); err != nil {
+	if err := r.db.Select(&results, "SELECT id, stage_id, participant_id, time_seconds, penalty_points, correct_answers, created_at, updated_at FROM stage_results WHERE stage_id = ?", stageID); err != nil {
+		slog.Error("GetStageResults", "stageID", stageID, "error", err)
 		return nil, err
 	}
 	return results, nil
@@ -472,59 +478,33 @@ func (r *Repository) GetStageStandingsWithParticipants(competitionID int64) ([]S
 }
 
 func (r *Repository) GetParticipantResults(competitionID int64, participantID int64) ([]ParticipantStageDetail, error) {
-	var rows *sql.Rows
-	var err error
-
-	if participantID > 0 {
-		query := `
-			SELECT s.id AS stage_id, s.name AS stage_name, s.order_index,
-				p.id AS participant_id, p.full_name, p.gender, p.age,
-				t.name AS team_name,
-				COALESCE(sr.penalty_points, 0) AS penalty_points,
-				COALESCE(sr.correct_answers, 0) AS correct_answers,
-				COALESCE(sr.correct_answers, 0) - COALESCE(sr.penalty_points, 0) AS points,
-				COALESCE(sr.time_seconds, 0) AS time_seconds
-			FROM stages s
-			CROSS JOIN participants p
-			JOIN teams t ON t.id = p.team_id
-			LEFT JOIN stage_results sr ON sr.stage_id = s.id AND sr.participant_id = p.id
-			WHERE s.competition_id = ? AND p.id = ?
-			ORDER BY s.order_index
-		`
-		rows, err = r.db.Query(query, competitionID, participantID)
-	} else {
-		query := `
-			SELECT s.id AS stage_id, s.name AS stage_name, s.order_index,
-				p.id AS participant_id, p.full_name, p.gender, p.age,
-				t.name AS team_name,
-				COALESCE(sr.penalty_points, 0) AS penalty_points,
-				COALESCE(sr.correct_answers, 0) AS correct_answers,
-				COALESCE(sr.correct_answers, 0) - COALESCE(sr.penalty_points, 0) AS points,
-				COALESCE(sr.time_seconds, 0) AS time_seconds
-			FROM stages s
-			CROSS JOIN participants p
-			JOIN teams t ON t.id = p.team_id
-			LEFT JOIN stage_results sr ON sr.stage_id = s.id AND sr.participant_id = p.id
-			WHERE s.competition_id = ?
-			ORDER BY s.order_index, t.name, p.full_name
-		`
-		rows, err = r.db.Query(query, competitionID)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
+	query := `
+		SELECT s.id AS stage_id, s.name AS stage_name, s.order_index,
+			p.id AS participant_id, p.full_name, p.gender, p.age,
+			t.name AS team_name,
+			COALESCE(sr.penalty_points, 0) AS penalty_points,
+			COALESCE(sr.correct_answers, 0) AS correct_answers,
+			COALESCE(sr.correct_answers, 0) - COALESCE(sr.penalty_points, 0) AS points,
+			COALESCE(sr.time_seconds, 0) AS time_seconds
+		FROM stages s
+		CROSS JOIN participants p
+		JOIN teams t ON t.id = p.team_id
+		LEFT JOIN stage_results sr ON sr.stage_id = s.id AND sr.participant_id = p.id
+		WHERE s.competition_id = ?
+	`
 	var results []ParticipantStageDetail
-	for rows.Next() {
-		var d ParticipantStageDetail
-		if err := rows.Scan(&d.StageID, &d.StageName, &d.OrderIndex, &d.ParticipantID, &d.FullName, &d.Gender, &d.Age, &d.TeamName, &d.PenaltyPoints, &d.CorrectAnswers, &d.Points, &d.TimeSeconds); err != nil {
+	if participantID > 0 {
+		query += " AND p.id = ? ORDER BY s.order_index"
+		if err := r.db.Select(&results, query, competitionID, participantID); err != nil {
+			slog.Error("GetParticipantResults", "participantID", participantID, "error", err)
 			return nil, err
 		}
-		results = append(results, d)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
+	} else {
+		query += " ORDER BY s.order_index, t.name, p.full_name"
+		if err := r.db.Select(&results, query, competitionID); err != nil {
+			slog.Error("GetParticipantResults", "error", err)
+			return nil, err
+		}
 	}
 	return results, nil
 }
@@ -542,30 +522,41 @@ func (r *Repository) GetParticipantsWithResults(competitionID int64, stageID int
 		WHERE t.competition_id = ?
 		ORDER BY t.name, p.full_name
 	`
-	rows, err := r.db.Query(query, stageID, competitionID)
-	if err != nil {
+	type row struct {
+		ID             int64          `db:"id"`
+		TeamID         int64          `db:"team_id"`
+		FullName       string         `db:"full_name"`
+		Gender         sql.NullString `db:"gender"`
+		BirthDate      sql.NullString `db:"birth_date"`
+		Age            int            `db:"age"`
+		TeamName       string         `db:"team_name"`
+		TimeSeconds    float64        `db:"time_seconds"`
+		PenaltyPoints  int            `db:"penalty_points"`
+		CorrectAnswers int            `db:"correct_answers"`
+	}
+	var rows []row
+	if err := r.db.Select(&rows, query, stageID, competitionID); err != nil {
+		slog.Error("GetParticipantsWithResults", "stageID", stageID, "error", err)
 		return nil, err
 	}
-	defer rows.Close()
-
-	var results []ParticipantWithResults
-	for rows.Next() {
-		var p ParticipantWithResults
-		var gender sql.NullString
-		var birthDate sql.NullString
-		if err := rows.Scan(&p.ID, &p.TeamID, &p.FullName, &gender, &birthDate, &p.Age, &p.TeamName, &p.TimeSeconds, &p.PenaltyPoints, &p.CorrectAnswers); err != nil {
-			return nil, err
+	results := make([]ParticipantWithResults, len(rows))
+	for i, rw := range rows {
+		results[i] = ParticipantWithResults{
+			ID:             rw.ID,
+			TeamID:         rw.TeamID,
+			FullName:       rw.FullName,
+			Age:            rw.Age,
+			TeamName:       rw.TeamName,
+			TimeSeconds:    rw.TimeSeconds,
+			PenaltyPoints:  rw.PenaltyPoints,
+			CorrectAnswers: rw.CorrectAnswers,
 		}
-		if gender.Valid {
-			p.Gender = gender.String
+		if rw.Gender.Valid {
+			results[i].Gender = rw.Gender.String
 		}
-		if birthDate.Valid {
-			p.BirthDate = birthDate.String
+		if rw.BirthDate.Valid {
+			results[i].BirthDate = rw.BirthDate.String
 		}
-		results = append(results, p)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 	return results, nil
 }
@@ -584,26 +575,27 @@ func (r *Repository) GetAllCompetitionsStandings() ([]AllCompetitionStanding, er
 		GROUP BY c.id, t.id
 		ORDER BY total_penalties ASC, total_time ASC
 	`
-	rows, err := r.db.Query(query)
-	if err != nil {
+	type row struct {
+		CompetitionName string  `db:"competition_name"`
+		TeamName        string  `db:"team_name"`
+		TotalPenalties  int     `db:"total_penalties"`
+		TotalTime       float64 `db:"total_time"`
+	}
+	var rows []row
+	if err := r.db.Select(&rows, query); err != nil {
+		slog.Error("GetAllCompetitionsStandings", "error", err)
 		return nil, err
 	}
-	defer rows.Close()
-
-	var results []AllCompetitionStanding
-	rank := 1
-	for rows.Next() {
-		var s AllCompetitionStanding
-		if err := rows.Scan(&s.CompetitionName, &s.TeamName, &s.TotalPenalties, &s.TotalTime); err != nil {
-			return nil, err
+	results := make([]AllCompetitionStanding, len(rows))
+	for i, rw := range rows {
+		results[i] = AllCompetitionStanding{
+			Rank:              i + 1,
+			TeamName:          rw.TeamName,
+			CompetitionName:   rw.CompetitionName,
+			RankInCompetition: i + 1,
+			TotalPenalties:    rw.TotalPenalties,
+			TotalTime:         rw.TotalTime,
 		}
-		s.Rank = rank
-		s.RankInCompetition = rank
-		results = append(results, s)
-		rank++
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 	return results, nil
 }
@@ -616,6 +608,33 @@ func (r *Repository) GetIndividualStandings(competitionID int64) ([]IndividualSt
 		return nil, err
 	}
 
+	type individualRow struct {
+		ParticipantID  int64          `db:"participant_id"`
+		FullName       string         `db:"full_name"`
+		Gender         sql.NullString `db:"gender"`
+		BirthDate      sql.NullString `db:"birth_date"`
+		Age            int            `db:"age"`
+		TeamName       string         `db:"team_name"`
+		CorrectAnswers int            `db:"correct_answers"`
+		PenaltyPoints  int            `db:"penalty_points"`
+		Points         int            `db:"points"`
+		TimeSeconds    float64        `db:"time_seconds"`
+	}
+
+	query := `
+		SELECT p.id AS participant_id, p.full_name, p.gender, p.birth_date, p.age,
+			t.name AS team_name,
+			COALESCE(sr.correct_answers, 0) AS correct_answers,
+			COALESCE(sr.penalty_points, 0) AS penalty_points,
+			COALESCE(sr.correct_answers, 0) - COALESCE(sr.penalty_points, 0) AS points,
+			COALESCE(sr.time_seconds, 0) AS time_seconds
+		FROM participants p
+		JOIN teams t ON t.id = p.team_id
+		LEFT JOIN stage_results sr ON sr.participant_id = p.id AND sr.stage_id = ?
+		WHERE t.competition_id = ? AND sr.id IS NOT NULL
+		ORDER BY points DESC, time_seconds ASC, p.age ASC
+	`
+
 	var result []IndividualStanding
 	for _, stage := range stages {
 		standing := IndividualStanding{
@@ -625,38 +644,29 @@ func (r *Repository) GetIndividualStandings(competitionID int64) ([]IndividualSt
 			Girls:     []IndividualResult{},
 		}
 
-		query := `
-			SELECT p.id, p.full_name, p.gender, p.birth_date, p.age,
-				t.name AS team_name,
-				COALESCE(sr.correct_answers, 0) AS correct_answers,
-				COALESCE(sr.penalty_points, 0) AS penalty_points,
-				COALESCE(sr.correct_answers, 0) - COALESCE(sr.penalty_points, 0) AS points,
-				COALESCE(sr.time_seconds, 0) AS time_seconds
-			FROM participants p
-			JOIN teams t ON t.id = p.team_id
-			LEFT JOIN stage_results sr ON sr.participant_id = p.id AND sr.stage_id = ?
-			WHERE t.competition_id = ? AND sr.id IS NOT NULL
-			ORDER BY points DESC, time_seconds ASC, p.age ASC
-		`
-		rows, err := r.db.Query(query, stage.ID, competitionID)
-		if err != nil {
+		var rows []individualRow
+		if err := r.db.Select(&rows, query, stage.ID, competitionID); err != nil {
+			slog.Error("GetIndividualStandings", "stageID", stage.ID, "error", err)
 			return nil, err
 		}
-		defer rows.Close()
 
 		boyRank, girlRank := 1, 1
-		for rows.Next() {
-			var ir IndividualResult
-			var gender sql.NullString
-			var birthDate sql.NullString
-			if err := rows.Scan(&ir.ParticipantID, &ir.FullName, &gender, &birthDate, &ir.Age, &ir.TeamName, &ir.CorrectAnswers, &ir.PenaltyPoints, &ir.Points, &ir.TimeSeconds); err != nil {
-				return nil, err
+		for _, rw := range rows {
+			ir := IndividualResult{
+				ParticipantID:  rw.ParticipantID,
+				FullName:       rw.FullName,
+				Age:            rw.Age,
+				TeamName:       rw.TeamName,
+				CorrectAnswers: rw.CorrectAnswers,
+				PenaltyPoints:  rw.PenaltyPoints,
+				Points:         rw.Points,
+				TimeSeconds:    rw.TimeSeconds,
 			}
-			if gender.Valid {
-				ir.Gender = gender.String
+			if rw.Gender.Valid {
+				ir.Gender = rw.Gender.String
 			}
-			if birthDate.Valid {
-				ir.BirthDate = birthDate.String
+			if rw.BirthDate.Valid {
+				ir.BirthDate = rw.BirthDate.String
 			}
 
 			switch ir.Gender {
@@ -669,9 +679,6 @@ func (r *Repository) GetIndividualStandings(competitionID int64) ([]IndividualSt
 				girlRank++
 				standing.Girls = append(standing.Girls, ir)
 			}
-		}
-		if err := rows.Err(); err != nil {
-			return nil, err
 		}
 		result = append(result, standing)
 	}
@@ -692,24 +699,19 @@ func (r *Repository) computeStageTeamRanking(competitionID int64, stageID int64)
 		GROUP BY t.id
 		ORDER BY total_points DESC, total_time ASC
 	`
-	rows, err := r.db.Query(query, stageID, competitionID)
-	if err != nil {
+	type row struct {
+		TeamID      int64   `db:"team_id"`
+		TotalPoints int     `db:"total_points"`
+		TotalTime   float64 `db:"total_time"`
+	}
+	var rows []row
+	if err := r.db.Select(&rows, query, stageID, competitionID); err != nil {
+		slog.Error("computeStageTeamRanking", "stageID", stageID, "error", err)
 		return nil
 	}
-	defer rows.Close()
-
-	var teamIDs []int64
-	for rows.Next() {
-		var teamID int64
-		var totalPoints int
-		var totalTime float64
-		if err := rows.Scan(&teamID, &totalPoints, &totalTime); err != nil {
-			return nil
-		}
-		teamIDs = append(teamIDs, teamID)
-	}
-	if err := rows.Err(); err != nil {
-		return nil
+	teamIDs := make([]int64, len(rows))
+	for i, rw := range rows {
+		teamIDs[i] = rw.TeamID
 	}
 	return teamIDs
 }
@@ -722,15 +724,21 @@ func (r *Repository) getTeamStageTotals(stageID int64, teamID int64) (int, float
 		LEFT JOIN stage_results sr ON sr.participant_id = p.id AND sr.stage_id = ?
 		WHERE p.team_id = ?
 	`
-	var totalPoints int
-	var totalTime float64
-	r.db.QueryRow(query, stageID, teamID).Scan(&totalPoints, &totalTime)
-	return totalPoints, totalTime
+	type row struct {
+		TotalPoints int     `db:"total_points"`
+		TotalTime   float64 `db:"total_time"`
+	}
+	var rw row
+	if err := r.db.Get(&rw, query, stageID, teamID); err != nil {
+		slog.Error("getTeamStageTotals", "stageID", stageID, "teamID", teamID, "error", err)
+		return 0, 0
+	}
+	return rw.TotalPoints, rw.TotalTime
 }
 
 func (r *Repository) getStageParticipants(stageID int64, teamID int64) []ParticipantResult {
 	query := `
-		SELECT p.id, p.full_name, p.gender, p.age,
+		SELECT p.id AS participant_id, p.full_name, p.gender, p.age,
 			COALESCE(sr.penalty_points, 0) AS penalty_points,
 			COALESCE(sr.correct_answers, 0) AS correct_answers,
 			COALESCE(sr.correct_answers, 0) - COALESCE(sr.penalty_points, 0) AS points,
@@ -740,61 +748,40 @@ func (r *Repository) getStageParticipants(stageID int64, teamID int64) []Partici
 		WHERE p.team_id = ?
 		ORDER BY p.full_name
 	`
-	rows, err := r.db.Query(query, stageID, teamID)
-	if err != nil {
+	type row struct {
+		ParticipantID  int64          `db:"participant_id"`
+		FullName       string         `db:"full_name"`
+		Gender         sql.NullString `db:"gender"`
+		Age            int            `db:"age"`
+		PenaltyPoints  int            `db:"penalty_points"`
+		CorrectAnswers int            `db:"correct_answers"`
+		Points         int            `db:"points"`
+		TimeSeconds    float64        `db:"time_seconds"`
+	}
+	var rows []row
+	if err := r.db.Select(&rows, query, stageID, teamID); err != nil {
+		slog.Error("getStageParticipants", "stageID", stageID, "teamID", teamID, "error", err)
 		return nil
 	}
-	defer rows.Close()
-
-	var participants []ParticipantResult
-	for rows.Next() {
-		var pr ParticipantResult
-		var gender sql.NullString
-		if err := rows.Scan(&pr.ParticipantID, &pr.FullName, &gender, &pr.Age, &pr.PenaltyPoints, &pr.CorrectAnswers, &pr.Points, &pr.TimeSeconds); err != nil {
-			return nil
+	participants := make([]ParticipantResult, len(rows))
+	for i, rw := range rows {
+		participants[i] = ParticipantResult{
+			ParticipantID:  rw.ParticipantID,
+			FullName:       rw.FullName,
+			Age:            rw.Age,
+			PenaltyPoints:  rw.PenaltyPoints,
+			CorrectAnswers: rw.CorrectAnswers,
+			Points:         rw.Points,
+			TimeSeconds:    rw.TimeSeconds,
 		}
-		if gender.Valid {
-			pr.Gender = gender.String
+		if rw.Gender.Valid {
+			participants[i].Gender = rw.Gender.String
 		}
-		participants = append(participants, pr)
-	}
-	if err := rows.Err(); err != nil {
-		return nil
 	}
 	return participants
 }
 
 // ===== Helpers =====
-
-func scanCompetitions(rows *sql.Rows) ([]Competition, error) {
-	var comps []Competition
-	for rows.Next() {
-		var c Competition
-		if err := rows.Scan(&c.ID, &c.Name, &c.Description, &c.Settings, &c.CreatedAt, &c.UpdatedAt); err != nil {
-			return nil, err
-		}
-		comps = append(comps, c)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return comps, nil
-}
-
-func scanParticipants(rows *sql.Rows) ([]Participant, error) {
-	var participants []Participant
-	for rows.Next() {
-		var p Participant
-		if err := rows.Scan(&p.ID, &p.TeamID, &p.FullName, &p.Gender, &p.BirthDate, &p.Age, &p.CreatedAt, &p.UpdatedAt); err != nil {
-			return nil, err
-		}
-		participants = append(participants, p)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return participants, nil
-}
 
 func calcAge(birthDate string) int {
 	t, err := time.Parse("2006-01-02", birthDate)

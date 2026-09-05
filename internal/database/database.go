@@ -3,46 +3,46 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"os"
-	"path/filepath"
+	"log/slog"
 
+	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
 )
 
 type DB struct {
-	*sql.DB
+	*sqlx.DB
 }
 
 func Open(dbPath string) (*DB, error) {
-	dir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, fmt.Errorf("create db directory: %w", err)
-	}
-
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := sqlx.Open("sqlite", dbPath)
 	if err != nil {
+		slog.Error("failed to open sqlite", "path", dbPath, "error", err)
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
 
 	if err := applyPragmas(db); err != nil {
+		slog.Error("failed to apply pragmas", "error", err)
 		db.Close()
 		return nil, err
 	}
 
 	if err := createTables(db); err != nil {
+		slog.Error("failed to create tables", "error", err)
 		db.Close()
 		return nil, err
 	}
 
 	if err := runMigrations(db); err != nil {
+		slog.Error("failed to run migrations", "error", err)
 		db.Close()
 		return nil, err
 	}
 
+	slog.Info("database ready", "path", dbPath)
 	return &DB{db}, nil
 }
 
-func applyPragmas(db *sql.DB) error {
+func applyPragmas(db *sqlx.DB) error {
 	pragmas := []string{
 		"PRAGMA journal_mode = WAL",
 		"PRAGMA synchronous = NORMAL",
@@ -60,7 +60,7 @@ func applyPragmas(db *sql.DB) error {
 	return nil
 }
 
-func createTables(db *sql.DB) error {
+func createTables(db *sqlx.DB) error {
 	ddl := []string{
 		`CREATE TABLE IF NOT EXISTS competitions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,7 +133,7 @@ func createTables(db *sql.DB) error {
 	return nil
 }
 
-func runMigrations(db *sql.DB) error {
+func runMigrations(db *sqlx.DB) error {
 	migrations := []struct {
 		sql string
 	}{
@@ -144,7 +144,9 @@ func runMigrations(db *sql.DB) error {
 	}
 
 	for _, m := range migrations {
-		_, _ = db.Exec(m.sql)
+		if _, err := db.Exec(m.sql); err != nil {
+			// already applied — skip silently
+		}
 	}
 
 	// Migrate stages: add order_index
@@ -176,6 +178,7 @@ func runMigrations(db *sql.DB) error {
 		if _, err := db.Exec("UPDATE stages SET order_index = id WHERE order_index = 0"); err != nil {
 			return fmt.Errorf("update order_index: %w", err)
 		}
+		slog.Info("migration applied", "column", "order_index")
 	}
 
 	if _, err := db.Exec("CREATE INDEX IF NOT EXISTS idx_stages_competition_order ON stages(competition_id, order_index)"); err != nil {

@@ -2,6 +2,8 @@ package main
 
 import (
 	"embed"
+	"log/slog"
+	"os"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -13,6 +15,10 @@ import (
 var assets embed.FS
 
 func main() {
+	slog.SetDefault(slog.New(newColorHandler(os.Stderr, slog.LevelDebug)))
+
+	slog.Info("starting SafeWheel")
+
 	// Create an instance of the app structure
 	app := NewApp()
 
@@ -37,6 +43,6 @@ func main() {
 	})
 
 	if err != nil {
-		println("Error:", err.Error())
+		slog.Error("wails run failed", "error", err)
 	}
 }

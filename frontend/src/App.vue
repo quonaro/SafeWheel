@@ -8,6 +8,7 @@ import {
   IconChartBar,
   IconPlus,
   IconPencil,
+  IconTrash,
 } from "@tabler/icons-vue";
 import { Button } from "@/components/ui/button";
 import {
@@ -188,11 +189,16 @@ async function handleEdit() {
           </div>
         </div>
         <div class="flex shrink-0 items-center gap-2">
-          <Button variant="outline" size="sm" @click="openEditDialog">
+          <Button size="sm" @click="openEditDialog">
             <IconPencil class="mr-2 h-4 w-4" />
             Изменить
           </Button>
-          <Button variant="outline" size="sm" @click="showDeleteDialog = true">
+          <Button
+            variant="destructive"
+            size="sm"
+            @click="showDeleteDialog = true"
+          >
+            <IconTrash class="mr-2 h-4 w-4" />
             Удалить
           </Button>
         </div>

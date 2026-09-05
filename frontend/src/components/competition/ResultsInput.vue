@@ -1,6 +1,12 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted, computed } from "vue";
-import { IconClipboardList, IconDeviceFloppy } from "@tabler/icons-vue";
+import {
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconClipboardList,
+  IconClock,
+  IconDeviceFloppy,
+} from "@tabler/icons-vue";
 import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,36 +154,61 @@ function parseTimeString(time: string): number {
           </CardHeader>
           <CardContent class="pt-0">
             <div class="space-y-2">
+              <!-- Column headers -->
+              <div
+                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem_2.25rem] items-center gap-2 px-2 text-xs text-muted-foreground"
+              >
+                <span>Участник</span>
+                <span class="flex items-center justify-center gap-1">
+                  <IconClock class="h-3.5 w-3.5 text-sky-500" />
+                  Время
+                </span>
+                <span class="flex items-center justify-center gap-1">
+                  <IconCircleCheck class="h-3.5 w-3.5 text-green-500" />
+                  Ответы
+                </span>
+                <span class="flex items-center justify-center gap-1">
+                  <IconAlertTriangle class="h-3.5 w-3.5 text-amber-500" />
+                  Штраф
+                </span>
+                <span></span>
+              </div>
               <div
                 v-for="p in teamParticipants"
                 :key="p.id"
-                class="flex items-center gap-3 rounded-md border p-2"
+                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem_2.25rem] items-center gap-2 rounded-md border p-2"
               >
-                <span class="flex-1 text-sm font-medium">{{
+                <span class="truncate text-sm font-medium">{{
                   p.full_name
                 }}</span>
-                <div class="flex items-center gap-2">
-                  <Input
-                    v-model="resultsMap[p.id].time"
-                    placeholder="MM:SS"
-                    class="w-24 text-center"
-                  />
-                  <Input
-                    v-model.number="resultsMap[p.id].correctAnswers"
-                    type="number"
-                    placeholder="0"
-                    class="w-16 text-center"
-                  />
-                  <Input
-                    v-model.number="resultsMap[p.id].penalties"
-                    type="number"
-                    placeholder="0"
-                    class="w-16 text-center"
-                  />
-                  <Button size="sm" variant="outline" @click="saveResult(p.id)">
-                    <IconDeviceFloppy class="h-3 w-3" />
-                  </Button>
-                </div>
+                <Input
+                  v-model="resultsMap[p.id].time"
+                  placeholder="MM:SS"
+                  class="text-center"
+                  title="Время прохождения (MM:SS)"
+                />
+                <Input
+                  v-model.number="resultsMap[p.id].correctAnswers"
+                  type="number"
+                  placeholder="0"
+                  class="text-center"
+                  title="Правильные ответы"
+                />
+                <Input
+                  v-model.number="resultsMap[p.id].penalties"
+                  type="number"
+                  placeholder="0"
+                  class="text-center"
+                  title="Штрафные баллы"
+                />
+                <Button
+                  size="sm"
+                  title="Сохранить результат"
+                  @click="saveResult(p.id)"
+                >
+                  <IconDeviceFloppy class="h-4 w-4" />
+                  Сохранить
+                </Button>
               </div>
             </div>
           </CardContent>

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -24,22 +25,28 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	slog.Info("app startup")
 
 	dbPath := a.resolveDBPath()
 
 	db, err := database.Open(dbPath)
 	if err != nil {
+		slog.Error("failed to open database", "path", dbPath, "error", err)
 		runtime.LogErrorf(ctx, "Failed to open database: %s", err)
 		return
 	}
 
 	a.repo = database.NewRepository(db)
 	a.export = services.NewExportService(a.repo)
+	slog.Info("app initialized")
 }
 
 func (a *App) shutdown(ctx context.Context) {
+	slog.Info("app shutdown")
 	if a.repo != nil {
-		a.repo.GetDB().Close()
+		if err := a.repo.GetDB().Close(); err != nil {
+			slog.Error("failed to close database", "error", err)
+		}
 	}
 }
 
@@ -61,6 +68,7 @@ func (a *App) resolveDBPath() string {
 
 func (a *App) ensureRepo() error {
 	if a.repo == nil {
+		slog.Warn("repo not initialized")
 		return fmt.Errorf("база данных не инициализирована")
 	}
 	return nil
@@ -86,7 +94,13 @@ func (a *App) CreateCompetition(data database.Competition) (*database.Competitio
 	if err := a.ensureRepo(); err != nil {
 		return nil, err
 	}
-	return a.repo.CreateCompetition(data)
+	res, err := a.repo.CreateCompetition(data)
+	if err != nil {
+		slog.Error("CreateCompetition", "name", data.Name, "error", err)
+		return nil, err
+	}
+	slog.Info("competition created", "id", res.ID, "name", res.Name)
+	return res, nil
 }
 
 func (a *App) UpdateCompetition(id int64, data database.Competition) (*database.Competition, error) {
@@ -100,7 +114,12 @@ func (a *App) DeleteCompetition(id int64) error {
 	if err := a.ensureRepo(); err != nil {
 		return err
 	}
-	return a.repo.DeleteCompetition(id)
+	if err := a.repo.DeleteCompetition(id); err != nil {
+		slog.Error("DeleteCompetition", "id", id, "error", err)
+		return err
+	}
+	slog.Info("competition deleted", "id", id)
+	return nil
 }
 
 // ===== Teams =====
@@ -123,7 +142,13 @@ func (a *App) CreateTeam(competitionID int64, name string) (*database.Team, erro
 	if err := a.ensureRepo(); err != nil {
 		return nil, err
 	}
-	return a.repo.CreateTeam(competitionID, name)
+	res, err := a.repo.CreateTeam(competitionID, name)
+	if err != nil {
+		slog.Error("CreateTeam", "name", name, "error", err)
+		return nil, err
+	}
+	slog.Info("team created", "id", res.ID, "name", name)
+	return res, nil
 }
 
 func (a *App) UpdateTeam(id int64, name string) (*database.Team, error) {
@@ -137,7 +162,12 @@ func (a *App) DeleteTeam(id int64) error {
 	if err := a.ensureRepo(); err != nil {
 		return err
 	}
-	return a.repo.DeleteTeam(id)
+	if err := a.repo.DeleteTeam(id); err != nil {
+		slog.Error("DeleteTeam", "id", id, "error", err)
+		return err
+	}
+	slog.Info("team deleted", "id", id)
+	return nil
 }
 
 // ===== Participants =====

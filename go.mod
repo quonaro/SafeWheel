@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/fumiama/go-docx v0.0.0-20250506085032-0c30fd09304b
+	github.com/jmoiron/sqlx v1.4.0
 	github.com/wailsapp/wails/v2 v2.15.0
 	modernc.org/sqlite v1.58.0
 )

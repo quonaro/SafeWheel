@@ -89,11 +89,13 @@ async function removeStage(stage: any) {
             <span class="font-medium">{{ stage.name }}</span>
           </div>
           <div class="flex gap-1">
-            <Button variant="ghost" size="icon" @click="openEdit(stage)">
-              <IconPencil class="h-4 w-4" />
+            <Button size="sm" @click="openEdit(stage)">
+              <IconPencil class="mr-1 h-4 w-4" />
+              Изменить
             </Button>
-            <Button variant="ghost" size="icon" @click="removeStage(stage)">
-              <IconTrash class="h-4 w-4" />
+            <Button variant="destructive" size="sm" @click="removeStage(stage)">
+              <IconTrash class="mr-1 h-4 w-4" />
+              Удалить
             </Button>
           </div>
         </CardContent>
