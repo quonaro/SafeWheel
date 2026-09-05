@@ -175,12 +175,7 @@ async function saveParticipant() {
       <p>Нет команд. Создайте первую команду.</p>
     </div>
 
-    <Card
-      v-for="team in teams"
-      :key="team.id"
-      class="overflow-hidden"
-      style="content-visibility: auto; contain-intrinsic-size: auto 56px"
-    >
+    <Card v-for="team in teams" :key="team.id" class="overflow-hidden">
       <CardHeader
         class="flex flex-row items-center justify-between cursor-pointer py-3"
         @click="toggleTeam(team.id)"

@@ -5,3 +5,5 @@ frontend/dist
 *.db
 *.db-wal
 *.db-shm
+*.md5
+frontend/package.json.md5
