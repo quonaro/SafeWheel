@@ -10,3 +10,4 @@ frontend/dist
 *.md5
 frontend/package.json.md5
 frontend/wailsjs/runtime/
+frontend/wailsjs/go/
