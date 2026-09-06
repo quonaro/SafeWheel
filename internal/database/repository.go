@@ -901,7 +901,7 @@ func (r *Repository) GetParticipantStatistics(competitionID int64, participantID
 	// Compute overall rank among same gender
 	overallRank := r.computeParticipantOverallRank(competitionID, participantID, gender)
 	// Compute rank within team
-	teamRank := r.computeParticipantTeamRank(competitionID, participantID, participant.TeamID)
+	teamRank := r.computeParticipantTeamRank(participantID, participant.TeamID)
 
 	birthDate := ""
 	if participant.BirthDate != nil {
@@ -988,7 +988,7 @@ func (r *Repository) computeParticipantOverallRank(competitionID, participantID 
 	return 0
 }
 
-func (r *Repository) computeParticipantTeamRank(competitionID, participantID, teamID int64) int {
+func (r *Repository) computeParticipantTeamRank(participantID, teamID int64) int {
 	query := `
 		SELECT p.id, COALESCE(SUM(sr.penalty_points), 0) AS total_penalties, COALESCE(SUM(sr.time_seconds), 0) AS total_time, p.age
 		FROM participants p

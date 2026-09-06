@@ -107,7 +107,7 @@ func attrValue(v slog.Value) []byte {
 	case slog.KindTime:
 		return []byte(v.Time().Format(time.RFC3339))
 	case slog.KindAny:
-		return []byte(fmt.Sprint(v.Any()))
+		return fmt.Append(nil, v.Any())
 	default:
 		return []byte(v.String())
 	}
