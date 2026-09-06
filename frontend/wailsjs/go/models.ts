@@ -29,9 +29,7 @@ export namespace database {
 	    gender: string;
 	    age: number;
 	    birth_date: string;
-	    correct_answers: number;
 	    penalty_points: number;
-	    points: number;
 	    time_seconds: number;
 	    rank: number;
 	
@@ -47,9 +45,7 @@ export namespace database {
 	        this.gender = source["gender"];
 	        this.age = source["age"];
 	        this.birth_date = source["birth_date"];
-	        this.correct_answers = source["correct_answers"];
 	        this.penalty_points = source["penalty_points"];
-	        this.points = source["points"];
 	        this.time_seconds = source["time_seconds"];
 	        this.rank = source["rank"];
 	    }
@@ -146,8 +142,6 @@ export namespace database {
 	    gender: string;
 	    age: number;
 	    penalty_points: number;
-	    correct_answers: number;
-	    points: number;
 	    time_seconds: number;
 	
 	    static createFrom(source: any = {}) {
@@ -161,8 +155,6 @@ export namespace database {
 	        this.gender = source["gender"];
 	        this.age = source["age"];
 	        this.penalty_points = source["penalty_points"];
-	        this.correct_answers = source["correct_answers"];
-	        this.points = source["points"];
 	        this.time_seconds = source["time_seconds"];
 	    }
 	}
@@ -176,8 +168,6 @@ export namespace database {
 	    age: number;
 	    team_name: string;
 	    penalty_points: number;
-	    correct_answers: number;
-	    points: number;
 	    time_seconds: number;
 	
 	    static createFrom(source: any = {}) {
@@ -195,8 +185,6 @@ export namespace database {
 	        this.age = source["age"];
 	        this.team_name = source["team_name"];
 	        this.penalty_points = source["penalty_points"];
-	        this.correct_answers = source["correct_answers"];
-	        this.points = source["points"];
 	        this.time_seconds = source["time_seconds"];
 	    }
 	}
@@ -210,7 +198,6 @@ export namespace database {
 	    team_name: string;
 	    time_seconds: number;
 	    penalty_points: number;
-	    correct_answers: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new ParticipantWithResults(source);
@@ -227,7 +214,6 @@ export namespace database {
 	        this.team_name = source["team_name"];
 	        this.time_seconds = source["time_seconds"];
 	        this.penalty_points = source["penalty_points"];
-	        this.correct_answers = source["correct_answers"];
 	    }
 	}
 	export class Stage {
@@ -258,7 +244,6 @@ export namespace database {
 	    participant_id: number;
 	    time_seconds: number;
 	    penalty_points: number;
-	    correct_answers: number;
 	    created_at: string;
 	    updated_at: string;
 	
@@ -273,7 +258,6 @@ export namespace database {
 	        this.participant_id = source["participant_id"];
 	        this.time_seconds = source["time_seconds"];
 	        this.penalty_points = source["penalty_points"];
-	        this.correct_answers = source["correct_answers"];
 	        this.created_at = source["created_at"];
 	        this.updated_at = source["updated_at"];
 	    }
@@ -285,7 +269,6 @@ export namespace database {
 	    order_index: number;
 	    team_id: number;
 	    team_name: string;
-	    total_points: number;
 	    total_penalties: number;
 	    total_time: number;
 	    avg_age: number;
@@ -302,7 +285,6 @@ export namespace database {
 	        this.order_index = source["order_index"];
 	        this.team_id = source["team_id"];
 	        this.team_name = source["team_name"];
-	        this.total_points = source["total_points"];
 	        this.total_penalties = source["total_penalties"];
 	        this.total_time = source["total_time"];
 	        this.avg_age = source["avg_age"];
@@ -347,7 +329,6 @@ export namespace database {
 	export class TeamResultWithParticipants {
 	    team_id: number;
 	    team_name: string;
-	    team_total_points: number;
 	    team_total_penalties: number;
 	    team_total_time: number;
 	    participant_count: number;
@@ -362,7 +343,6 @@ export namespace database {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.team_id = source["team_id"];
 	        this.team_name = source["team_name"];
-	        this.team_total_points = source["team_total_points"];
 	        this.team_total_penalties = source["team_total_penalties"];
 	        this.team_total_time = source["team_total_time"];
 	        this.participant_count = source["participant_count"];

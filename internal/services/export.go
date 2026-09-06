@@ -70,13 +70,13 @@ func (s *ExportService) ExportStageResults(competitionID int64) ([]byte, error) 
 
 	for _, stage := range stageStandings {
 		addSubtitle(d, fmt.Sprintf("Этап: %s", stage.StageName))
-		header := []string{"Место", "Команда", "Очки", "Время"}
+		header := []string{"Место", "Команда", "Штрафы", "Время"}
 		rows := make([][]string, 0, len(stage.Results))
 		for _, res := range stage.Results {
 			rows = append(rows, []string{
 				fmt.Sprintf("%d", res.Rank),
 				res.TeamName,
-				fmt.Sprintf("%d", res.TotalPoints),
+				fmt.Sprintf("%d", res.TotalPenalties),
 				database.FormatTime(res.TotalTime),
 			})
 		}

@@ -4,7 +4,6 @@ import { useDebounceFn } from "@vueuse/core";
 import {
   IconAlertTriangle,
   IconChevronDown,
-  IconCircleCheck,
   IconClipboardList,
   IconClock,
   IconUser,
@@ -26,9 +25,7 @@ const { state } = useAppState();
 
 const selectedStageId = ref<number | null>(null);
 const participants = ref<any[]>([]);
-const resultsMap = ref<
-  Record<number, { time: string; penalties: number; correctAnswers: number }>
->({});
+const resultsMap = ref<Record<number, { time: string; penalties: number }>>({});
 const expandedTeams = ref<Set<string>>(new Set());
 
 const dirtyIds = new Set<number>();
@@ -85,7 +82,6 @@ async function loadResults() {
       resultsMap.value[p.id] = {
         time: p.time_seconds > 0 ? formatTimeLocal(p.time_seconds) : "",
         penalties: p.penalty_points,
-        correctAnswers: p.correct_answers || 0,
       };
     }
     resetExpandedTeams();
@@ -137,7 +133,6 @@ async function saveResult(participantId: number) {
     participantId,
     timeSeconds,
     r.penalties || 0,
-    r.correctAnswers || 0,
   );
   if (result !== null) {
     const p = participants.value.find((x) => x.id === participantId);
@@ -228,7 +223,7 @@ function parseTimeString(time: string): number {
             <div class="space-y-2">
               <!-- Column headers -->
               <div
-                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem] items-center gap-2 px-2 text-xs text-muted-foreground"
+                class="grid grid-cols-[1fr_6rem_4.5rem] items-center gap-2 px-2 text-xs text-muted-foreground"
               >
                 <span class="flex items-center gap-1">
                   <IconUser class="h-3.5 w-3.5 text-muted-foreground" />
@@ -237,10 +232,6 @@ function parseTimeString(time: string): number {
                 <span class="flex items-center justify-center gap-1">
                   <IconClock class="h-3.5 w-3.5 text-muted-foreground" />
                   Время
-                </span>
-                <span class="flex items-center justify-center gap-1">
-                  <IconCircleCheck class="h-3.5 w-3.5 text-muted-foreground" />
-                  Ответы
                 </span>
                 <span class="flex items-center justify-center gap-1">
                   <IconAlertTriangle
@@ -252,7 +243,7 @@ function parseTimeString(time: string): number {
               <div
                 v-for="p in teamParticipants"
                 :key="p.id"
-                class="grid grid-cols-[1fr_6rem_4.5rem_4.5rem] items-center gap-2 rounded-md border bg-muted p-2"
+                class="grid grid-cols-[1fr_6rem_4.5rem] items-center gap-2 rounded-md border bg-muted p-2"
               >
                 <div class="flex min-w-0 items-center gap-2">
                   <IconUser class="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -268,14 +259,6 @@ function parseTimeString(time: string): number {
                   @update:model-value="queueSave(p.id)"
                   @blur="saveResult(p.id)"
                   @keydown.enter="saveResult(p.id)"
-                />
-                <Input
-                  v-model.number="resultsMap[p.id].correctAnswers"
-                  type="number"
-                  placeholder="0"
-                  class="text-center"
-                  title="Правильные ответы"
-                  @update:model-value="queueSave(p.id)"
                 />
                 <Input
                   v-model.number="resultsMap[p.id].penalties"

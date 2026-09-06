@@ -313,18 +313,18 @@ func (r *Repository) DeleteStage(id int64) error {
 
 // ===== Results =====
 
-func (r *Repository) UpsertStageResult(stageID, participantID int64, timeSeconds float64, penaltyPoints int, correctAnswers int) (*StageResult, error) {
+func (r *Repository) UpsertStageResult(stageID, participantID int64, timeSeconds float64, penaltyPoints int) (*StageResult, error) {
 	var existingID int64
 	err := r.db.Get(&existingID, "SELECT id FROM stage_results WHERE stage_id = ? AND participant_id = ?", stageID, participantID)
 	switch err {
 	case nil:
-		_, err = r.db.Exec("UPDATE stage_results SET time_seconds = ?, penalty_points = ?, correct_answers = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", timeSeconds, penaltyPoints, correctAnswers, existingID)
+		_, err = r.db.Exec("UPDATE stage_results SET time_seconds = ?, penalty_points = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", timeSeconds, penaltyPoints, existingID)
 		if err != nil {
 			slog.Error("UpsertStageResult update", "stageID", stageID, "participantID", participantID, "error", err)
 			return nil, err
 		}
 	case sql.ErrNoRows:
-		res, err := r.db.Exec("INSERT INTO stage_results (stage_id, participant_id, time_seconds, penalty_points, correct_answers, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", stageID, participantID, timeSeconds, penaltyPoints, correctAnswers)
+		res, err := r.db.Exec("INSERT INTO stage_results (stage_id, participant_id, time_seconds, penalty_points, created_at, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", stageID, participantID, timeSeconds, penaltyPoints)
 		if err != nil {
 			slog.Error("UpsertStageResult insert", "stageID", stageID, "participantID", participantID, "error", err)
 			return nil, err
@@ -336,7 +336,7 @@ func (r *Repository) UpsertStageResult(stageID, participantID int64, timeSeconds
 	}
 
 	var sr StageResult
-	if err := r.db.Get(&sr, "SELECT id, stage_id, participant_id, time_seconds, penalty_points, correct_answers, created_at, updated_at FROM stage_results WHERE id = ?", existingID); err != nil {
+	if err := r.db.Get(&sr, "SELECT id, stage_id, participant_id, time_seconds, penalty_points, created_at, updated_at FROM stage_results WHERE id = ?", existingID); err != nil {
 		slog.Error("UpsertStageResult refetch", "id", existingID, "error", err)
 		return nil, err
 	}
@@ -345,7 +345,7 @@ func (r *Repository) UpsertStageResult(stageID, participantID int64, timeSeconds
 
 func (r *Repository) GetStageResults(stageID int64) ([]StageResult, error) {
 	var results []StageResult
-	if err := r.db.Select(&results, "SELECT id, stage_id, participant_id, time_seconds, penalty_points, correct_answers, created_at, updated_at FROM stage_results WHERE stage_id = ?", stageID); err != nil {
+	if err := r.db.Select(&results, "SELECT id, stage_id, participant_id, time_seconds, penalty_points, created_at, updated_at FROM stage_results WHERE stage_id = ?", stageID); err != nil {
 		slog.Error("GetStageResults", "stageID", stageID, "error", err)
 		return nil, err
 	}
@@ -463,16 +463,16 @@ func (r *Repository) GetStageStandings(competitionID int64) ([]StageStanding, er
 					break
 				}
 			}
-			totalPoints, totalTime := r.getTeamStageTotals(stage.ID, teamID)
+			totalPenalties, totalTime := r.getTeamStageTotals(stage.ID, teamID)
 			results = append(results, StageTeamResult{
-				Rank:        rank + 1,
-				StageID:     stage.ID,
-				StageName:   stage.Name,
-				OrderIndex:  stage.OrderIndex,
-				TeamID:      teamID,
-				TeamName:    teamName,
-				TotalPoints: totalPoints,
-				TotalTime:   totalTime,
+				Rank:           rank + 1,
+				StageID:        stage.ID,
+				StageName:      stage.Name,
+				OrderIndex:     stage.OrderIndex,
+				TeamID:         teamID,
+				TeamName:       teamName,
+				TotalPenalties: totalPenalties,
+				TotalTime:      totalTime,
 			})
 		}
 		result = append(result, StageStanding{
@@ -508,16 +508,16 @@ func (r *Repository) GetStageStandingsWithParticipants(competitionID int64) ([]S
 					break
 				}
 			}
-			totalPoints, totalTime := r.getTeamStageTotals(stage.ID, teamID)
+			totalPenalties, totalTime := r.getTeamStageTotals(stage.ID, teamID)
 			participants := r.getStageParticipants(stage.ID, teamID)
 			teamResults = append(teamResults, TeamResultWithParticipants{
-				TeamID:           teamID,
-				TeamName:         teamName,
-				TeamTotalPoints:  totalPoints,
-				TeamTotalTime:    totalTime,
-				ParticipantCount: len(participants),
-				Rank:             rank + 1,
-				Participants:     participants,
+				TeamID:             teamID,
+				TeamName:           teamName,
+				TeamTotalPenalties: totalPenalties,
+				TeamTotalTime:      totalTime,
+				ParticipantCount:   len(participants),
+				Rank:               rank + 1,
+				Participants:       participants,
 			})
 		}
 		result = append(result, StageStandingWithParticipants{
@@ -536,8 +536,6 @@ func (r *Repository) GetParticipantResults(competitionID int64, participantID in
 			p.id AS participant_id, p.full_name, p.gender, p.age,
 			t.name AS team_name,
 			COALESCE(sr.penalty_points, 0) AS penalty_points,
-			COALESCE(sr.correct_answers, 0) AS correct_answers,
-			COALESCE(sr.correct_answers, 0) - COALESCE(sr.penalty_points, 0) AS points,
 			COALESCE(sr.time_seconds, 0) AS time_seconds
 		FROM stages s
 		CROSS JOIN participants p
@@ -567,8 +565,7 @@ func (r *Repository) GetParticipantsWithResults(competitionID int64, stageID int
 		SELECT p.id, p.team_id, p.full_name, p.gender, p.birth_date, p.age,
 			t.name AS team_name,
 			COALESCE(sr.time_seconds, 0) AS time_seconds,
-			COALESCE(sr.penalty_points, 0) AS penalty_points,
-			COALESCE(sr.correct_answers, 0) AS correct_answers
+			COALESCE(sr.penalty_points, 0) AS penalty_points
 		FROM participants p
 		JOIN teams t ON t.id = p.team_id
 		LEFT JOIN stage_results sr ON sr.participant_id = p.id AND sr.stage_id = ?
@@ -576,16 +573,15 @@ func (r *Repository) GetParticipantsWithResults(competitionID int64, stageID int
 		ORDER BY t.name, p.full_name
 	`
 	type row struct {
-		ID             int64          `db:"id"`
-		TeamID         int64          `db:"team_id"`
-		FullName       string         `db:"full_name"`
-		Gender         sql.NullString `db:"gender"`
-		BirthDate      sql.NullString `db:"birth_date"`
-		Age            int            `db:"age"`
-		TeamName       string         `db:"team_name"`
-		TimeSeconds    float64        `db:"time_seconds"`
-		PenaltyPoints  int            `db:"penalty_points"`
-		CorrectAnswers int            `db:"correct_answers"`
+		ID            int64          `db:"id"`
+		TeamID        int64          `db:"team_id"`
+		FullName      string         `db:"full_name"`
+		Gender        sql.NullString `db:"gender"`
+		BirthDate     sql.NullString `db:"birth_date"`
+		Age           int            `db:"age"`
+		TeamName      string         `db:"team_name"`
+		TimeSeconds   float64        `db:"time_seconds"`
+		PenaltyPoints int            `db:"penalty_points"`
 	}
 	var rows []row
 	if err := r.db.Select(&rows, query, stageID, competitionID); err != nil {
@@ -595,14 +591,13 @@ func (r *Repository) GetParticipantsWithResults(competitionID int64, stageID int
 	results := make([]ParticipantWithResults, len(rows))
 	for i, rw := range rows {
 		results[i] = ParticipantWithResults{
-			ID:             rw.ID,
-			TeamID:         rw.TeamID,
-			FullName:       rw.FullName,
-			Age:            rw.Age,
-			TeamName:       rw.TeamName,
-			TimeSeconds:    rw.TimeSeconds,
-			PenaltyPoints:  rw.PenaltyPoints,
-			CorrectAnswers: rw.CorrectAnswers,
+			ID:            rw.ID,
+			TeamID:        rw.TeamID,
+			FullName:      rw.FullName,
+			Age:           rw.Age,
+			TeamName:      rw.TeamName,
+			TimeSeconds:   rw.TimeSeconds,
+			PenaltyPoints: rw.PenaltyPoints,
 		}
 		if rw.Gender.Valid {
 			results[i].Gender = rw.Gender.String
@@ -662,30 +657,26 @@ func (r *Repository) GetIndividualStandings(competitionID int64) ([]IndividualSt
 	}
 
 	type individualRow struct {
-		ParticipantID  int64          `db:"participant_id"`
-		FullName       string         `db:"full_name"`
-		Gender         sql.NullString `db:"gender"`
-		BirthDate      sql.NullString `db:"birth_date"`
-		Age            int            `db:"age"`
-		TeamName       string         `db:"team_name"`
-		CorrectAnswers int            `db:"correct_answers"`
-		PenaltyPoints  int            `db:"penalty_points"`
-		Points         int            `db:"points"`
-		TimeSeconds    float64        `db:"time_seconds"`
+		ParticipantID int64          `db:"participant_id"`
+		FullName      string         `db:"full_name"`
+		Gender        sql.NullString `db:"gender"`
+		BirthDate     sql.NullString `db:"birth_date"`
+		Age           int            `db:"age"`
+		TeamName      string         `db:"team_name"`
+		PenaltyPoints int            `db:"penalty_points"`
+		TimeSeconds   float64        `db:"time_seconds"`
 	}
 
 	query := `
 		SELECT p.id AS participant_id, p.full_name, p.gender, p.birth_date, p.age,
 			t.name AS team_name,
-			COALESCE(sr.correct_answers, 0) AS correct_answers,
 			COALESCE(sr.penalty_points, 0) AS penalty_points,
-			COALESCE(sr.correct_answers, 0) - COALESCE(sr.penalty_points, 0) AS points,
 			COALESCE(sr.time_seconds, 0) AS time_seconds
 		FROM participants p
 		JOIN teams t ON t.id = p.team_id
 		LEFT JOIN stage_results sr ON sr.participant_id = p.id AND sr.stage_id = ?
 		WHERE t.competition_id = ? AND sr.id IS NOT NULL
-		ORDER BY points DESC, time_seconds ASC, p.age ASC
+		ORDER BY penalty_points ASC, time_seconds ASC, p.age ASC
 	`
 
 	var result []IndividualStanding
@@ -706,14 +697,12 @@ func (r *Repository) GetIndividualStandings(competitionID int64) ([]IndividualSt
 		boyRank, girlRank := 1, 1
 		for _, rw := range rows {
 			ir := IndividualResult{
-				ParticipantID:  rw.ParticipantID,
-				FullName:       rw.FullName,
-				Age:            rw.Age,
-				TeamName:       rw.TeamName,
-				CorrectAnswers: rw.CorrectAnswers,
-				PenaltyPoints:  rw.PenaltyPoints,
-				Points:         rw.Points,
-				TimeSeconds:    rw.TimeSeconds,
+				ParticipantID: rw.ParticipantID,
+				FullName:      rw.FullName,
+				Age:           rw.Age,
+				TeamName:      rw.TeamName,
+				PenaltyPoints: rw.PenaltyPoints,
+				TimeSeconds:   rw.TimeSeconds,
 			}
 			if rw.Gender.Valid {
 				ir.Gender = rw.Gender.String
@@ -743,19 +732,19 @@ func (r *Repository) GetIndividualStandings(competitionID int64) ([]IndividualSt
 func (r *Repository) computeStageTeamRanking(competitionID int64, stageID int64) []int64 {
 	query := `
 		SELECT t.id AS team_id,
-			COALESCE(SUM(sr.correct_answers - sr.penalty_points), 0) AS total_points,
+			COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
 			COALESCE(SUM(sr.time_seconds), 0) AS total_time
 		FROM teams t
 		LEFT JOIN participants p ON p.team_id = t.id
 		LEFT JOIN stage_results sr ON sr.participant_id = p.id AND sr.stage_id = ?
 		WHERE t.competition_id = ?
 		GROUP BY t.id
-		ORDER BY total_points DESC, total_time ASC
+		ORDER BY total_penalties ASC, total_time ASC
 	`
 	type row struct {
-		TeamID      int64   `db:"team_id"`
-		TotalPoints int     `db:"total_points"`
-		TotalTime   float64 `db:"total_time"`
+		TeamID         int64   `db:"team_id"`
+		TotalPenalties int     `db:"total_penalties"`
+		TotalTime      float64 `db:"total_time"`
 	}
 	var rows []row
 	if err := r.db.Select(&rows, query, stageID, competitionID); err != nil {
@@ -771,30 +760,28 @@ func (r *Repository) computeStageTeamRanking(competitionID int64, stageID int64)
 
 func (r *Repository) getTeamStageTotals(stageID int64, teamID int64) (int, float64) {
 	query := `
-		SELECT COALESCE(SUM(sr.correct_answers - sr.penalty_points), 0) AS total_points,
+		SELECT COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
 			COALESCE(SUM(sr.time_seconds), 0) AS total_time
 		FROM participants p
 		LEFT JOIN stage_results sr ON sr.participant_id = p.id AND sr.stage_id = ?
 		WHERE p.team_id = ?
 	`
 	type row struct {
-		TotalPoints int     `db:"total_points"`
-		TotalTime   float64 `db:"total_time"`
+		TotalPenalties int     `db:"total_penalties"`
+		TotalTime      float64 `db:"total_time"`
 	}
 	var rw row
 	if err := r.db.Get(&rw, query, stageID, teamID); err != nil {
 		slog.Error("getTeamStageTotals", "stageID", stageID, "teamID", teamID, "error", err)
 		return 0, 0
 	}
-	return rw.TotalPoints, rw.TotalTime
+	return rw.TotalPenalties, rw.TotalTime
 }
 
 func (r *Repository) getStageParticipants(stageID int64, teamID int64) []ParticipantResult {
 	query := `
 		SELECT p.id AS participant_id, p.full_name, p.gender, p.age,
 			COALESCE(sr.penalty_points, 0) AS penalty_points,
-			COALESCE(sr.correct_answers, 0) AS correct_answers,
-			COALESCE(sr.correct_answers, 0) - COALESCE(sr.penalty_points, 0) AS points,
 			COALESCE(sr.time_seconds, 0) AS time_seconds
 		FROM participants p
 		LEFT JOIN stage_results sr ON sr.participant_id = p.id AND sr.stage_id = ?
@@ -802,14 +789,12 @@ func (r *Repository) getStageParticipants(stageID int64, teamID int64) []Partici
 		ORDER BY p.full_name
 	`
 	type row struct {
-		ParticipantID  int64          `db:"participant_id"`
-		FullName       string         `db:"full_name"`
-		Gender         sql.NullString `db:"gender"`
-		Age            int            `db:"age"`
-		PenaltyPoints  int            `db:"penalty_points"`
-		CorrectAnswers int            `db:"correct_answers"`
-		Points         int            `db:"points"`
-		TimeSeconds    float64        `db:"time_seconds"`
+		ParticipantID int64          `db:"participant_id"`
+		FullName      string         `db:"full_name"`
+		Gender        sql.NullString `db:"gender"`
+		Age           int            `db:"age"`
+		PenaltyPoints int            `db:"penalty_points"`
+		TimeSeconds   float64        `db:"time_seconds"`
 	}
 	var rows []row
 	if err := r.db.Select(&rows, query, stageID, teamID); err != nil {
@@ -819,13 +804,11 @@ func (r *Repository) getStageParticipants(stageID int64, teamID int64) []Partici
 	participants := make([]ParticipantResult, len(rows))
 	for i, rw := range rows {
 		participants[i] = ParticipantResult{
-			ParticipantID:  rw.ParticipantID,
-			FullName:       rw.FullName,
-			Age:            rw.Age,
-			PenaltyPoints:  rw.PenaltyPoints,
-			CorrectAnswers: rw.CorrectAnswers,
-			Points:         rw.Points,
-			TimeSeconds:    rw.TimeSeconds,
+			ParticipantID: rw.ParticipantID,
+			FullName:      rw.FullName,
+			Age:           rw.Age,
+			PenaltyPoints: rw.PenaltyPoints,
+			TimeSeconds:   rw.TimeSeconds,
 		}
 		if rw.Gender.Valid {
 			participants[i].Gender = rw.Gender.String

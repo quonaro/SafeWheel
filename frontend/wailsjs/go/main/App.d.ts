@@ -66,4 +66,4 @@ export function UpdateStage(arg1:number,arg2:string):Promise<database.Stage>;
 
 export function UpdateTeam(arg1:number,arg2:string):Promise<database.Team>;
 
-export function UpsertStageResult(arg1:number,arg2:number,arg3:number,arg4:number,arg5:number):Promise<database.StageResult>;
+export function UpsertStageResult(arg1:number,arg2:number,arg3:number,arg4:number):Promise<database.StageResult>;

@@ -43,14 +43,13 @@ type Stage struct {
 }
 
 type StageResult struct {
-	ID             int64     `json:"id" db:"id"`
-	StageID        int64     `json:"stage_id" db:"stage_id"`
-	ParticipantID  int64     `json:"participant_id" db:"participant_id"`
-	TimeSeconds    float64   `json:"time_seconds" db:"time_seconds"`
-	PenaltyPoints  int       `json:"penalty_points" db:"penalty_points"`
-	CorrectAnswers int       `json:"correct_answers" db:"correct_answers"`
-	CreatedAt      time.Time `json:"created_at" ts_type:"string" db:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at" ts_type:"string" db:"updated_at"`
+	ID            int64     `json:"id" db:"id"`
+	StageID       int64     `json:"stage_id" db:"stage_id"`
+	ParticipantID int64     `json:"participant_id" db:"participant_id"`
+	TimeSeconds   float64   `json:"time_seconds" db:"time_seconds"`
+	PenaltyPoints int       `json:"penalty_points" db:"penalty_points"`
+	CreatedAt     time.Time `json:"created_at" ts_type:"string" db:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" ts_type:"string" db:"updated_at"`
 }
 
 type Standing struct {
@@ -78,7 +77,6 @@ type StageTeamResult struct {
 	OrderIndex     int     `json:"order_index" db:"order_index"`
 	TeamID         int64   `json:"team_id" db:"team_id"`
 	TeamName       string  `json:"team_name" db:"team_name"`
-	TotalPoints    int     `json:"total_points" db:"total_points"`
 	TotalPenalties int     `json:"total_penalties" db:"total_penalties"`
 	TotalTime      float64 `json:"total_time" db:"total_time"`
 	AvgAge         float64 `json:"avg_age" db:"avg_age"`
@@ -94,7 +92,6 @@ type StageStandingWithParticipants struct {
 type TeamResultWithParticipants struct {
 	TeamID             int64               `json:"team_id" db:"team_id"`
 	TeamName           string              `json:"team_name" db:"team_name"`
-	TeamTotalPoints    int                 `json:"team_total_points" db:"team_total_points"`
 	TeamTotalPenalties int                 `json:"team_total_penalties" db:"team_total_penalties"`
 	TeamTotalTime      float64             `json:"team_total_time" db:"team_total_time"`
 	ParticipantCount   int                 `json:"participant_count" db:"participant_count"`
@@ -103,29 +100,25 @@ type TeamResultWithParticipants struct {
 }
 
 type ParticipantResult struct {
-	ParticipantID  int64   `json:"participant_id" db:"participant_id"`
-	FullName       string  `json:"full_name" db:"full_name"`
-	Gender         string  `json:"gender" db:"gender"`
-	Age            int     `json:"age" db:"age"`
-	PenaltyPoints  int     `json:"penalty_points" db:"penalty_points"`
-	CorrectAnswers int     `json:"correct_answers" db:"correct_answers"`
-	Points         int     `json:"points" db:"points"`
-	TimeSeconds    float64 `json:"time_seconds" db:"time_seconds"`
+	ParticipantID int64   `json:"participant_id" db:"participant_id"`
+	FullName      string  `json:"full_name" db:"full_name"`
+	Gender        string  `json:"gender" db:"gender"`
+	Age           int     `json:"age" db:"age"`
+	PenaltyPoints int     `json:"penalty_points" db:"penalty_points"`
+	TimeSeconds   float64 `json:"time_seconds" db:"time_seconds"`
 }
 
 type ParticipantStageDetail struct {
-	StageID        int64   `json:"stage_id" db:"stage_id"`
-	StageName      string  `json:"stage_name" db:"stage_name"`
-	OrderIndex     int     `json:"order_index" db:"order_index"`
-	ParticipantID  int64   `json:"participant_id" db:"participant_id"`
-	FullName       string  `json:"full_name" db:"full_name"`
-	Gender         string  `json:"gender" db:"gender"`
-	Age            int     `json:"age" db:"age"`
-	TeamName       string  `json:"team_name" db:"team_name"`
-	PenaltyPoints  int     `json:"penalty_points" db:"penalty_points"`
-	CorrectAnswers int     `json:"correct_answers" db:"correct_answers"`
-	Points         int     `json:"points" db:"points"`
-	TimeSeconds    float64 `json:"time_seconds" db:"time_seconds"`
+	StageID       int64   `json:"stage_id" db:"stage_id"`
+	StageName     string  `json:"stage_name" db:"stage_name"`
+	OrderIndex    int     `json:"order_index" db:"order_index"`
+	ParticipantID int64   `json:"participant_id" db:"participant_id"`
+	FullName      string  `json:"full_name" db:"full_name"`
+	Gender        string  `json:"gender" db:"gender"`
+	Age           int     `json:"age" db:"age"`
+	TeamName      string  `json:"team_name" db:"team_name"`
+	PenaltyPoints int     `json:"penalty_points" db:"penalty_points"`
+	TimeSeconds   float64 `json:"time_seconds" db:"time_seconds"`
 }
 
 type CompetitionSettings struct {
@@ -133,16 +126,15 @@ type CompetitionSettings struct {
 }
 
 type ParticipantWithResults struct {
-	ID             int64   `json:"id" db:"id"`
-	TeamID         int64   `json:"team_id" db:"team_id"`
-	FullName       string  `json:"full_name" db:"full_name"`
-	Gender         string  `json:"gender" db:"gender"`
-	BirthDate      string  `json:"birth_date" db:"birth_date"`
-	Age            int     `json:"age" db:"age"`
-	TeamName       string  `json:"team_name" db:"team_name"`
-	TimeSeconds    float64 `json:"time_seconds" db:"time_seconds"`
-	PenaltyPoints  int     `json:"penalty_points" db:"penalty_points"`
-	CorrectAnswers int     `json:"correct_answers" db:"correct_answers"`
+	ID            int64   `json:"id" db:"id"`
+	TeamID        int64   `json:"team_id" db:"team_id"`
+	FullName      string  `json:"full_name" db:"full_name"`
+	Gender        string  `json:"gender" db:"gender"`
+	BirthDate     string  `json:"birth_date" db:"birth_date"`
+	Age           int     `json:"age" db:"age"`
+	TeamName      string  `json:"team_name" db:"team_name"`
+	TimeSeconds   float64 `json:"time_seconds" db:"time_seconds"`
+	PenaltyPoints int     `json:"penalty_points" db:"penalty_points"`
 }
 
 type AllCompetitionStanding struct {
@@ -162,17 +154,15 @@ type IndividualStanding struct {
 }
 
 type IndividualResult struct {
-	ParticipantID  int64   `json:"participant_id" db:"participant_id"`
-	FullName       string  `json:"full_name" db:"full_name"`
-	TeamName       string  `json:"team_name" db:"team_name"`
-	Gender         string  `json:"gender" db:"gender"`
-	Age            int     `json:"age" db:"age"`
-	BirthDate      string  `json:"birth_date" db:"birth_date"`
-	CorrectAnswers int     `json:"correct_answers" db:"correct_answers"`
-	PenaltyPoints  int     `json:"penalty_points" db:"penalty_points"`
-	Points         int     `json:"points" db:"points"`
-	TimeSeconds    float64 `json:"time_seconds" db:"time_seconds"`
-	Rank           int     `json:"rank" db:"rank"`
+	ParticipantID int64   `json:"participant_id" db:"participant_id"`
+	FullName      string  `json:"full_name" db:"full_name"`
+	TeamName      string  `json:"team_name" db:"team_name"`
+	Gender        string  `json:"gender" db:"gender"`
+	Age           int     `json:"age" db:"age"`
+	BirthDate     string  `json:"birth_date" db:"birth_date"`
+	PenaltyPoints int     `json:"penalty_points" db:"penalty_points"`
+	TimeSeconds   float64 `json:"time_seconds" db:"time_seconds"`
+	Rank          int     `json:"rank" db:"rank"`
 }
 
 type OverallStanding struct {

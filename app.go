@@ -246,11 +246,11 @@ func (a *App) DeleteStage(id int64) error {
 
 // ===== Results =====
 
-func (a *App) UpsertStageResult(stageID, participantID int64, timeSeconds float64, penaltyPoints int, correctAnswers int) (*database.StageResult, error) {
+func (a *App) UpsertStageResult(stageID, participantID int64, timeSeconds float64, penaltyPoints int) (*database.StageResult, error) {
 	if err := a.ensureRepo(); err != nil {
 		return nil, err
 	}
-	return a.repo.UpsertStageResult(stageID, participantID, timeSeconds, penaltyPoints, correctAnswers)
+	return a.repo.UpsertStageResult(stageID, participantID, timeSeconds, penaltyPoints)
 }
 
 func (a *App) GetStageResults(stageID int64) ([]database.StageResult, error) {

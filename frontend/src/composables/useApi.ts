@@ -153,7 +153,6 @@ export function useResults() {
     participantId: number,
     timeSeconds: number,
     penaltyPoints: number,
-    correctAnswers: number,
   ) {
     return call(() =>
       wails.UpsertStageResult(
@@ -161,7 +160,6 @@ export function useResults() {
         participantId,
         timeSeconds,
         penaltyPoints,
-        correctAnswers,
       ),
     );
   }

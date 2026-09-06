@@ -188,7 +188,7 @@ async function handleExportStages() {
               <TableRow>
                 <TableHead class="w-12 text-center">Место</TableHead>
                 <TableHead>Команда</TableHead>
-                <TableHead class="text-center">Очки</TableHead>
+                <TableHead class="text-center">Штрафы</TableHead>
                 <TableHead class="text-center">Время</TableHead>
               </TableRow>
             </TableHeader>
@@ -207,7 +207,7 @@ async function handleExportStages() {
                 </TableCell>
                 <TableCell class="font-medium">{{ r.team_name }}</TableCell>
                 <TableCell class="text-center font-bold">{{
-                  r.total_points
+                  r.total_penalties
                 }}</TableCell>
                 <TableCell class="text-center font-mono">{{
                   formatTimeLocal(r.total_time)
@@ -248,7 +248,7 @@ async function handleExportStages() {
                     <TableHead class="w-12 text-center">Место</TableHead>
                     <TableHead>ФИО</TableHead>
                     <TableHead>Команда</TableHead>
-                    <TableHead class="text-center">Очки</TableHead>
+                    <TableHead class="text-center">Штрафы</TableHead>
                     <TableHead class="text-center">Время</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -268,7 +268,7 @@ async function handleExportStages() {
                     <TableCell class="font-medium">{{ b.full_name }}</TableCell>
                     <TableCell class="text-sm">{{ b.team_name }}</TableCell>
                     <TableCell class="text-center font-bold">{{
-                      b.points
+                      b.penalty_points
                     }}</TableCell>
                     <TableCell class="text-center font-mono">{{
                       formatTimeLocal(b.time_seconds)
@@ -290,7 +290,7 @@ async function handleExportStages() {
                     <TableHead class="w-12 text-center">Место</TableHead>
                     <TableHead>ФИО</TableHead>
                     <TableHead>Команда</TableHead>
-                    <TableHead class="text-center">Очки</TableHead>
+                    <TableHead class="text-center">Штрафы</TableHead>
                     <TableHead class="text-center">Время</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -310,7 +310,7 @@ async function handleExportStages() {
                     <TableCell class="font-medium">{{ g.full_name }}</TableCell>
                     <TableCell class="text-sm">{{ g.team_name }}</TableCell>
                     <TableCell class="text-center font-bold">{{
-                      g.points
+                      g.penalty_points
                     }}</TableCell>
                     <TableCell class="text-center font-mono">{{
                       formatTimeLocal(g.time_seconds)

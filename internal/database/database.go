@@ -104,7 +104,6 @@ func createTables(db *sqlx.DB) error {
 			participant_id INTEGER NOT NULL,
 			time_seconds REAL NOT NULL DEFAULT 0,
 			penalty_points INTEGER NOT NULL DEFAULT 0,
-			correct_answers INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			UNIQUE(stage_id, participant_id),
@@ -140,7 +139,6 @@ func runMigrations(db *sqlx.DB) error {
 		{"ALTER TABLE competitions ADD COLUMN description TEXT DEFAULT ''"},
 		{"ALTER TABLE competitions ADD COLUMN settings TEXT DEFAULT '{}'"},
 		{"ALTER TABLE participants ADD COLUMN birth_date DATE"},
-		{"ALTER TABLE stage_results ADD COLUMN correct_answers INTEGER NOT NULL DEFAULT 0"},
 	}
 
 	for _, m := range migrations {
