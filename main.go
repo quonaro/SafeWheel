@@ -24,7 +24,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:         "SafeWheel",
+		Title:         "Безопасное колесо",
 		Width:         1280,
 		Height:        720,
 		DisableResize: true,

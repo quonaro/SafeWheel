@@ -9,8 +9,9 @@ build:
 
   nsis:
     desc: "Build for Windows (amd64)"
-    script: $HOME/.go/bin/wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform windows/amd64 -nsis -o safe-wheel-windows-amd64.exe
-
+    script: |
+      $HOME/.go/bin/wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform windows/amd64 -nsis -installscope user -o safe-wheel-windows-amd64.exe
+      rm -rfv ./build/bin/safe-wheel-windows-amd64.exe
   windows:
     desc: "Build for Windows (amd64)"
     script: $HOME/.go/bin/wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform windows/amd64 -o safe-wheel-windows-amd64.exe
@@ -34,13 +35,13 @@ push:
   - "tag:str?"
   script: |
     if [ -n $tag ]; then
+      version=$(echo $tag | sed 's/^v//')
+      sed -i "s/\"productVersion\": \"[^\"]*\"/\"productVersion\": \"$version\"/" wails.json
+      git add wails.json
+      git commit -m "chore: bump version to $version"
       git tag -f $tag
       git push origin $tag --force
       git push
     else
       git push origin main
     fi
-
-start:
-  windows:
-    script: wine ./build/bin/safe-wheel-windows-amd64.exe

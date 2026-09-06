@@ -103,4 +103,4 @@ lota build.all
 APP_DIR=/path/to/dir ./safe-wheel
 ```
 
-На Windows установщик автоматически создаёт папку `%USERPROFILE%\SafeWheel` и прописывает `APP_DIR` в переменные окружения пользователя.
+На Windows установщик так же создаёт `safewheel.db` рядом с исполняемым файлом в `%LOCALAPPDATA%\Programs\SafeWheel`.

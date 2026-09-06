@@ -1,7 +1,8 @@
 node_modules
 frontend/dist
-/build/
+/build/*
 !/build/windows/
+/build/windows/installer/tmp/
 /private/
 *.db
 *.db-wal

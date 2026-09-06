@@ -42,6 +42,8 @@ const { load, create, update, remove, competitions } = useCompetitions();
 const { theme, toggleTheme } = useTheme();
 const { state } = useAppState();
 
+const appVersion = __APP_VERSION__;
+
 const selectedCompetition = ref<any>(null);
 const activeTab = ref<
   "teams" | "stages" | "results" | "standings" | "statistics"
@@ -220,6 +222,10 @@ async function handleEdit() {
           />
           {{ theme === "dark" ? "Светлая тема" : "Тёмная тема" }}
         </button>
+        <hr class="mt-2 border-t -mx-2" />
+        <p class="mt-2 text-center text-xs text-muted-foreground">
+          v{{ appVersion }}
+        </p>
       </div>
     </aside>
 
