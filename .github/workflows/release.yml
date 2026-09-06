@@ -43,12 +43,6 @@ jobs:
     - name: Build
       run: wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform linux/amd64 -o safe-wheel-linux-amd64
 
-    - name: Debug git status
-      run: |
-        git describe --tags --dirty
-        git status --porcelain
-        git diff --stat
-
     - uses: actions/upload-artifact@v4
       with:
         name: safe-wheel-linux-amd64
@@ -83,12 +77,6 @@ jobs:
 
     - name: Build
       run: wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform windows/amd64 -nsis -o safe-wheel-windows-amd64.exe
-
-    - name: Debug git status
-      run: |
-        git describe --tags --dirty
-        git status --porcelain
-        git diff --stat
 
     - uses: actions/upload-artifact@v4
       with:
