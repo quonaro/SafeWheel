@@ -51,7 +51,8 @@ func (a *App) shutdown(ctx context.Context) {
 }
 
 func (a *App) resolveDBPath() string {
-	if envDir := os.Getenv("SAFEWHEEL_DB_DIR"); envDir != "" {
+	if envDir := os.Getenv("APP_DIR"); envDir != "" {
+		_ = os.MkdirAll(envDir, 0755)
 		return filepath.Join(envDir, "safewheel.db")
 	}
 
@@ -63,7 +64,9 @@ func (a *App) resolveDBPath() string {
 	if err != nil {
 		return "safewheel.db"
 	}
-	return filepath.Join(home, ".safewheel", "safewheel.db")
+	dir := filepath.Join(home, ".safewheel")
+	_ = os.MkdirAll(dir, 0755)
+	return filepath.Join(dir, "safewheel.db")
 }
 
 func (a *App) ensureRepo() error {

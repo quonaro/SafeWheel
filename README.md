@@ -18,13 +18,13 @@
 
 ## Технологии
 
-| Слой | Технология |
-|------|-----------|
-| Backend | Go 1.25, Wails v2.15 |
-| Frontend | Vue 3, TypeScript, Vite 7 |
-| UI | Tailwind CSS v4, shadcn-vue (reka-ui), Tabler Icons |
-| База данных | SQLite (modernc.org/sqlite — чистый Go, без CGO) |
-| Экспорт | go-docx (генерация .docx) |
+| Слой        | Технология                                          |
+| ----------- | --------------------------------------------------- |
+| Backend     | Go 1.25, Wails v2.15                                |
+| Frontend    | Vue 3, TypeScript, Vite 7                           |
+| UI          | Tailwind CSS v4, shadcn-vue (reka-ui), Tabler Icons |
+| База данных | SQLite (modernc.org/sqlite — чистый Go, без CGO)    |
+| Экспорт     | go-docx (генерация .docx)                           |
 
 ## Структура проекта
 
@@ -75,13 +75,13 @@ wails dev -tags webkit2_41
 lota dev
 ```
 
-База данных создаётся рядом с исполняемым файлом. Для dev-режима используется `SAFEWHEEL_DB_DIR=./` (настраивается в `lota.yml`).
+База данных создаётся рядом с исполняемым файлом. Для dev-режима используется `APP_DIR=./` (настраивается в `lota.yml`).
 
 ### Сборка
 
 ```bash
-# Windows (amd64)
-wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform windows/amd64
+# Windows (amd64) + NSIS установщик
+wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform windows/amd64 -nsis
 
 # Linux (amd64)
 wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform linux/amd64
@@ -97,9 +97,10 @@ lota build.all
 
 ## Расположение базы данных
 
-По умолчанию `safewheel.db` создаётся в директории рядом с исполняемым файлом. Переопределить можно переменной окружения:
+По умолчанию `safewheel.db` создаётся в директории рядом с исполняемым файлом. Переопределить можно переменной окружения `APP_DIR`:
 
 ```bash
-SAFEWHEEL_DB_DIR=/path/to/dir ./safe-wheel
+APP_DIR=/path/to/dir ./safe-wheel
 ```
 
+На Windows установщик автоматически создаёт папку `%USERPROFILE%\SafeWheel` и прописывает `APP_DIR` в переменные окружения пользователя.

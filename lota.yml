@@ -1,11 +1,15 @@
 dev:
   desc: "Run in development mode"
   vars:
-  - "SAFEWHEEL_DB_DIR=./"
+  - "APP_DIR=./"
   script: $HOME/.go/bin/wails dev -tags webkit2_41
 
 build:
   desc: "Build the application"
+
+  nsis:
+    desc: "Build for Windows (amd64)"
+    script: $HOME/.go/bin/wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform windows/amd64 -nsis -o safe-wheel-windows-amd64.exe
 
   windows:
     desc: "Build for Windows (amd64)"
