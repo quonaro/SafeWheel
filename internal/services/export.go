@@ -123,6 +123,177 @@ func (s *ExportService) ExportAllCompetitionsResults() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func (s *ExportService) ExportParticipantStatistics(competitionID int64, participantID int64) ([]byte, error) {
+	comp, err := s.repo.GetCompetitionByID(competitionID)
+	if err != nil || comp == nil {
+		return nil, fmt.Errorf("соревнование не найдено")
+	}
+
+	stats, err := s.repo.GetParticipantStatistics(competitionID, participantID)
+	if err != nil || stats == nil {
+		return nil, fmt.Errorf("статистика не найдена")
+	}
+
+	d := docx.New().WithDefaultTheme()
+	addTitle(d, fmt.Sprintf("%s — Статистика участника", comp.Name))
+	addSubtitle(d, stats.FullName)
+
+	addParagraph(d, fmt.Sprintf("Команда: %s", stats.TeamName), false)
+	addParagraph(d, fmt.Sprintf("Возраст: %d", stats.Age), false)
+	genderLabel := "—"
+	switch stats.Gender {
+	case "М":
+		genderLabel = "Юноша"
+	case "Ж":
+		genderLabel = "Девушка"
+	}
+	addParagraph(d, fmt.Sprintf("Пол: %s", genderLabel), false)
+	addParagraph(d, "", false)
+
+	addSubtitle(d, "Результаты по этапам")
+	header := []string{"Этап", "Штрафы", "Время", "Место"}
+	rows := make([][]string, 0, len(stats.StageResults))
+	for _, sr := range stats.StageResults {
+		rankStr := "—"
+		if sr.StageRank > 0 {
+			rankStr = fmt.Sprintf("%d", sr.StageRank)
+		}
+		rows = append(rows, []string{
+			sr.StageName,
+			fmt.Sprintf("%d", sr.PenaltyPoints),
+			database.FormatTime(sr.TimeSeconds),
+			rankStr,
+		})
+	}
+	addTable(d, header, rows)
+	addParagraph(d, "", false)
+
+	addSubtitle(d, "Итоги")
+	addParagraph(d, fmt.Sprintf("Сумма штрафных: %d", stats.TotalPenalties), false)
+	addParagraph(d, fmt.Sprintf("Общее время: %s", database.FormatTime(stats.TotalTime)), false)
+	addParagraph(d, fmt.Sprintf("Среднее время: %s", database.FormatTime(stats.AvgTime)), false)
+	if stats.BestStage != "" {
+		addParagraph(d, fmt.Sprintf("Лучший этап: %s", stats.BestStage), false)
+	}
+	if stats.WorstStage != "" {
+		addParagraph(d, fmt.Sprintf("Худший этап: %s", stats.WorstStage), false)
+	}
+	if stats.OverallRank > 0 {
+		addParagraph(d, fmt.Sprintf("Место среди %s: %d", genderLabel, stats.OverallRank), false)
+	}
+	if stats.TeamRank > 0 {
+		addParagraph(d, fmt.Sprintf("Место в команде: %d", stats.TeamRank), false)
+	}
+
+	var buf bytes.Buffer
+	_, err = d.WriteTo(&buf)
+	if err != nil {
+		return nil, fmt.Errorf("save docx: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+func (s *ExportService) ExportTeamStatistics(competitionID int64, teamID int64) ([]byte, error) {
+	comp, err := s.repo.GetCompetitionByID(competitionID)
+	if err != nil || comp == nil {
+		return nil, fmt.Errorf("соревнование не найдено")
+	}
+
+	stats, err := s.repo.GetTeamStatistics(competitionID, teamID)
+	if err != nil || stats == nil {
+		return nil, fmt.Errorf("статистика не найдена")
+	}
+
+	d := docx.New().WithDefaultTheme()
+	addTitle(d, fmt.Sprintf("%s — Статистика команды", comp.Name))
+	addSubtitle(d, stats.TeamName)
+
+	addParagraph(d, fmt.Sprintf("Участников: %d", stats.ParticipantCount), false)
+	addParagraph(d, fmt.Sprintf("Средний возраст: %.1f", stats.AvgAge), false)
+	if stats.OverallRank > 0 {
+		addParagraph(d, fmt.Sprintf("Место в общем зачёте: %d", stats.OverallRank), false)
+	}
+	addParagraph(d, "", false)
+
+	addSubtitle(d, "Результаты по этапам")
+	header := []string{"Этап", "Штрафы", "Время", "Место"}
+	rows := make([][]string, 0, len(stats.StageResults))
+	for _, sr := range stats.StageResults {
+		rankStr := "—"
+		if sr.StageRank > 0 {
+			rankStr = fmt.Sprintf("%d", sr.StageRank)
+		}
+		rows = append(rows, []string{
+			sr.StageName,
+			fmt.Sprintf("%d", sr.TotalPenalties),
+			database.FormatTime(sr.TotalTime),
+			rankStr,
+		})
+	}
+	addTable(d, header, rows)
+	addParagraph(d, "", false)
+
+	// Per-stage participant breakdown
+	addSubtitle(d, "Результаты участников по этапам")
+	for _, stage := range stats.StageResults {
+		addSubtitle(d, fmt.Sprintf("Этап: %s (Итого: %d шк., %s", stage.StageName, stage.TotalPenalties, database.FormatTime(stage.TotalTime)))
+		sHeader := []string{"ФИО", "Пол", "Штрафы", "Время", "Место"}
+		sRows := make([][]string, 0, len(stats.Participants))
+		for _, p := range stats.Participants {
+			for _, psr := range p.StageResults {
+				if psr.StageID != stage.StageID {
+					continue
+				}
+				rankStr := "—"
+				if psr.StageRank > 0 {
+					rankStr = fmt.Sprintf("%d", psr.StageRank)
+				}
+				gLabel := "—"
+				switch p.Gender {
+				case "М":
+					gLabel = "Юноша"
+				case "Ж":
+					gLabel = "Девушка"
+				}
+				sRows = append(sRows, []string{
+					p.FullName,
+					gLabel,
+					fmt.Sprintf("%d", psr.PenaltyPoints),
+					database.FormatTime(psr.TimeSeconds),
+					rankStr,
+				})
+				break
+			}
+		}
+		addTable(d, sHeader, sRows)
+		addParagraph(d, "", false)
+	}
+
+	addSubtitle(d, "Участники команды — сводка")
+	pHeader := []string{"ФИО", "Штрафы", "Время", "Место в команде"}
+	pRows := make([][]string, 0, len(stats.Participants))
+	for _, p := range stats.Participants {
+		teamRankStr := "—"
+		if p.TeamRank > 0 {
+			teamRankStr = fmt.Sprintf("%d", p.TeamRank)
+		}
+		pRows = append(pRows, []string{
+			p.FullName,
+			fmt.Sprintf("%d", p.TotalPenalties),
+			database.FormatTime(p.TotalTime),
+			teamRankStr,
+		})
+	}
+	addTable(d, pHeader, pRows)
+
+	var buf bytes.Buffer
+	_, err = d.WriteTo(&buf)
+	if err != nil {
+		return nil, fmt.Errorf("save docx: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
 func addTitle(d *docx.Docx, text string) {
 	p := d.AddParagraph()
 	p.AddText(text).Bold().Size("32")

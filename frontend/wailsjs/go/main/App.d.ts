@@ -24,7 +24,11 @@ export function ExportAllCompetitionsResults():Promise<void>;
 
 export function ExportOverallResults(arg1:number):Promise<void>;
 
+export function ExportParticipantStatistics(arg1:number,arg2:number):Promise<void>;
+
 export function ExportStageResults(arg1:number):Promise<void>;
+
+export function ExportTeamStatistics(arg1:number,arg2:number):Promise<void>;
 
 export function FormatTime(arg1:number):Promise<string>;
 
@@ -35,6 +39,8 @@ export function GetIndividualStandings(arg1:number):Promise<Array<database.Indiv
 export function GetParticipantByID(arg1:number):Promise<database.Participant>;
 
 export function GetParticipantResults(arg1:number,arg2:number):Promise<Array<database.ParticipantStageDetail>>;
+
+export function GetParticipantStatistics(arg1:number,arg2:number):Promise<database.ParticipantStatistics>;
 
 export function GetParticipantsWithResults(arg1:number,arg2:number):Promise<Array<database.ParticipantWithResults>>;
 
@@ -47,6 +53,8 @@ export function GetStageStandings(arg1:number):Promise<Array<database.StageStand
 export function GetStageStandingsWithParticipants(arg1:number):Promise<Array<database.StageStandingWithParticipants>>;
 
 export function GetTeamByID(arg1:number):Promise<database.Team>;
+
+export function GetTeamStatistics(arg1:number,arg2:number):Promise<database.TeamStatistics>;
 
 export function ListCompetitions():Promise<Array<database.Competition>>;
 

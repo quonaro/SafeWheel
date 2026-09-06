@@ -6,6 +6,7 @@ import {
   IconFlag,
   IconClipboardList,
   IconChartBar,
+  IconReportAnalytics,
   IconPlus,
   IconPencil,
   IconTrash,
@@ -35,13 +36,16 @@ import TeamsParticipants from "@/components/competition/TeamsParticipants.vue";
 import StagesManager from "@/components/competition/StagesManager.vue";
 import ResultsInput from "@/components/competition/ResultsInput.vue";
 import StandingsTable from "@/components/competition/StandingsTable.vue";
+import Statistics from "@/components/competition/Statistics.vue";
 
 const { load, create, update, remove, competitions } = useCompetitions();
 const { theme, toggleTheme } = useTheme();
 const { state } = useAppState();
 
 const selectedCompetition = ref<any>(null);
-const activeTab = ref<"teams" | "stages" | "results" | "standings">("teams");
+const activeTab = ref<
+  "teams" | "stages" | "results" | "standings" | "statistics"
+>("teams");
 
 const maxParticipants = computed(() => {
   if (!selectedCompetition.value) return 4;
@@ -66,6 +70,7 @@ const tabs = [
   { key: "stages", label: "Этапы", icon: IconFlag },
   { key: "results", label: "Результаты", icon: IconClipboardList },
   { key: "standings", label: "Турнирная таблица", icon: IconChartBar },
+  { key: "statistics", label: "Статистика", icon: IconReportAnalytics },
 ] as const;
 
 onMounted(async () => {
@@ -291,6 +296,10 @@ async function handleEdit() {
         />
         <StandingsTable
           v-else-if="activeTab === 'standings'"
+          :competition-id="selectedCompetition.id"
+        />
+        <Statistics
+          v-else-if="activeTab === 'statistics'"
           :competition-id="selectedCompetition.id"
         />
       </div>

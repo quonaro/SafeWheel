@@ -817,6 +817,299 @@ func (r *Repository) getStageParticipants(stageID int64, teamID int64) []Partici
 	return participants
 }
 
+// ===== Statistics =====
+
+func (r *Repository) GetParticipantStatistics(competitionID int64, participantID int64) (*ParticipantStatistics, error) {
+	// Get participant info
+	participant, err := r.GetParticipantByID(participantID)
+	if err != nil || participant == nil {
+		return nil, fmt.Errorf("участник не найден")
+	}
+
+	team, err := r.GetTeamByID(participant.TeamID)
+	if err != nil || team == nil {
+		return nil, fmt.Errorf("команда не найдена")
+	}
+
+	gender := ""
+	if participant.Gender != nil {
+		gender = *participant.Gender
+	}
+
+	// Get stage results for this participant
+	type stageRow struct {
+		StageID       int64   `db:"stage_id"`
+		StageName     string  `db:"stage_name"`
+		OrderIndex    int     `db:"order_index"`
+		PenaltyPoints int     `db:"penalty_points"`
+		TimeSeconds   float64 `db:"time_seconds"`
+	}
+	query := `
+		SELECT s.id AS stage_id, s.name AS stage_name, s.order_index,
+			COALESCE(sr.penalty_points, 0) AS penalty_points,
+			COALESCE(sr.time_seconds, 0) AS time_seconds
+		FROM stages s
+		LEFT JOIN stage_results sr ON sr.stage_id = s.id AND sr.participant_id = ?
+		WHERE s.competition_id = ?
+		ORDER BY s.order_index
+	`
+	var rows []stageRow
+	if err := r.db.Select(&rows, query, participantID, competitionID); err != nil {
+		slog.Error("GetParticipantStatistics query", "participantID", participantID, "error", err)
+		return nil, err
+	}
+
+	stageResults := make([]ParticipantStageStat, 0, len(rows))
+	totalPenalties := 0
+	totalTime := 0.0
+	stageCount := 0
+	bestStage := ""
+	worstStage := ""
+	bestPenalties := -1
+	worstPenalties := -1
+
+	for _, rw := range rows {
+		stageRank := r.computeParticipantStageRank(competitionID, rw.StageID, participantID, gender)
+		stageResults = append(stageResults, ParticipantStageStat{
+			StageID:       rw.StageID,
+			StageName:     rw.StageName,
+			OrderIndex:    rw.OrderIndex,
+			PenaltyPoints: rw.PenaltyPoints,
+			TimeSeconds:   rw.TimeSeconds,
+			StageRank:     stageRank,
+		})
+		if rw.TimeSeconds > 0 || rw.PenaltyPoints > 0 {
+			totalPenalties += rw.PenaltyPoints
+			totalTime += rw.TimeSeconds
+			stageCount++
+			if bestPenalties < 0 || rw.PenaltyPoints < bestPenalties {
+				bestPenalties = rw.PenaltyPoints
+				bestStage = rw.StageName
+			}
+			if worstPenalties < 0 || rw.PenaltyPoints > worstPenalties {
+				worstPenalties = rw.PenaltyPoints
+				worstStage = rw.StageName
+			}
+		}
+	}
+
+	avgTime := 0.0
+	if stageCount > 0 {
+		avgTime = totalTime / float64(stageCount)
+	}
+
+	// Compute overall rank among same gender
+	overallRank := r.computeParticipantOverallRank(competitionID, participantID, gender)
+	// Compute rank within team
+	teamRank := r.computeParticipantTeamRank(competitionID, participantID, participant.TeamID)
+
+	birthDate := ""
+	if participant.BirthDate != nil {
+		birthDate = *participant.BirthDate
+	}
+
+	return &ParticipantStatistics{
+		ParticipantID:  participant.ID,
+		FullName:       participant.FullName,
+		Gender:         gender,
+		Age:            participant.Age,
+		BirthDate:      birthDate,
+		TeamName:       team.Name,
+		StageResults:   stageResults,
+		TotalPenalties: totalPenalties,
+		TotalTime:      totalTime,
+		BestStage:      bestStage,
+		WorstStage:     worstStage,
+		AvgTime:        avgTime,
+		OverallRank:    overallRank,
+		TeamRank:       teamRank,
+	}, nil
+}
+
+func (r *Repository) computeParticipantStageRank(competitionID, stageID, participantID int64, gender string) int {
+	query := `
+		SELECT p.id, COALESCE(sr.penalty_points, 0) AS penalty_points, COALESCE(sr.time_seconds, 0) AS time_seconds, p.age
+		FROM participants p
+		JOIN teams t ON t.id = p.team_id
+		LEFT JOIN stage_results sr ON sr.participant_id = p.id AND sr.stage_id = ?
+		WHERE t.competition_id = ? AND sr.id IS NOT NULL AND p.gender = ?
+		ORDER BY penalty_points ASC, time_seconds ASC, p.age ASC
+	`
+	type row struct {
+		ID            int64   `db:"id"`
+		PenaltyPoints int     `db:"penalty_points"`
+		TimeSeconds   float64 `db:"time_seconds"`
+		Age           int     `db:"age"`
+	}
+	var rows []row
+	if err := r.db.Select(&rows, query, stageID, competitionID, gender); err != nil {
+		return 0
+	}
+	for i, rw := range rows {
+		if rw.ID == participantID {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+func (r *Repository) computeParticipantOverallRank(competitionID, participantID int64, gender string) int {
+	stages, err := r.ListStages(competitionID)
+	if err != nil || len(stages) == 0 {
+		return 0
+	}
+
+	// Aggregate penalties and time across all stages for each participant of same gender
+	query := `
+		SELECT p.id, COALESCE(SUM(sr.penalty_points), 0) AS total_penalties, COALESCE(SUM(sr.time_seconds), 0) AS total_time, p.age
+		FROM participants p
+		JOIN teams t ON t.id = p.team_id
+		LEFT JOIN stage_results sr ON sr.participant_id = p.id
+		WHERE t.competition_id = ? AND p.gender = ?
+		GROUP BY p.id
+		HAVING total_penalties > 0 OR total_time > 0
+		ORDER BY total_penalties ASC, total_time ASC, p.age ASC
+	`
+	type row struct {
+		ID             int64   `db:"id"`
+		TotalPenalties int     `db:"total_penalties"`
+		TotalTime      float64 `db:"total_time"`
+		Age            int     `db:"age"`
+	}
+	var rows []row
+	if err := r.db.Select(&rows, query, competitionID, gender); err != nil {
+		return 0
+	}
+	for i, rw := range rows {
+		if rw.ID == participantID {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+func (r *Repository) computeParticipantTeamRank(competitionID, participantID, teamID int64) int {
+	query := `
+		SELECT p.id, COALESCE(SUM(sr.penalty_points), 0) AS total_penalties, COALESCE(SUM(sr.time_seconds), 0) AS total_time, p.age
+		FROM participants p
+		LEFT JOIN stage_results sr ON sr.participant_id = p.id
+		WHERE p.team_id = ?
+		GROUP BY p.id
+		HAVING total_penalties > 0 OR total_time > 0
+		ORDER BY total_penalties ASC, total_time ASC, p.age ASC
+	`
+	type row struct {
+		ID             int64   `db:"id"`
+		TotalPenalties int     `db:"total_penalties"`
+		TotalTime      float64 `db:"total_time"`
+		Age            int     `db:"age"`
+	}
+	var rows []row
+	if err := r.db.Select(&rows, query, teamID); err != nil {
+		return 0
+	}
+	for i, rw := range rows {
+		if rw.ID == participantID {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+func (r *Repository) GetTeamStatistics(competitionID int64, teamID int64) (*TeamStatistics, error) {
+	stages, err := r.ListStages(competitionID)
+	if err != nil {
+		return nil, err
+	}
+
+	team, err := r.GetTeamByID(teamID)
+	if err != nil || team == nil {
+		return nil, fmt.Errorf("команда не найдена")
+	}
+
+	participants, err := r.ListParticipants(teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Stage stats for team
+	stageResults := make([]TeamStageStat, 0, len(stages))
+	totalPenalties := 0
+	totalTime := 0.0
+	for _, stage := range stages {
+		penalties, time := r.getTeamStageTotals(stage.ID, teamID)
+		stageRank := r.computeTeamStageRank(competitionID, stage.ID, teamID)
+		stageResults = append(stageResults, TeamStageStat{
+			StageID:        stage.ID,
+			StageName:      stage.Name,
+			OrderIndex:     stage.OrderIndex,
+			TotalPenalties: penalties,
+			TotalTime:      time,
+			StageRank:      stageRank,
+		})
+		totalPenalties += penalties
+		totalTime += time
+	}
+
+	// Avg age
+	avgAge := 0.0
+	if len(participants) > 0 {
+		sum := 0
+		for _, p := range participants {
+			sum += p.Age
+		}
+		avgAge = float64(sum) / float64(len(participants))
+	}
+
+	// Participants statistics
+	participantStats := make([]ParticipantStatistics, 0, len(participants))
+	for _, p := range participants {
+		ps, err := r.GetParticipantStatistics(competitionID, p.ID)
+		if err != nil {
+			continue
+		}
+		participantStats = append(participantStats, *ps)
+	}
+
+	// Overall rank
+	overallRank := r.computeTeamOverallRank(competitionID, teamID)
+
+	return &TeamStatistics{
+		TeamID:           team.ID,
+		TeamName:         team.Name,
+		ParticipantCount: len(participants),
+		AvgAge:           avgAge,
+		TotalPenalties:   totalPenalties,
+		TotalTime:        totalTime,
+		StageResults:     stageResults,
+		Participants:     participantStats,
+		OverallRank:      overallRank,
+	}, nil
+}
+
+func (r *Repository) computeTeamStageRank(competitionID, stageID, teamID int64) int {
+	rankedIDs := r.computeStageTeamRanking(competitionID, stageID)
+	for i, id := range rankedIDs {
+		if id == teamID {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+func (r *Repository) computeTeamOverallRank(competitionID, teamID int64) int {
+	standings, err := r.ComputeStandings(competitionID, 4)
+	if err != nil {
+		return 0
+	}
+	for _, s := range standings {
+		if s.TeamID == teamID {
+			return s.Rank
+		}
+	}
+	return 0
+}
+
 // ===== Helpers =====
 
 func calcAge(birthDate string) int {

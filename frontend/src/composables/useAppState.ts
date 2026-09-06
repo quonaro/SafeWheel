@@ -1,6 +1,7 @@
 import { reactive, toRaw, watch } from "vue";
 
-export type ActiveTab = "teams" | "stages" | "results" | "standings";
+export type ActiveTab =
+  "teams" | "stages" | "results" | "standings" | "statistics";
 export type StandingsView = "overall" | "stages" | "individual";
 
 export interface AppState {

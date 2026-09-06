@@ -352,6 +352,44 @@ func (a *App) saveFile(defaultName string, data []byte) error {
 	return os.WriteFile(path, data, 0644)
 }
 
+// ===== Statistics =====
+
+func (a *App) GetParticipantStatistics(competitionID int64, participantID int64) (*database.ParticipantStatistics, error) {
+	if err := a.ensureRepo(); err != nil {
+		return nil, err
+	}
+	return a.repo.GetParticipantStatistics(competitionID, participantID)
+}
+
+func (a *App) GetTeamStatistics(competitionID int64, teamID int64) (*database.TeamStatistics, error) {
+	if err := a.ensureRepo(); err != nil {
+		return nil, err
+	}
+	return a.repo.GetTeamStatistics(competitionID, teamID)
+}
+
+func (a *App) ExportParticipantStatistics(competitionID int64, participantID int64) error {
+	if err := a.ensureRepo(); err != nil {
+		return err
+	}
+	data, err := a.export.ExportParticipantStatistics(competitionID, participantID)
+	if err != nil {
+		return err
+	}
+	return a.saveFile("Статистика_участника.docx", data)
+}
+
+func (a *App) ExportTeamStatistics(competitionID int64, teamID int64) error {
+	if err := a.ensureRepo(); err != nil {
+		return err
+	}
+	data, err := a.export.ExportTeamStatistics(competitionID, teamID)
+	if err != nil {
+		return err
+	}
+	return a.saveFile("Статистика_команды.docx", data)
+}
+
 // ===== Utility =====
 
 func (a *App) FormatTime(seconds float64) string {

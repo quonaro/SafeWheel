@@ -129,3 +129,50 @@ export interface ParticipantWithResults {
 export interface CompetitionSettings {
   maxParticipantsPerTeam: number;
 }
+
+export interface ParticipantStageStat {
+  stage_id: number;
+  stage_name: string;
+  order_index: number;
+  penalty_points: number;
+  time_seconds: number;
+  stage_rank: number;
+}
+
+export interface ParticipantStatistics {
+  participant_id: number;
+  full_name: string;
+  gender: string;
+  age: number;
+  birth_date: string;
+  team_name: string;
+  stage_results: ParticipantStageStat[];
+  total_penalties: number;
+  total_time: number;
+  best_stage: string;
+  worst_stage: string;
+  avg_time: number;
+  overall_rank: number;
+  team_rank: number;
+}
+
+export interface TeamStageStat {
+  stage_id: number;
+  stage_name: string;
+  order_index: number;
+  total_penalties: number;
+  total_time: number;
+  stage_rank: number;
+}
+
+export interface TeamStatistics {
+  team_id: number;
+  team_name: string;
+  participant_count: number;
+  avg_age: number;
+  total_penalties: number;
+  total_time: number;
+  stage_results: TeamStageStat[];
+  participants: ParticipantStatistics[];
+  overall_rank: number;
+}

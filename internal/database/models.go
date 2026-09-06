@@ -174,3 +174,50 @@ type OverallStanding struct {
 	SecondPlaces     int    `json:"second_places" db:"second_places"`
 	ThirdPlaces      int    `json:"third_places" db:"third_places"`
 }
+
+type ParticipantStageStat struct {
+	StageID       int64   `json:"stage_id" db:"stage_id"`
+	StageName     string  `json:"stage_name" db:"stage_name"`
+	OrderIndex    int     `json:"order_index" db:"order_index"`
+	PenaltyPoints int     `json:"penalty_points" db:"penalty_points"`
+	TimeSeconds   float64 `json:"time_seconds" db:"time_seconds"`
+	StageRank     int     `json:"stage_rank"`
+}
+
+type ParticipantStatistics struct {
+	ParticipantID  int64                  `json:"participant_id"`
+	FullName       string                 `json:"full_name"`
+	Gender         string                 `json:"gender"`
+	Age            int                    `json:"age"`
+	BirthDate      string                 `json:"birth_date"`
+	TeamName       string                 `json:"team_name"`
+	StageResults   []ParticipantStageStat `json:"stage_results"`
+	TotalPenalties int                    `json:"total_penalties"`
+	TotalTime      float64                `json:"total_time"`
+	BestStage      string                 `json:"best_stage"`
+	WorstStage     string                 `json:"worst_stage"`
+	AvgTime        float64                `json:"avg_time"`
+	OverallRank    int                    `json:"overall_rank"`
+	TeamRank       int                    `json:"team_rank"`
+}
+
+type TeamStageStat struct {
+	StageID        int64   `json:"stage_id" db:"stage_id"`
+	StageName      string  `json:"stage_name" db:"stage_name"`
+	OrderIndex     int     `json:"order_index" db:"order_index"`
+	TotalPenalties int     `json:"total_penalties" db:"total_penalties"`
+	TotalTime      float64 `json:"total_time" db:"total_time"`
+	StageRank      int     `json:"stage_rank"`
+}
+
+type TeamStatistics struct {
+	TeamID           int64                   `json:"team_id"`
+	TeamName         string                  `json:"team_name"`
+	ParticipantCount int                     `json:"participant_count"`
+	AvgAge           float64                 `json:"avg_age"`
+	TotalPenalties   int                     `json:"total_penalties"`
+	TotalTime        float64                 `json:"total_time"`
+	StageResults     []TeamStageStat         `json:"stage_results"`
+	Participants     []ParticipantStatistics `json:"participants"`
+	OverallRank      int                     `json:"overall_rank"`
+}

@@ -46,8 +46,16 @@ export function ExportOverallResults(arg1) {
   return window['go']['main']['App']['ExportOverallResults'](arg1);
 }
 
+export function ExportParticipantStatistics(arg1, arg2) {
+  return window['go']['main']['App']['ExportParticipantStatistics'](arg1, arg2);
+}
+
 export function ExportStageResults(arg1) {
   return window['go']['main']['App']['ExportStageResults'](arg1);
+}
+
+export function ExportTeamStatistics(arg1, arg2) {
+  return window['go']['main']['App']['ExportTeamStatistics'](arg1, arg2);
 }
 
 export function FormatTime(arg1) {
@@ -68,6 +76,10 @@ export function GetParticipantByID(arg1) {
 
 export function GetParticipantResults(arg1, arg2) {
   return window['go']['main']['App']['GetParticipantResults'](arg1, arg2);
+}
+
+export function GetParticipantStatistics(arg1, arg2) {
+  return window['go']['main']['App']['GetParticipantStatistics'](arg1, arg2);
 }
 
 export function GetParticipantsWithResults(arg1, arg2) {
@@ -92,6 +104,10 @@ export function GetStageStandingsWithParticipants(arg1) {
 
 export function GetTeamByID(arg1) {
   return window['go']['main']['App']['GetTeamByID'](arg1);
+}
+
+export function GetTeamStatistics(arg1, arg2) {
+  return window['go']['main']['App']['GetTeamStatistics'](arg1, arg2);
 }
 
 export function ListCompetitions() {

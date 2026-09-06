@@ -273,3 +273,43 @@ export function useFormat() {
 
   return { formatTime, parseTime, formatTimeLocal };
 }
+
+// Statistics
+export function useStatistics() {
+  const { loading, error, call } = useApi();
+
+  async function getParticipantStatistics(
+    competitionId: number,
+    participantId: number,
+  ) {
+    return call(() =>
+      wails.GetParticipantStatistics(competitionId, participantId),
+    );
+  }
+
+  async function getTeamStatistics(competitionId: number, teamId: number) {
+    return call(() => wails.GetTeamStatistics(competitionId, teamId));
+  }
+
+  async function exportParticipantStatistics(
+    competitionId: number,
+    participantId: number,
+  ) {
+    return call(() =>
+      wails.ExportParticipantStatistics(competitionId, participantId),
+    );
+  }
+
+  async function exportTeamStatistics(competitionId: number, teamId: number) {
+    return call(() => wails.ExportTeamStatistics(competitionId, teamId));
+  }
+
+  return {
+    loading,
+    error,
+    getParticipantStatistics,
+    getTeamStatistics,
+    exportParticipantStatistics,
+    exportTeamStatistics,
+  };
+}
