@@ -90,7 +90,7 @@ wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform linux/amd64
 или через lota:
 
 ```bash
-lota build.all
+lota build all
 ```
 
 Готовые бинарники попадают в `build/bin/`.
