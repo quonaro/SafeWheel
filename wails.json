@@ -7,6 +7,9 @@
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "buildtags": ["webkit2_41"],
+  "preBuildHooks": {
+    "*/*": "sh -c \"cd \\\"$(git rev-parse --show-toplevel)\\\" && magick frontend/src/assets/img/logo.webp -resize 1024x1024 build/appicon.png\""
+  },
   "author": {
     "name": "quonaro",
     "email": "quonaro@mail.ru"

@@ -339,6 +339,17 @@ func (a *App) ExportAllCompetitionsResults() error {
 	return a.saveFile("Общие_итоги.docx", data)
 }
 
+func (a *App) ExportIndividualStandings(competitionID int64) error {
+	if err := a.ensureRepo(); err != nil {
+		return err
+	}
+	data, err := a.export.ExportIndividualStandings(competitionID)
+	if err != nil {
+		return err
+	}
+	return a.saveFile("Личное_первенство.docx", data)
+}
+
 func (a *App) saveFile(defaultName string, data []byte) error {
 	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
 		DefaultFilename: defaultName,

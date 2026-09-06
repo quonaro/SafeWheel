@@ -61,7 +61,7 @@ const teamName = ref("");
 const participantName = ref("");
 const participantGender = ref("");
 const participantBirthDate = ref("");
-const participantAge = ref(0);
+const participantAge = ref<number | null>(0);
 
 async function initialize() {
   await loadTeams(props.competitionId);
@@ -173,7 +173,7 @@ async function saveParticipant() {
     full_name: participantName.value,
     gender: participantGender.value || null,
     birth_date: participantBirthDate.value || null,
-    age: participantAge.value,
+    age: Math.max(0, Math.trunc(Number(participantAge.value ?? 0) || 0)),
   };
   const isEdit = !!editingParticipant.value;
   const result = isEdit
@@ -254,7 +254,7 @@ async function saveParticipant() {
         <div class="flex items-center justify-between mb-3">
           <span class="text-sm font-medium">Участники</span>
           <Button
-            v-if="participants.length < props.maxParticipants"
+            v-if="(participants?.length ?? 0) < props.maxParticipants"
             size="sm"
             variant="outline"
             @click="openCreateParticipant(team.id)"
@@ -264,10 +264,20 @@ async function saveParticipant() {
           </Button>
         </div>
         <div
-          v-if="participants.length === 0"
-          class="text-sm text-muted-foreground py-2"
+          v-if="!participants?.length"
+          class="py-4 text-center text-sm text-muted-foreground"
         >
-          Нет участников
+          <p>Нет участников</p>
+          <Button
+            v-if="(participants?.length ?? 0) < props.maxParticipants"
+            size="sm"
+            variant="outline"
+            class="mt-2"
+            @click="openCreateParticipant(team.id)"
+          >
+            <IconPlus class="h-3 w-3" />
+            Добавить участника
+          </Button>
         </div>
         <div v-else class="space-y-2">
           <div

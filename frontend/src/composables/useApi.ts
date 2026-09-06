@@ -100,8 +100,11 @@ export function useParticipants() {
   const { loading, error, call } = useApi();
 
   async function load(teamId: number) {
+    participants.value = [];
     const result = await call(() => wails.ListParticipants(teamId));
-    if (result) participants.value = result;
+    if (Array.isArray(result)) {
+      participants.value = result;
+    }
   }
 
   async function create(teamId: number, data: any) {
@@ -251,7 +254,18 @@ export function useExport() {
     return call(() => wails.ExportAllCompetitionsResults());
   }
 
-  return { loading, error, exportOverall, exportStages, exportAll };
+  async function exportIndividual(competitionId: number) {
+    return call(() => wails.ExportIndividualStandings(competitionId));
+  }
+
+  return {
+    loading,
+    error,
+    exportOverall,
+    exportStages,
+    exportAll,
+    exportIndividual,
+  };
 }
 
 // Utility

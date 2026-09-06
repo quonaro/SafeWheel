@@ -63,7 +63,7 @@ const newCompName = ref("");
 const newCompDesc = ref("");
 const editCompName = ref("");
 const editCompDesc = ref("");
-const editMaxParticipants = ref(4);
+const editMaxParticipants = ref<number | null>(4);
 
 const tabs = [
   { key: "teams", label: "Команды", icon: IconUsers },
@@ -150,7 +150,7 @@ async function handleEdit() {
   if (!selectedCompetition.value) return;
   if (!editCompName.value.trim()) return;
   const settings = JSON.stringify({
-    maxParticipantsPerTeam: editMaxParticipants.value,
+    maxParticipantsPerTeam: editMaxParticipants.value ?? 4,
   });
   const result = await update(selectedCompetition.value.id, {
     name: editCompName.value,

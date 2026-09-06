@@ -25,7 +25,9 @@ const { state } = useAppState();
 
 const selectedStageId = ref<number | null>(null);
 const participants = ref<any[]>([]);
-const resultsMap = ref<Record<number, { time: string; penalties: number }>>({});
+const resultsMap = ref<
+  Record<number, { time: string; penalties: number | null }>
+>({});
 const expandedTeams = ref<Set<string>>(new Set());
 
 const dirtyIds = new Set<number>();
@@ -122,11 +124,52 @@ function toggleTeam(teamName: string) {
   expandedTeams.value = next;
 }
 
+function maskTime(value: string): string {
+  const cleaned = value.replace(/[^0-9:]/g, "");
+  if (cleaned.includes(":")) {
+    const [mm, ss] = cleaned.split(":", 2);
+    return `${(mm || "").slice(0, 2)}:${(ss || "").slice(0, 2)}`;
+  }
+  const digits = cleaned.slice(0, 4);
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
+function normalizeTimeString(value: string): string {
+  const cleaned = value.replace(/[^0-9:]/g, "");
+  let mm = "";
+  let ss = "";
+  if (cleaned.includes(":")) {
+    const [a, b] = cleaned.split(":", 2);
+    mm = (a || "").slice(0, 2);
+    ss = (b || "").slice(0, 2);
+  } else {
+    const digits = cleaned.slice(0, 4);
+    mm = digits.slice(0, 2);
+    ss = digits.slice(2);
+  }
+  if (!mm && !ss) return "";
+  return `${mm.padStart(2, "0")}:${ss.padEnd(2, "0").slice(0, 2)}`;
+}
+
+function onTimeInput(participantId: number, value: string | number | null) {
+  const r = resultsMap.value[participantId];
+  if (!r) return;
+  const raw = value == null ? "" : String(value);
+  const masked = maskTime(raw);
+  r.time = masked;
+  if (!masked || masked.length === 5) {
+    queueSave(participantId);
+  }
+}
+
 async function saveResult(participantId: number) {
   if (!selectedStageId.value) return;
   const r = resultsMap.value[participantId];
   if (!r) return;
 
+  r.time = normalizeTimeString(r.time);
   const timeSeconds = r.time ? parseTimeString(r.time) : 0;
   const result = await upsert(
     selectedStageId.value,
@@ -143,17 +186,12 @@ async function saveResult(participantId: number) {
 }
 
 function parseTimeString(time: string): number {
-  const trimmed = time.trim();
-  if (!trimmed) return 0;
-  const parts = trimmed.split(":");
-  if (parts.length >= 2) {
-    const m = parseInt(parts[0], 10) || 0;
-    const s = parseFloat(parts[1]) || 0;
-    return m * 60 + s;
-  }
-  // Single number is treated as minutes
-  const m = parseFloat(trimmed);
-  return isNaN(m) ? 0 : m * 60;
+  const normalized = normalizeTimeString(time.trim());
+  if (!normalized) return 0;
+  const [mm, ss] = normalized.split(":");
+  const m = parseInt(mm, 10) || 0;
+  const s = parseInt(ss, 10) || 0;
+  return m * 60 + s;
 }
 </script>
 
@@ -252,16 +290,17 @@ function parseTimeString(time: string): number {
                   }}</span>
                 </div>
                 <Input
-                  v-model="resultsMap[p.id].time"
+                  :model-value="resultsMap[p.id].time"
                   placeholder="MM:SS"
                   class="text-center"
                   title="Время прохождения (MM:SS)"
-                  @update:model-value="queueSave(p.id)"
+                  maxlength="5"
+                  @update:model-value="(v) => onTimeInput(p.id, v)"
                   @blur="saveResult(p.id)"
                   @keydown.enter="saveResult(p.id)"
                 />
                 <Input
-                  v-model.number="resultsMap[p.id].penalties"
+                  v-model="resultsMap[p.id].penalties"
                   type="number"
                   placeholder="0"
                   class="text-center"

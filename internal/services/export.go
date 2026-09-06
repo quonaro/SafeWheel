@@ -123,6 +123,72 @@ func (s *ExportService) ExportAllCompetitionsResults() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func (s *ExportService) ExportIndividualStandings(competitionID int64) ([]byte, error) {
+	comp, err := s.repo.GetCompetitionByID(competitionID)
+	if err != nil || comp == nil {
+		return nil, fmt.Errorf("соревнование не найдено")
+	}
+
+	standings, err := s.repo.GetIndividualStandings(competitionID)
+	if err != nil {
+		return nil, err
+	}
+
+	d := docx.New().WithDefaultTheme()
+	addTitle(d, fmt.Sprintf("%s — Личное первенство", comp.Name))
+	addSubtitle(d, "Результаты участников по этапам")
+
+	for _, stage := range standings {
+		addSubtitle(d, fmt.Sprintf("Этап: %s", stage.StageName))
+
+		if len(stage.Boys) > 0 {
+			addParagraph(d, "Юноши", true)
+			header := []string{"Место", "ФИО", "Команда", "Штрафы", "Время"}
+			rows := make([][]string, 0, len(stage.Boys))
+			for _, b := range stage.Boys {
+				rows = append(rows, []string{
+					fmt.Sprintf("%d", b.Rank),
+					b.FullName,
+					b.TeamName,
+					fmt.Sprintf("%d", b.PenaltyPoints),
+					database.FormatTime(b.TimeSeconds),
+				})
+			}
+			addTable(d, header, rows)
+			addParagraph(d, "", false)
+		}
+
+		if len(stage.Girls) > 0 {
+			addParagraph(d, "Девушки", true)
+			header := []string{"Место", "ФИО", "Команда", "Штрафы", "Время"}
+			rows := make([][]string, 0, len(stage.Girls))
+			for _, g := range stage.Girls {
+				rows = append(rows, []string{
+					fmt.Sprintf("%d", g.Rank),
+					g.FullName,
+					g.TeamName,
+					fmt.Sprintf("%d", g.PenaltyPoints),
+					database.FormatTime(g.TimeSeconds),
+				})
+			}
+			addTable(d, header, rows)
+			addParagraph(d, "", false)
+		}
+
+		if len(stage.Boys) == 0 && len(stage.Girls) == 0 {
+			addParagraph(d, "Нет данных", false)
+			addParagraph(d, "", false)
+		}
+	}
+
+	var buf bytes.Buffer
+	_, err = d.WriteTo(&buf)
+	if err != nil {
+		return nil, fmt.Errorf("save docx: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
 func (s *ExportService) ExportParticipantStatistics(competitionID int64, participantID int64) ([]byte, error) {
 	comp, err := s.repo.GetCompetitionByID(competitionID)
 	if err != nil || comp == nil {

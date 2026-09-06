@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const props = defineProps<{
   class?: string;
-  modelValue?: string | number;
+  modelValue?: string | number | null;
   type?: string;
   placeholder?: string;
   disabled?: boolean;
@@ -13,7 +13,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "update:modelValue": [value: string | number];
+  "update:modelValue": [value: string | number | null];
 }>();
 
 const isNumber = computed(() => props.type === "number");
@@ -42,6 +42,13 @@ function onInput(e: Event) {
     if (!isNaN(num) && num < min) {
       target.value = String(min);
     }
+    // Emit a real number (or null when cleared) so numeric models
+    // don't turn into strings and break JSON unmarshalling in Go.
+    emit(
+      "update:modelValue",
+      target.value === "" ? null : Number(target.value),
+    );
+    return;
   }
   emit("update:modelValue", target.value);
 }

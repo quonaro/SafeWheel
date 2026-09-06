@@ -42,6 +42,10 @@ export function ExportAllCompetitionsResults() {
   return window['go']['main']['App']['ExportAllCompetitionsResults']();
 }
 
+export function ExportIndividualStandings(arg1) {
+  return window['go']['main']['App']['ExportIndividualStandings'](arg1);
+}
+
 export function ExportOverallResults(arg1) {
   return window['go']['main']['App']['ExportOverallResults'](arg1);
 }

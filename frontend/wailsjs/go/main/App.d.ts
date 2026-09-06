@@ -22,6 +22,8 @@ export function DeleteTeam(arg1:number):Promise<void>;
 
 export function ExportAllCompetitionsResults():Promise<void>;
 
+export function ExportIndividualStandings(arg1:number):Promise<void>;
+
 export function ExportOverallResults(arg1:number):Promise<void>;
 
 export function ExportParticipantStatistics(arg1:number,arg2:number):Promise<void>;

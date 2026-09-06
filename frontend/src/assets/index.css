@@ -134,6 +134,14 @@
     user-select: text;
     -webkit-user-select: text;
   }
+
+  /* WebKitGTK renders the native select popup with a light GTK background;
+     without explicit colors the dark-theme foreground makes text unreadable. */
+  select,
+  select option {
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+  }
 }
 
 .overflow-y-auto {

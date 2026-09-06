@@ -26,7 +26,7 @@ const {
   loadStageStandings,
   loadIndividualStandings,
 } = useStandings();
-const { exportOverall, exportStages } = useExport();
+const { exportOverall, exportStages, exportIndividual } = useExport();
 const { formatTimeLocal } = useFormat();
 const { state } = useAppState();
 
@@ -75,6 +75,15 @@ async function handleExportStages() {
     });
   }
 }
+
+async function handleExportIndividual() {
+  const result = await exportIndividual(props.competitionId);
+  if (result !== null) {
+    toast.success("Экспорт завершён", {
+      description: "Личное первенство сохранено в файл",
+    });
+  }
+}
 </script>
 
 <template>
@@ -112,6 +121,10 @@ async function handleExportStages() {
         <Button variant="outline" size="sm" @click="handleExportStages">
           <IconFileDownload class="h-4 w-4" />
           По этапам
+        </Button>
+        <Button variant="outline" size="sm" @click="handleExportIndividual">
+          <IconFileDownload class="h-4 w-4" />
+          Личное
         </Button>
       </div>
     </div>
