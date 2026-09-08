@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { cn } from "@/lib/utils";
+import { TextFieldContextMenu } from "@/components/ui/context-menu";
 
 const props = defineProps<{
   class?: string;
@@ -15,6 +16,15 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:modelValue": [value: string | number | null];
 }>();
+
+const inputEl = ref<HTMLInputElement>();
+
+function onMenuEdit(value: string) {
+  const el = inputEl.value;
+  if (!el) return;
+  el.value = value;
+  onInput({ target: el } as unknown as Event);
+}
 
 const isNumber = computed(() => props.type === "number");
 
@@ -55,20 +65,23 @@ function onInput(e: Event) {
 </script>
 
 <template>
-  <input
-    :type="type || 'text'"
-    :value="modelValue"
-    :placeholder="placeholder"
-    :disabled="disabled"
-    :min="inputMin"
-    :max="max"
-    :class="
-      cn(
-        'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
-        props.class,
-      )
-    "
-    @input="onInput"
-    @keydown="onKeydown"
-  />
+  <TextFieldContextMenu :target="() => inputEl" @edit="onMenuEdit">
+    <input
+      ref="inputEl"
+      :type="type || 'text'"
+      :value="modelValue"
+      :placeholder="placeholder"
+      :disabled="disabled"
+      :min="inputMin"
+      :max="max"
+      :class="
+        cn(
+          'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+          props.class,
+        )
+      "
+      @input="onInput"
+      @keydown="onKeydown"
+    />
+  </TextFieldContextMenu>
 </template>

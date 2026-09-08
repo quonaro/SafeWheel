@@ -71,15 +71,16 @@ type StageStanding struct {
 }
 
 type StageTeamResult struct {
-	Rank           int     `json:"rank" db:"rank"`
-	StageID        int64   `json:"stage_id" db:"stage_id"`
-	StageName      string  `json:"stage_name" db:"stage_name"`
-	OrderIndex     int     `json:"order_index" db:"order_index"`
-	TeamID         int64   `json:"team_id" db:"team_id"`
-	TeamName       string  `json:"team_name" db:"team_name"`
-	TotalPenalties int     `json:"total_penalties" db:"total_penalties"`
-	TotalTime      float64 `json:"total_time" db:"total_time"`
-	AvgAge         float64 `json:"avg_age" db:"avg_age"`
+	Rank             int     `json:"rank" db:"rank"`
+	StageID          int64   `json:"stage_id" db:"stage_id"`
+	StageName        string  `json:"stage_name" db:"stage_name"`
+	OrderIndex       int     `json:"order_index" db:"order_index"`
+	TeamID           int64   `json:"team_id" db:"team_id"`
+	TeamName         string  `json:"team_name" db:"team_name"`
+	TotalPenalties   int     `json:"total_penalties" db:"total_penalties"`
+	TotalTime        float64 `json:"total_time" db:"total_time"`
+	AvgAge           float64 `json:"avg_age" db:"avg_age"`
+	OutOfCompetition bool    `json:"out_of_competition" db:"-"`
 }
 
 type StageStandingWithParticipants struct {
@@ -97,6 +98,7 @@ type TeamResultWithParticipants struct {
 	ParticipantCount   int                 `json:"participant_count" db:"participant_count"`
 	Rank               int                 `json:"rank" db:"rank"`
 	Participants       []ParticipantResult `json:"participants" db:"-"`
+	OutOfCompetition   bool                `json:"out_of_competition" db:"-"`
 }
 
 type ParticipantResult struct {
@@ -173,6 +175,7 @@ type OverallStanding struct {
 	FirstPlaces      int    `json:"first_places" db:"first_places"`
 	SecondPlaces     int    `json:"second_places" db:"second_places"`
 	ThirdPlaces      int    `json:"third_places" db:"third_places"`
+	OutOfCompetition bool   `json:"out_of_competition" db:"-"`
 }
 
 type ParticipantStageStat struct {
@@ -220,4 +223,44 @@ type TeamStatistics struct {
 	StageResults     []TeamStageStat         `json:"stage_results"`
 	Participants     []ParticipantStatistics `json:"participants"`
 	OverallRank      int                     `json:"overall_rank"`
+}
+
+// ===== Export / Import =====
+
+type CompetitionExport struct {
+	Name        string        `json:"name"`
+	Description string        `json:"description"`
+	Settings    string        `json:"settings"`
+	Teams       []TeamExport  `json:"teams"`
+	Stages      []StageExport `json:"stages"`
+}
+
+type TeamExport struct {
+	Name         string              `json:"name"`
+	Participants []ParticipantExport `json:"participants"`
+}
+
+type ParticipantExport struct {
+	FullName  string         `json:"full_name"`
+	Gender    *string        `json:"gender"`
+	BirthDate *string        `json:"birth_date"`
+	Age       int            `json:"age"`
+	Results   []ResultExport `json:"results"`
+}
+
+type StageExport struct {
+	Name       string `json:"name"`
+	OrderIndex int    `json:"order_index"`
+}
+
+type ResultExport struct {
+	StageName     string  `json:"stage_name"`
+	TimeSeconds   float64 `json:"time_seconds"`
+	PenaltyPoints int     `json:"penalty_points"`
+}
+
+type ImportFile struct {
+	Version      int                 `json:"version"`
+	ExportedAt   time.Time           `json:"exported_at"`
+	Competitions []CompetitionExport `json:"competitions"`
 }

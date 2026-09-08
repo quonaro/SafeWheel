@@ -14,8 +14,11 @@ import {
   IconMoon,
   IconX,
   IconDeviceFloppy,
+  IconDownload,
+  IconUpload,
 } from "@tabler/icons-vue";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { Toaster } from "vue-sonner";
 import { toast } from "@/composables/useToast";
 import { useCompetitions } from "@/composables/useApi";
+import { useExchange } from "@/composables/useApi";
 import { useTheme } from "@/composables/useTheme";
 import { useAppState } from "@/composables/useAppState";
 import TeamsParticipants from "@/components/competition/TeamsParticipants.vue";
@@ -41,6 +45,7 @@ import Statistics from "@/components/competition/Statistics.vue";
 const { load, create, update, remove, competitions } = useCompetitions();
 const { theme, toggleTheme } = useTheme();
 const { state } = useAppState();
+const { exportJSON, pickImportFile, importCompetitions } = useExchange();
 
 const appVersion = __APP_VERSION__;
 
@@ -66,6 +71,12 @@ const newCompDesc = ref("");
 const editCompName = ref("");
 const editCompDesc = ref("");
 const editMaxParticipants = ref<number | null>(4);
+
+const showExportDialog = ref(false);
+const showImportDialog = ref(false);
+const exportSelected = ref<Record<number, boolean>>({});
+const importFileComps = ref<any[]>([]);
+const importSelected = ref<Record<number, boolean>>({});
 
 const tabs = [
   { key: "teams", label: "Команды", icon: IconUsers },
@@ -166,6 +177,75 @@ async function handleEdit() {
     toast.success("Изменения сохранены");
   }
 }
+
+function openExportDialog() {
+  exportSelected.value = Object.fromEntries(
+    competitions.value.map((c) => [c.id, true]),
+  );
+  showExportDialog.value = true;
+}
+
+const exportAllSelected = computed({
+  get: () =>
+    competitions.value.length > 0 &&
+    competitions.value.every((c) => exportSelected.value[c.id]),
+  set: (val: boolean) => {
+    for (const c of competitions.value) exportSelected.value[c.id] = val;
+  },
+});
+
+async function handleExport() {
+  const ids = competitions.value
+    .filter((c) => exportSelected.value[c.id])
+    .map((c) => c.id);
+  if (ids.length === 0) return;
+  const result = await exportJSON(ids);
+  if (result !== null) {
+    showExportDialog.value = false;
+    toast.success("Экспортировано", {
+      description: `Сохранено соревнований: ${ids.length}`,
+    });
+  }
+}
+
+async function openImportDialog() {
+  importFileComps.value = [];
+  importSelected.value = {};
+  showImportDialog.value = true;
+}
+
+async function handlePickImportFile() {
+  const result = await pickImportFile();
+  if (!Array.isArray(result)) return;
+  importFileComps.value = result;
+  importSelected.value = Object.fromEntries(result.map((_, i) => [i, true]));
+}
+
+const importAllSelected = computed({
+  get: () =>
+    importFileComps.value.length > 0 &&
+    importFileComps.value.every((_, i) => importSelected.value[i]),
+  set: (val: boolean) => {
+    for (let i = 0; i < importFileComps.value.length; i++) {
+      importSelected.value[i] = val;
+    }
+  },
+});
+
+async function handleImport() {
+  const comps = importFileComps.value.filter((_, i) => importSelected.value[i]);
+  if (comps.length === 0) return;
+  const result = await importCompetitions(comps);
+  if (result !== null) {
+    showImportDialog.value = false;
+    importFileComps.value = [];
+    importSelected.value = {};
+    await load();
+    toast.success("Импортировано", {
+      description: `Добавлено соревнований: ${comps.length}`,
+    });
+  }
+}
 </script>
 
 <template>
@@ -182,11 +262,26 @@ async function handleEdit() {
         </div>
       </div>
 
-      <div class="px-2 py-3">
+      <div class="px-2 py-3 space-y-2">
         <Button class="w-full" @click="showCreateDialog = true">
           <IconPlus class="h-4 w-4" />
           Создать соревнование
         </Button>
+        <div class="flex gap-2">
+          <Button
+            variant="outline"
+            class="flex-1"
+            :disabled="competitions.length === 0"
+            @click="openExportDialog"
+          >
+            <IconDownload class="h-4 w-4" />
+            Экспорт
+          </Button>
+          <Button variant="outline" class="flex-1" @click="openImportDialog">
+            <IconUpload class="h-4 w-4" />
+            Импорт
+          </Button>
+        </div>
       </div>
 
       <div class="flex-1 overflow-y-auto px-2 space-y-1">
@@ -422,6 +517,111 @@ async function handleEdit() {
           <Button variant="destructive" @click="handleDelete">
             <IconTrash class="h-4 w-4" />
             Удалить
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Export Dialog -->
+    <Dialog v-model:open="showExportDialog">
+      <DialogContent class="max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Экспорт в JSON</DialogTitle>
+          <DialogDescription>
+            Выберите соревнования для выгрузки в файл
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-3 py-2">
+          <div class="flex items-center gap-2 text-sm font-medium">
+            <Checkbox v-model="exportAllSelected" />
+            Выбрать все / Снять все
+          </div>
+          <hr />
+          <div
+            v-if="competitions.length === 0"
+            class="py-4 text-center text-sm text-muted-foreground"
+          >
+            Нет соревнований для экспорта
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="comp in competitions"
+              :key="comp.id"
+              class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
+            >
+              <Checkbox v-model="exportSelected[comp.id]" />
+              <span class="flex-1 truncate">{{ comp.name }}</span>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="showExportDialog = false">
+            <IconX class="h-4 w-4" />
+            Отмена
+          </Button>
+          <Button @click="handleExport">
+            <IconDownload class="h-4 w-4" />
+            Экспортировать
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Import Dialog -->
+    <Dialog v-model:open="showImportDialog">
+      <DialogContent class="max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Импорт из JSON</DialogTitle>
+          <DialogDescription>
+            Выберите файл и соревнования для загрузки. Дубликаты получат
+            порядковый номер в имени.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-3 py-2">
+          <Button
+            variant="outline"
+            class="w-full"
+            @click="handlePickImportFile"
+          >
+            <IconUpload class="h-4 w-4" />
+            Выбрать файл
+          </Button>
+          <template v-if="importFileComps.length > 0">
+            <div class="flex items-center gap-2 text-sm font-medium">
+              <Checkbox v-model="importAllSelected" />
+              Выбрать все / Снять все
+            </div>
+            <hr />
+            <div class="space-y-2">
+              <div
+                v-for="(comp, i) in importFileComps"
+                :key="i"
+                class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
+              >
+                <Checkbox v-model="importSelected[i]" />
+                <span class="flex-1 truncate">{{ comp.name }}</span>
+                <span class="shrink-0 text-xs text-muted-foreground">
+                  {{ comp.teams?.length ?? 0 }} команд ·
+                  {{ comp.stages?.length ?? 0 }} этапов
+                </span>
+              </div>
+            </div>
+          </template>
+          <p v-else class="py-4 text-center text-sm text-muted-foreground">
+            Файл не выбран
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="showImportDialog = false">
+            <IconX class="h-4 w-4" />
+            Отмена
+          </Button>
+          <Button
+            :disabled="importFileComps.length === 0"
+            @click="handleImport"
+          >
+            <IconPlus class="h-4 w-4" />
+            Импортировать
           </Button>
         </DialogFooter>
       </DialogContent>

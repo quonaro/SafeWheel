@@ -66,6 +66,7 @@ export interface StageTeamResult {
   total_penalties: number;
   total_time: number;
   avg_age: number;
+  out_of_competition: boolean;
 }
 
 export interface StageStanding {
@@ -92,6 +93,7 @@ export interface TeamResultWithParticipants {
   participant_count: number;
   rank: number;
   participants: ParticipantResult[];
+  out_of_competition: boolean;
 }
 
 export interface StageStandingWithParticipants {

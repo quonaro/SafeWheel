@@ -116,7 +116,7 @@ async function handleExportIndividual() {
       <div class="flex gap-2">
         <Button variant="outline" size="sm" @click="handleExportOverall">
           <IconFileDownload class="h-4 w-4" />
-          Экспорт
+          Общие результаты
         </Button>
         <Button variant="outline" size="sm" @click="handleExportStages">
           <IconFileDownload class="h-4 w-4" />
@@ -152,9 +152,14 @@ async function handleExportIndividual() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow v-for="s in standings" :key="s.team_id">
+              <TableRow
+                v-for="s in standings"
+                :key="s.team_id"
+                :class="s.out_of_competition ? 'text-muted-foreground' : ''"
+              >
                 <TableCell class="text-center">
                   <span
+                    v-if="!s.out_of_competition"
                     :class="[
                       'inline-flex items-center gap-1 font-bold',
                       s.rank <= 3 ? medalColors[s.rank - 1] : '',
@@ -163,8 +168,17 @@ async function handleExportIndividual() {
                     <IconTrophy v-if="s.rank <= 3" class="h-4 w-4" />
                     {{ s.rank }}
                   </span>
+                  <span v-else class="font-bold">—</span>
                 </TableCell>
-                <TableCell class="font-medium">{{ s.team_name }}</TableCell>
+                <TableCell class="font-medium">
+                  {{ s.team_name }}
+                  <Badge
+                    v-if="s.out_of_competition"
+                    variant="secondary"
+                    class="ml-2 font-normal"
+                    >вне конкурса</Badge
+                  >
+                </TableCell>
                 <TableCell class="text-center font-bold">{{
                   s.total_place_points
                 }}</TableCell>
@@ -206,9 +220,14 @@ async function handleExportIndividual() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow v-for="r in stage.results" :key="r.team_id">
+              <TableRow
+                v-for="r in stage.results"
+                :key="r.team_id"
+                :class="r.out_of_competition ? 'text-muted-foreground' : ''"
+              >
                 <TableCell class="text-center">
                   <span
+                    v-if="!r.out_of_competition"
                     :class="[
                       'inline-flex items-center gap-1 font-bold',
                       r.rank <= 3 ? medalColors[r.rank - 1] : '',
@@ -217,8 +236,17 @@ async function handleExportIndividual() {
                     <IconTrophy v-if="r.rank <= 3" class="h-4 w-4" />
                     {{ r.rank }}
                   </span>
+                  <span v-else class="font-bold">—</span>
                 </TableCell>
-                <TableCell class="font-medium">{{ r.team_name }}</TableCell>
+                <TableCell class="font-medium">
+                  {{ r.team_name }}
+                  <Badge
+                    v-if="r.out_of_competition"
+                    variant="secondary"
+                    class="ml-2 font-normal"
+                    >вне конкурса</Badge
+                  >
+                </TableCell>
                 <TableCell class="text-center font-bold">{{
                   r.total_penalties
                 }}</TableCell>

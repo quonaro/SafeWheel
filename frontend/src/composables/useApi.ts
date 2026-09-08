@@ -268,6 +268,31 @@ export function useExport() {
   };
 }
 
+// Exchange (Import / Export JSON)
+export function useExchange() {
+  const { loading, error, call } = useApi();
+
+  async function exportJSON(competitionIds: number[]) {
+    return call(() => wails.ExportCompetitionsJSON(competitionIds));
+  }
+
+  async function pickImportFile() {
+    return call(() => wails.PickImportFile());
+  }
+
+  async function importCompetitions(comps: any[]) {
+    return call(() => wails.ImportCompetitions(comps));
+  }
+
+  return {
+    loading,
+    error,
+    exportJSON,
+    pickImportFile,
+    importCompetitions,
+  };
+}
+
 // Utility
 export function useFormat() {
   async function formatTime(seconds: number): Promise<string> {

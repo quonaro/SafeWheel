@@ -23,7 +23,7 @@ func (s *ExportService) ExportOverallResults(competitionID int64) ([]byte, error
 		return nil, fmt.Errorf("соревнование не найдено")
 	}
 
-	standings, err := s.repo.ComputeStandings(competitionID, 4)
+	standings, err := s.repo.ComputeStandings(competitionID)
 	if err != nil {
 		return nil, err
 	}
@@ -35,9 +35,15 @@ func (s *ExportService) ExportOverallResults(competitionID int64) ([]byte, error
 	header := []string{"Место", "Команда", "Сумма мест", "1-х", "2-х", "3-х"}
 	rows := make([][]string, 0, len(standings))
 	for _, st := range standings {
+		rank := fmt.Sprintf("%d", st.Rank)
+		teamName := st.TeamName
+		if st.OutOfCompetition {
+			rank = "—"
+			teamName += " (вне конкурса)"
+		}
 		rows = append(rows, []string{
-			fmt.Sprintf("%d", st.Rank),
-			st.TeamName,
+			rank,
+			teamName,
 			fmt.Sprintf("%d", st.TotalPlacePoints),
 			fmt.Sprintf("%d", st.FirstPlaces),
 			fmt.Sprintf("%d", st.SecondPlaces),
@@ -73,9 +79,15 @@ func (s *ExportService) ExportStageResults(competitionID int64) ([]byte, error) 
 		header := []string{"Место", "Команда", "Штрафы", "Время"}
 		rows := make([][]string, 0, len(stage.Results))
 		for _, res := range stage.Results {
+			rank := fmt.Sprintf("%d", res.Rank)
+			teamName := res.TeamName
+			if res.OutOfCompetition {
+				rank = "—"
+				teamName += " (вне конкурса)"
+			}
 			rows = append(rows, []string{
-				fmt.Sprintf("%d", res.Rank),
-				res.TeamName,
+				rank,
+				teamName,
 				fmt.Sprintf("%d", res.TotalPenalties),
 				database.FormatTime(res.TotalTime),
 			})

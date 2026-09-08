@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -168,6 +169,10 @@ function openEditParticipant(p: any) {
 
 async function saveParticipant() {
   if (!participantName.value.trim()) return;
+  if (!participantGender.value) {
+    toast.error("Укажите пол участника");
+    return;
+  }
   const teamId = expandedTeam.value!;
   const data = {
     full_name: participantName.value,
@@ -354,8 +359,20 @@ async function saveParticipant() {
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div class="space-y-2">
-              <Label>Пол</Label>
-              <Input v-model="participantGender" placeholder="М/Ж" />
+              <Label>Пол <span class="text-destructive">*</span></Label>
+              <RadioGroup
+                v-model="participantGender"
+                class="flex h-9 items-center gap-4"
+              >
+                <div class="flex items-center space-x-2">
+                  <RadioGroupItem id="gender-m" value="М" />
+                  <Label for="gender-m" class="font-normal">М</Label>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <RadioGroupItem id="gender-f" value="Ж" />
+                  <Label for="gender-f" class="font-normal">Ж</Label>
+                </div>
+              </RadioGroup>
             </div>
             <div class="space-y-2">
               <Label>Возраст</Label>

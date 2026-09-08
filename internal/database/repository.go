@@ -352,9 +352,27 @@ func (r *Repository) GetStageResults(stageID int64) ([]StageResult, error) {
 	return results, nil
 }
 
+func (r *Repository) ListStageResultsForCompetition(competitionID int64) ([]StageResult, error) {
+	var results []StageResult
+	if err := r.db.Select(&results, "SELECT sr.id, sr.stage_id, sr.participant_id, sr.time_seconds, sr.penalty_points, sr.created_at, sr.updated_at FROM stage_results sr JOIN stages s ON s.id = sr.stage_id WHERE s.competition_id = ?", competitionID); err != nil {
+		slog.Error("ListStageResultsForCompetition", "competitionID", competitionID, "error", err)
+		return nil, err
+	}
+	return results, nil
+}
+
+func (r *Repository) CompetitionNameExists(name string) (bool, error) {
+	var count int
+	if err := r.db.Get(&count, "SELECT COUNT(1) FROM competitions WHERE name = ?", name); err != nil {
+		slog.Error("CompetitionNameExists", "name", name, "error", err)
+		return false, err
+	}
+	return count > 0, nil
+}
+
 // ===== Standings =====
 
-func (r *Repository) ComputeStandings(competitionID int64, maxParticipantsPerTeam int) ([]OverallStanding, error) {
+func (r *Repository) ComputeStandings(competitionID int64) ([]OverallStanding, error) {
 	stages, err := r.ListStages(competitionID)
 	if err != nil {
 		return nil, err
@@ -365,28 +383,43 @@ func (r *Repository) ComputeStandings(competitionID int64, maxParticipantsPerTea
 		return nil, err
 	}
 
+	requiredSize := r.requiredTeamSize(competitionID)
+
 	teamPlaceSum := make(map[int64]int)
 	teamFirstPlaces := make(map[int64]int)
 	teamSecondPlaces := make(map[int64]int)
 	teamThirdPlaces := make(map[int64]int)
 	teamNames := make(map[int64]string)
+	teamFullRoster := make(map[int64]bool)
+	teamMissedStage := make(map[int64]bool)
 
 	for _, t := range teams {
 		teamNames[t.ID] = t.Name
+		teamFullRoster[t.ID] = t.ParticipantCount >= requiredSize
 	}
 
+	heldStages := 0
 	for _, stage := range stages {
-		stageTeams := r.computeStageTeamRanking(competitionID, stage.ID)
-		for rank, teamID := range stageTeams {
-			place := rank + 1
-			teamPlaceSum[teamID] += place
+		ranking, held := r.computeStageTeamRanking(competitionID, stage.ID, requiredSize)
+		if !held {
+			continue
+		}
+		heldStages++
+		place := 0
+		for _, tr := range ranking {
+			if !tr.Eligible {
+				teamMissedStage[tr.TeamID] = true
+				continue
+			}
+			place++
+			teamPlaceSum[tr.TeamID] += place
 			switch place {
 			case 1:
-				teamFirstPlaces[teamID]++
+				teamFirstPlaces[tr.TeamID]++
 			case 2:
-				teamSecondPlaces[teamID]++
+				teamSecondPlaces[tr.TeamID]++
 			case 3:
-				teamThirdPlaces[teamID]++
+				teamThirdPlaces[tr.TeamID]++
 			}
 		}
 	}
@@ -400,33 +433,44 @@ func (r *Repository) ComputeStandings(competitionID int64, maxParticipantsPerTea
 		ThirdPlaces      int
 	}
 
-	var scores []teamScore
+	var competitive, outOfCompetition []teamScore
 	for _, t := range teams {
-		scores = append(scores, teamScore{
+		s := teamScore{
 			TeamID:           t.ID,
 			TeamName:         t.Name,
 			TotalPlacePoints: teamPlaceSum[t.ID],
 			FirstPlaces:      teamFirstPlaces[t.ID],
 			SecondPlaces:     teamSecondPlaces[t.ID],
 			ThirdPlaces:      teamThirdPlaces[t.ID],
-		})
+		}
+		if heldStages > 0 && teamFullRoster[t.ID] && !teamMissedStage[t.ID] {
+			competitive = append(competitive, s)
+		} else {
+			outOfCompetition = append(outOfCompetition, s)
+		}
 	}
 
-	sort.Slice(scores, func(i, j int) bool {
-		if scores[i].TotalPlacePoints != scores[j].TotalPlacePoints {
-			return scores[i].TotalPlacePoints < scores[j].TotalPlacePoints
+	sort.Slice(competitive, func(i, j int) bool {
+		if competitive[i].TotalPlacePoints != competitive[j].TotalPlacePoints {
+			return competitive[i].TotalPlacePoints < competitive[j].TotalPlacePoints
 		}
-		if scores[i].FirstPlaces != scores[j].FirstPlaces {
-			return scores[i].FirstPlaces > scores[j].FirstPlaces
+		if competitive[i].FirstPlaces != competitive[j].FirstPlaces {
+			return competitive[i].FirstPlaces > competitive[j].FirstPlaces
 		}
-		if scores[i].SecondPlaces != scores[j].SecondPlaces {
-			return scores[i].SecondPlaces > scores[j].SecondPlaces
+		if competitive[i].SecondPlaces != competitive[j].SecondPlaces {
+			return competitive[i].SecondPlaces > competitive[j].SecondPlaces
 		}
-		return scores[i].ThirdPlaces > scores[j].ThirdPlaces
+		if competitive[i].ThirdPlaces != competitive[j].ThirdPlaces {
+			return competitive[i].ThirdPlaces > competitive[j].ThirdPlaces
+		}
+		return competitive[i].TeamName < competitive[j].TeamName
+	})
+	sort.Slice(outOfCompetition, func(i, j int) bool {
+		return outOfCompetition[i].TeamName < outOfCompetition[j].TeamName
 	})
 
 	var result []OverallStanding
-	for i, s := range scores {
+	for i, s := range competitive {
 		result = append(result, OverallStanding{
 			Rank:             i + 1,
 			TeamID:           s.TeamID,
@@ -435,6 +479,17 @@ func (r *Repository) ComputeStandings(competitionID int64, maxParticipantsPerTea
 			FirstPlaces:      s.FirstPlaces,
 			SecondPlaces:     s.SecondPlaces,
 			ThirdPlaces:      s.ThirdPlaces,
+		})
+	}
+	for _, s := range outOfCompetition {
+		result = append(result, OverallStanding{
+			TeamID:           s.TeamID,
+			TeamName:         s.TeamName,
+			TotalPlacePoints: s.TotalPlacePoints,
+			FirstPlaces:      s.FirstPlaces,
+			SecondPlaces:     s.SecondPlaces,
+			ThirdPlaces:      s.ThirdPlaces,
+			OutOfCompetition: true,
 		})
 	}
 	return result, nil
@@ -451,29 +506,38 @@ func (r *Repository) GetStageStandings(competitionID int64) ([]StageStanding, er
 		return nil, err
 	}
 
+	requiredSize := r.requiredTeamSize(competitionID)
+
 	var result []StageStanding
 	for _, stage := range stages {
-		rankedTeamIDs := r.computeStageTeamRanking(competitionID, stage.ID)
+		ranking, _ := r.computeStageTeamRanking(competitionID, stage.ID, requiredSize)
 		var results []StageTeamResult
-		for rank, teamID := range rankedTeamIDs {
+		rank := 0
+		for _, tr := range ranking {
 			teamName := ""
 			for _, t := range teams {
-				if t.ID == teamID {
+				if t.ID == tr.TeamID {
 					teamName = t.Name
 					break
 				}
 			}
-			totalPenalties, totalTime := r.getTeamStageTotals(stage.ID, teamID)
-			results = append(results, StageTeamResult{
-				Rank:           rank + 1,
+			totalPenalties, totalTime := r.getTeamStageTotals(stage.ID, tr.TeamID)
+			entry := StageTeamResult{
 				StageID:        stage.ID,
 				StageName:      stage.Name,
 				OrderIndex:     stage.OrderIndex,
-				TeamID:         teamID,
+				TeamID:         tr.TeamID,
 				TeamName:       teamName,
 				TotalPenalties: totalPenalties,
 				TotalTime:      totalTime,
-			})
+			}
+			if tr.Eligible {
+				rank++
+				entry.Rank = rank
+			} else {
+				entry.OutOfCompetition = true
+			}
+			results = append(results, entry)
 		}
 		result = append(result, StageStanding{
 			StageID:    stage.ID,
@@ -496,29 +560,38 @@ func (r *Repository) GetStageStandingsWithParticipants(competitionID int64) ([]S
 		return nil, err
 	}
 
+	requiredSize := r.requiredTeamSize(competitionID)
+
 	var result []StageStandingWithParticipants
 	for _, stage := range stages {
-		rankedTeamIDs := r.computeStageTeamRanking(competitionID, stage.ID)
+		ranking, _ := r.computeStageTeamRanking(competitionID, stage.ID, requiredSize)
 		var teamResults []TeamResultWithParticipants
-		for rank, teamID := range rankedTeamIDs {
+		rank := 0
+		for _, tr := range ranking {
 			teamName := ""
 			for _, t := range teams {
-				if t.ID == teamID {
+				if t.ID == tr.TeamID {
 					teamName = t.Name
 					break
 				}
 			}
-			totalPenalties, totalTime := r.getTeamStageTotals(stage.ID, teamID)
-			participants := r.getStageParticipants(stage.ID, teamID)
-			teamResults = append(teamResults, TeamResultWithParticipants{
-				TeamID:             teamID,
+			totalPenalties, totalTime := r.getTeamStageTotals(stage.ID, tr.TeamID)
+			participants := r.getStageParticipants(stage.ID, tr.TeamID)
+			entry := TeamResultWithParticipants{
+				TeamID:             tr.TeamID,
 				TeamName:           teamName,
 				TeamTotalPenalties: totalPenalties,
 				TeamTotalTime:      totalTime,
 				ParticipantCount:   len(participants),
-				Rank:               rank + 1,
 				Participants:       participants,
-			})
+			}
+			if tr.Eligible {
+				rank++
+				entry.Rank = rank
+			} else {
+				entry.OutOfCompetition = true
+			}
+			teamResults = append(teamResults, entry)
 		}
 		result = append(result, StageStandingWithParticipants{
 			StageID:     stage.ID,
@@ -729,9 +802,28 @@ func (r *Repository) GetIndividualStandings(competitionID int64) ([]IndividualSt
 
 // ===== Stage Team Ranking Helpers =====
 
-func (r *Repository) computeStageTeamRanking(competitionID int64, stageID int64) []int64 {
+func (r *Repository) requiredTeamSize(competitionID int64) int {
+	comp, err := r.GetCompetitionByID(competitionID)
+	if err != nil || comp == nil {
+		return defaultMaxParticipantsPerTeam
+	}
+	var settings CompetitionSettings
+	if err := json.Unmarshal([]byte(comp.Settings), &settings); err != nil || settings.MaxParticipantsPerTeam <= 0 {
+		return defaultMaxParticipantsPerTeam
+	}
+	return settings.MaxParticipantsPerTeam
+}
+
+type stageTeamRank struct {
+	TeamID   int64
+	Eligible bool
+}
+
+func (r *Repository) computeStageTeamRanking(competitionID, stageID int64, requiredSize int) ([]stageTeamRank, bool) {
 	query := `
 		SELECT t.id AS team_id,
+			COUNT(DISTINCT p.id) AS participant_count,
+			COUNT(DISTINCT sr.id) AS result_count,
 			COALESCE(SUM(sr.penalty_points), 0) AS total_penalties,
 			COALESCE(SUM(sr.time_seconds), 0) AS total_time
 		FROM teams t
@@ -739,23 +831,34 @@ func (r *Repository) computeStageTeamRanking(competitionID int64, stageID int64)
 		LEFT JOIN stage_results sr ON sr.participant_id = p.id AND sr.stage_id = ?
 		WHERE t.competition_id = ?
 		GROUP BY t.id
-		ORDER BY total_penalties ASC, total_time ASC
+		ORDER BY
+			CASE WHEN COUNT(DISTINCT p.id) >= ? AND COUNT(DISTINCT sr.id) > 0 THEN 0 ELSE 1 END,
+			total_penalties ASC, total_time ASC, t.name ASC
 	`
 	type row struct {
-		TeamID         int64   `db:"team_id"`
-		TotalPenalties int     `db:"total_penalties"`
-		TotalTime      float64 `db:"total_time"`
+		TeamID           int64   `db:"team_id"`
+		ParticipantCount int     `db:"participant_count"`
+		ResultCount      int     `db:"result_count"`
+		TotalPenalties   int     `db:"total_penalties"`
+		TotalTime        float64 `db:"total_time"`
 	}
 	var rows []row
-	if err := r.db.Select(&rows, query, stageID, competitionID); err != nil {
+	if err := r.db.Select(&rows, query, stageID, competitionID, requiredSize); err != nil {
 		slog.Error("computeStageTeamRanking", "stageID", stageID, "error", err)
-		return nil
+		return nil, false
 	}
-	teamIDs := make([]int64, len(rows))
+	ranking := make([]stageTeamRank, len(rows))
+	held := false
 	for i, rw := range rows {
-		teamIDs[i] = rw.TeamID
+		if rw.ResultCount > 0 {
+			held = true
+		}
+		ranking[i] = stageTeamRank{
+			TeamID:   rw.TeamID,
+			Eligible: rw.ParticipantCount >= requiredSize && rw.ResultCount > 0,
+		}
 	}
-	return teamIDs
+	return ranking, held
 }
 
 func (r *Repository) getTeamStageTotals(stageID int64, teamID int64) (int, float64) {
@@ -1088,17 +1191,22 @@ func (r *Repository) GetTeamStatistics(competitionID int64, teamID int64) (*Team
 }
 
 func (r *Repository) computeTeamStageRank(competitionID, stageID, teamID int64) int {
-	rankedIDs := r.computeStageTeamRanking(competitionID, stageID)
-	for i, id := range rankedIDs {
-		if id == teamID {
-			return i + 1
+	ranking, _ := r.computeStageTeamRanking(competitionID, stageID, r.requiredTeamSize(competitionID))
+	place := 0
+	for _, tr := range ranking {
+		if !tr.Eligible {
+			continue
+		}
+		place++
+		if tr.TeamID == teamID {
+			return place
 		}
 	}
 	return 0
 }
 
 func (r *Repository) computeTeamOverallRank(competitionID, teamID int64) int {
-	standings, err := r.ComputeStandings(competitionID, 4)
+	standings, err := r.ComputeStandings(competitionID)
 	if err != nil {
 		return 0
 	}

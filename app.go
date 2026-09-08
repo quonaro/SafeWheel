@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -14,9 +15,10 @@ import (
 )
 
 type App struct {
-	ctx    context.Context
-	repo   *database.Repository
-	export *services.ExportService
+	ctx      context.Context
+	repo     *database.Repository
+	export   *services.ExportService
+	exchange *services.ExchangeService
 }
 
 func NewApp() *App {
@@ -38,6 +40,7 @@ func (a *App) startup(ctx context.Context) {
 
 	a.repo = database.NewRepository(db)
 	a.export = services.NewExportService(a.repo)
+	a.exchange = services.NewExchangeService(a.repo)
 	slog.Info("app initialized")
 }
 
@@ -269,7 +272,7 @@ func (a *App) ComputeStandings(competitionID int64) ([]database.OverallStanding,
 	if err := a.ensureRepo(); err != nil {
 		return nil, err
 	}
-	return a.repo.ComputeStandings(competitionID, 4)
+	return a.repo.ComputeStandings(competitionID)
 }
 
 func (a *App) GetStageStandings(competitionID int64) ([]database.StageStanding, error) {
@@ -364,6 +367,68 @@ func (a *App) saveFile(defaultName string, data []byte) error {
 		return nil
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+// ===== Import / Export JSON =====
+
+func (a *App) ExportCompetitionsJSON(competitionIDs []int64) error {
+	if err := a.ensureRepo(); err != nil {
+		return err
+	}
+	data, err := a.exchange.ExportCompetitions(competitionIDs)
+	if err != nil {
+		return err
+	}
+	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		DefaultFilename: "export.json",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "JSON (*.json)", Pattern: "*.json"},
+		},
+	})
+	if err != nil || path == "" {
+		return nil
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+func (a *App) PickImportFile() ([]database.CompetitionExport, error) {
+	if err := a.ensureRepo(); err != nil {
+		return nil, err
+	}
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Выберите файл импорта",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "JSON (*.json)", Pattern: "*.json"},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if path == "" {
+		return []database.CompetitionExport{}, nil
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("чтение файла: %w", err)
+	}
+	var file database.ImportFile
+	if err := json.Unmarshal(raw, &file); err != nil {
+		return nil, fmt.Errorf("разбор JSON: %w", err)
+	}
+	return file.Competitions, nil
+}
+
+func (a *App) ImportCompetitions(comps []database.CompetitionExport) ([]int64, error) {
+	if err := a.ensureRepo(); err != nil {
+		return nil, err
+	}
+	ids, err := a.exchange.ImportCompetitions(comps)
+	if err != nil {
+		slog.Error("ImportCompetitions", "error", err)
+		return ids, err
+	}
+	slog.Info("import done", "count", len(ids))
+	return ids, nil
 }
 
 // ===== Statistics =====
