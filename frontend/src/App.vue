@@ -12,6 +12,7 @@ import {
   IconTrash,
   IconSun,
   IconMoon,
+  IconSettings,
   IconX,
   IconDeviceFloppy,
   IconDownload,
@@ -30,11 +31,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Toaster } from "vue-sonner";
 import { toast } from "@/composables/useToast";
 import { useCompetitions } from "@/composables/useApi";
 import { useExchange } from "@/composables/useApi";
 import { useTheme } from "@/composables/useTheme";
+import { useSettings } from "@/composables/useSettings";
 import { useAppState } from "@/composables/useAppState";
 import TeamsParticipants from "@/components/competition/TeamsParticipants.vue";
 import StagesManager from "@/components/competition/StagesManager.vue";
@@ -44,6 +47,7 @@ import Statistics from "@/components/competition/Statistics.vue";
 
 const { load, create, update, remove, competitions } = useCompetitions();
 const { theme, toggleTheme } = useTheme();
+const { fontSize, FONT_SIZES } = useSettings();
 const { state } = useAppState();
 const { exportJSON, pickImportFile, importCompetitions } = useExchange();
 
@@ -74,9 +78,24 @@ const editMaxParticipants = ref<number | null>(4);
 
 const showExportDialog = ref(false);
 const showImportDialog = ref(false);
+const showSettingsDialog = ref(false);
 const exportSelected = ref<Record<number, boolean>>({});
 const importFileComps = ref<any[]>([]);
 const importSelected = ref<Record<number, boolean>>({});
+
+const fontOptions = computed(() =>
+  FONT_SIZES.map((size) => ({
+    value: size,
+    label:
+      size === 14
+        ? "Мелкий"
+        : size === 16
+          ? "Обычный"
+          : size === 18
+            ? "Крупный"
+            : "Очень крупный",
+  })),
+);
 
 const tabs = [
   { key: "teams", label: "Команды", icon: IconUsers },
@@ -254,12 +273,30 @@ async function handleImport() {
   >
     <!-- Sidebar -->
     <aside class="flex w-64 flex-col border-r bg-card">
-      <div class="flex h-16 shrink-0 items-center gap-3 px-4 border-b">
-        <img src="/logo-48x48.png" alt="SafeWheel" class="h-12 w-12 shrink-0" />
-        <div class="flex flex-col leading-tight">
-          <span class="text-base font-bold">Безопасное</span>
-          <span class="text-base font-bold">колесо</span>
+      <div
+        class="flex h-16 shrink-0 items-center justify-between gap-3 px-4 border-b"
+      >
+        <div class="flex min-w-0 items-center gap-3">
+          <img
+            src="/logo-48x48.png"
+            alt="SafeWheel"
+            class="h-12 w-12 shrink-0"
+          />
+          <div class="flex flex-col leading-tight">
+            <span class="text-base font-bold">Безопасное</span>
+            <span class="text-base font-bold">колесо</span>
+          </div>
         </div>
+        <button
+          @click="toggleTheme"
+          title="Сменить тему"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-accent"
+        >
+          <component
+            :is="theme === 'dark' ? IconSun : IconMoon"
+            class="h-4 w-4"
+          />
+        </button>
       </div>
 
       <div class="px-2 py-3 space-y-2">
@@ -306,16 +343,13 @@ async function handleImport() {
         </p>
       </div>
 
-      <div class="shrink-0 border-t p-2">
+      <div class="shrink-0 border-t p-2 space-y-1">
         <button
-          @click="toggleTheme"
+          @click="showSettingsDialog = true"
           class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent"
         >
-          <component
-            :is="theme === 'dark' ? IconSun : IconMoon"
-            class="h-4 w-4"
-          />
-          {{ theme === "dark" ? "Светлая тема" : "Тёмная тема" }}
+          <IconSettings class="h-4 w-4" />
+          Настройки
         </button>
         <hr class="mt-2 border-t -mx-2" />
         <p class="mt-2 text-center text-xs text-muted-foreground">
@@ -622,6 +656,82 @@ async function handleImport() {
           >
             <IconPlus class="h-4 w-4" />
             Импортировать
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Settings Dialog -->
+    <Dialog v-model:open="showSettingsDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Настройки</DialogTitle>
+          <DialogDescription
+            >Настройте отображение приложения</DialogDescription
+          >
+        </DialogHeader>
+        <div class="space-y-4 py-4">
+          <div class="space-y-2">
+            <Label>Тема</Label>
+            <RadioGroup v-model="theme" class="grid-cols-2 gap-2">
+              <label
+                :class="[
+                  'flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors',
+                  theme === 'light'
+                    ? 'border-primary text-foreground'
+                    : 'border-border hover:bg-accent',
+                ]"
+              >
+                <RadioGroupItem value="light" id="theme-light" />
+                <IconSun class="h-4 w-4" />
+                <span class="flex-1">Светлая</span>
+              </label>
+              <label
+                :class="[
+                  'flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors',
+                  theme === 'dark'
+                    ? 'border-primary text-foreground'
+                    : 'border-border hover:bg-accent',
+                ]"
+              >
+                <RadioGroupItem value="dark" id="theme-dark" />
+                <IconMoon class="h-4 w-4" />
+                <span class="flex-1">Тёмная</span>
+              </label>
+            </RadioGroup>
+          </div>
+          <div class="space-y-2">
+            <Label>Размер шрифта</Label>
+            <RadioGroup v-model="fontSize" class="grid-cols-2 gap-2">
+              <label
+                v-for="opt in fontOptions"
+                :key="opt.value"
+                :class="[
+                  'flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors',
+                  fontSize === opt.value
+                    ? 'border-primary text-foreground'
+                    : 'border-border hover:bg-accent',
+                ]"
+              >
+                <RadioGroupItem
+                  :value="opt.value"
+                  :id="`font-size-${opt.value}`"
+                />
+                <span class="flex-1">{{ opt.label }}</span>
+                <span class="text-xs text-muted-foreground">
+                  {{ opt.value }}px
+                </span>
+              </label>
+            </RadioGroup>
+            <p class="text-xs text-muted-foreground">
+              Изменение применяется сразу и сохраняется между запусками
+            </p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="showSettingsDialog = false">
+            <IconX class="h-4 w-4" />
+            Закрыть
           </Button>
         </DialogFooter>
       </DialogContent>
