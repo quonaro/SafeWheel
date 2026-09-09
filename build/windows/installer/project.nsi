@@ -7,6 +7,19 @@ Unicode true
 ## all standard macros (wails.files, wails.writeUninstaller, etc.).
 ####
 
+# Per-user install into $LOCALAPPDATA\Programs: no admin rights/UAC required.
+# wails_tools.nsh defaults REQUEST_EXECUTION_LEVEL and WAILS_INSTALL_SCOPE to
+# admin/machine, so define them here (before the include) to force a per-user
+# installer even when `wails build -nsis` is run without -installscope user.
+# An explicit `-installscope machine` on the command line still wins
+# (command-line defines are processed before this script).
+!ifndef REQUEST_EXECUTION_LEVEL
+    !define REQUEST_EXECUTION_LEVEL "user"
+!endif
+!ifndef WAILS_INSTALL_SCOPE
+    !define WAILS_INSTALL_SCOPE "user"
+!endif
+
 !include "wails_tools.nsh"
 
 # The version information for this two must consist of 4 parts

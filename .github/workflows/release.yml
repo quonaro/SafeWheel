@@ -76,7 +76,7 @@ jobs:
       run: command -v wails >/dev/null 2>&1 || go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
 
     - name: Build
-      run: wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform windows/amd64 -nsis -o safe-wheel-windows-amd64.exe
+      run: wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform windows/amd64 -nsis -installscope user -o safe-wheel-windows-amd64.exe
 
     - uses: actions/upload-artifact@v4
       with:
