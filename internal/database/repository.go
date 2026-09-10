@@ -429,6 +429,7 @@ func (r *Repository) ComputeStandings(competitionID int64) ([]OverallStanding, e
 		FirstPlaces      int
 		SecondPlaces     int
 		ThirdPlaces      int
+		Reason           string
 	}
 
 	var competitive, outOfCompetition []teamScore
@@ -444,27 +445,42 @@ func (r *Repository) ComputeStandings(competitionID int64) ([]OverallStanding, e
 		if heldStages > 0 && teamFullRoster[t.ID] && !teamMissedStage[t.ID] {
 			competitive = append(competitive, s)
 		} else {
+			switch {
+			case heldStages == 0:
+				s.Reason = "этапы не проведены"
+			case !teamFullRoster[t.ID]:
+				s.Reason = "неполный состав"
+			case teamMissedStage[t.ID]:
+				s.Reason = "пропустила этап"
+			default:
+				s.Reason = "вне конкурса"
+			}
 			outOfCompetition = append(outOfCompetition, s)
 		}
 	}
 
+	// Внеконкурсные команды тоже ранжируются между собой по тем же
+	// критериям, но всегда остаются внизу таблицы.
+	lessScore := func(a, b teamScore) bool {
+		if a.TotalPlacePoints != b.TotalPlacePoints {
+			return a.TotalPlacePoints < b.TotalPlacePoints
+		}
+		if a.FirstPlaces != b.FirstPlaces {
+			return a.FirstPlaces > b.FirstPlaces
+		}
+		if a.SecondPlaces != b.SecondPlaces {
+			return a.SecondPlaces > b.SecondPlaces
+		}
+		if a.ThirdPlaces != b.ThirdPlaces {
+			return a.ThirdPlaces > b.ThirdPlaces
+		}
+		return a.TeamName < b.TeamName
+	}
 	sort.Slice(competitive, func(i, j int) bool {
-		if competitive[i].TotalPlacePoints != competitive[j].TotalPlacePoints {
-			return competitive[i].TotalPlacePoints < competitive[j].TotalPlacePoints
-		}
-		if competitive[i].FirstPlaces != competitive[j].FirstPlaces {
-			return competitive[i].FirstPlaces > competitive[j].FirstPlaces
-		}
-		if competitive[i].SecondPlaces != competitive[j].SecondPlaces {
-			return competitive[i].SecondPlaces > competitive[j].SecondPlaces
-		}
-		if competitive[i].ThirdPlaces != competitive[j].ThirdPlaces {
-			return competitive[i].ThirdPlaces > competitive[j].ThirdPlaces
-		}
-		return competitive[i].TeamName < competitive[j].TeamName
+		return lessScore(competitive[i], competitive[j])
 	})
 	sort.Slice(outOfCompetition, func(i, j int) bool {
-		return outOfCompetition[i].TeamName < outOfCompetition[j].TeamName
+		return lessScore(outOfCompetition[i], outOfCompetition[j])
 	})
 
 	var result []OverallStanding
@@ -480,16 +496,19 @@ func (r *Repository) ComputeStandings(competitionID int64) ([]OverallStanding, e
 			ThirdPlaces:      s.ThirdPlaces,
 		})
 	}
-	for _, s := range outOfCompetition {
+	for i, s := range outOfCompetition {
 		result = append(result, OverallStanding{
-			TeamID:           s.TeamID,
-			TeamName:         s.TeamName,
-			TotalPlacePoints: s.TotalPlacePoints,
-			PrizePlaceSum:    s.FirstPlaces + 2*s.SecondPlaces + 3*s.ThirdPlaces,
-			FirstPlaces:      s.FirstPlaces,
-			SecondPlaces:     s.SecondPlaces,
-			ThirdPlaces:      s.ThirdPlaces,
-			OutOfCompetition: true,
+			Rank:                   len(competitive) + i + 1,
+			TeamID:                 s.TeamID,
+			TeamName:               s.TeamName,
+			TotalPlacePoints:       s.TotalPlacePoints,
+			PrizePlaceSum:          s.FirstPlaces + 2*s.SecondPlaces + 3*s.ThirdPlaces,
+			FirstPlaces:            s.FirstPlaces,
+			SecondPlaces:           s.SecondPlaces,
+			ThirdPlaces:            s.ThirdPlaces,
+			OutOfCompetition:       true,
+			OutOfCompetitionRank:   i + 1,
+			OutOfCompetitionReason: s.Reason,
 		})
 	}
 	return result, nil
@@ -513,6 +532,7 @@ func (r *Repository) GetStageStandings(competitionID int64) ([]StageStanding, er
 		ranking, _ := r.computeStageTeamRanking(competitionID, stage.ID, requiredSize)
 		var results []StageTeamResult
 		rank := 0
+		outRank := 0
 		for _, tr := range ranking {
 			teamName := ""
 			for _, t := range teams {
@@ -535,7 +555,17 @@ func (r *Repository) GetStageStandings(competitionID int64) ([]StageStanding, er
 				rank++
 				entry.Rank = rank
 			} else {
+				// Внеконкурсные команды идут внизу, но тоже занимают
+				// место в общем зачёте этапа и между собой.
+				outRank++
 				entry.OutOfCompetition = true
+				entry.Rank = rank + outRank
+				entry.OutOfCompetitionRank = outRank
+				if tr.ParticipantCount < requiredSize {
+					entry.OutOfCompetitionReason = "неполный состав"
+				} else {
+					entry.OutOfCompetitionReason = "неявка"
+				}
 			}
 			results = append(results, entry)
 		}
@@ -821,8 +851,10 @@ func (r *Repository) requiredTeamSize(competitionID int64) int {
 }
 
 type stageTeamRank struct {
-	TeamID   int64
-	Eligible bool
+	TeamID           int64
+	ParticipantCount int
+	ResultCount      int
+	Eligible         bool
 }
 
 func (r *Repository) computeStageTeamRanking(competitionID, stageID int64, requiredSize int) ([]stageTeamRank, bool) {
@@ -860,8 +892,10 @@ func (r *Repository) computeStageTeamRanking(competitionID, stageID int64, requi
 			held = true
 		}
 		ranking[i] = stageTeamRank{
-			TeamID:   rw.TeamID,
-			Eligible: rw.ParticipantCount >= requiredSize && rw.ResultCount > 0,
+			TeamID:           rw.TeamID,
+			ParticipantCount: rw.ParticipantCount,
+			ResultCount:      rw.ResultCount,
+			Eligible:         rw.ParticipantCount >= requiredSize && rw.ResultCount > 0,
 		}
 	}
 	return ranking, held

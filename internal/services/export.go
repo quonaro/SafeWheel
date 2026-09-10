@@ -32,18 +32,21 @@ func (s *ExportService) ExportOverallResults(competitionID int64) ([]byte, error
 	addTitle(d, fmt.Sprintf("%s — Общие результаты", comp.Name))
 	addSubtitle(d, "Итоговая таблица результатов соревнования")
 
-	header := []string{"Место", "Команда", "Сумма всех мест", "Сумма призовых мест", "1-х", "2-х", "3-х"}
-	rows := make([][]string, 0, len(standings))
+	var competitive, outOf []database.OverallStanding
 	for _, st := range standings {
-		rank := fmt.Sprintf("%d", st.Rank)
-		teamName := st.TeamName
 		if st.OutOfCompetition {
-			rank = "—"
-			teamName += " (вне конкурса)"
+			outOf = append(outOf, st)
+		} else {
+			competitive = append(competitive, st)
 		}
+	}
+
+	header := []string{"Место", "Команда", "Сумма всех мест", "Сумма призовых мест", "1-х", "2-х", "3-х"}
+	rows := make([][]string, 0, len(competitive))
+	for _, st := range competitive {
 		rows = append(rows, []string{
-			rank,
-			teamName,
+			fmt.Sprintf("%d", st.Rank),
+			st.TeamName,
 			fmt.Sprintf("%d", st.TotalPlacePoints),
 			fmt.Sprintf("%d", st.PrizePlaceSum),
 			fmt.Sprintf("%d", st.FirstPlaces),
@@ -52,6 +55,26 @@ func (s *ExportService) ExportOverallResults(competitionID int64) ([]byte, error
 		})
 	}
 	addTable(d, header, rows)
+
+	if len(outOf) > 0 {
+		addParagraph(d, "", false)
+		addSubtitle(d, "Команды вне конкурса")
+		oHeader := []string{"Место в общем зачёте", "Место вне конкурса", "Команда", "Сумма всех мест", "Сумма призовых мест", "1-х", "2-х", "3-х"}
+		oRows := make([][]string, 0, len(outOf))
+		for _, st := range outOf {
+			oRows = append(oRows, []string{
+				fmt.Sprintf("%d", st.Rank),
+				fmt.Sprintf("%d", st.OutOfCompetitionRank),
+				st.TeamName,
+				fmt.Sprintf("%d", st.TotalPlacePoints),
+				fmt.Sprintf("%d", st.PrizePlaceSum),
+				fmt.Sprintf("%d", st.FirstPlaces),
+				fmt.Sprintf("%d", st.SecondPlaces),
+				fmt.Sprintf("%d", st.ThirdPlaces),
+			})
+		}
+		addTable(d, oHeader, oRows)
+	}
 
 	var buf bytes.Buffer
 	_, err = d.WriteTo(&buf)
@@ -78,22 +101,37 @@ func (s *ExportService) ExportStageResults(competitionID int64) ([]byte, error) 
 	for _, stage := range stageStandings {
 		addSubtitle(d, fmt.Sprintf("Этап: %s", stage.StageName))
 		header := []string{"Место", "Команда", "Штрафы", "Время"}
-		rows := make([][]string, 0, len(stage.Results))
+		var rows [][]string
+		var outResults []database.StageTeamResult
 		for _, res := range stage.Results {
-			rank := fmt.Sprintf("%d", res.Rank)
-			teamName := res.TeamName
 			if res.OutOfCompetition {
-				rank = "—"
-				teamName += " (вне конкурса)"
+				outResults = append(outResults, res)
+				continue
 			}
 			rows = append(rows, []string{
-				rank,
-				teamName,
+				fmt.Sprintf("%d", res.Rank),
+				res.TeamName,
 				fmt.Sprintf("%d", res.TotalPenalties),
 				database.FormatTime(res.TotalTime),
 			})
 		}
 		addTable(d, header, rows)
+		if len(outResults) > 0 {
+			addParagraph(d, "", false)
+			addParagraph(d, "Команды вне конкурса", true)
+			oHeader := []string{"Место в общем зачёте", "Место вне конкурса", "Команда", "Штрафы", "Время"}
+			oRows := make([][]string, 0, len(outResults))
+			for _, res := range outResults {
+				oRows = append(oRows, []string{
+					fmt.Sprintf("%d", res.Rank),
+					fmt.Sprintf("%d", res.OutOfCompetitionRank),
+					res.TeamName,
+					fmt.Sprintf("%d", res.TotalPenalties),
+					database.FormatTime(res.TotalTime),
+				})
+			}
+			addTable(d, oHeader, oRows)
+		}
 		addParagraph(d, "", false)
 	}
 

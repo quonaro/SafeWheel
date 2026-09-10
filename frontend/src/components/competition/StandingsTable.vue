@@ -58,6 +58,26 @@ watch(view, (value) => {
 
 const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-400"];
 
+// Внеконкурсные команды выводятся снизу отдельным блоком, но при этом
+// ранжируются между собой по тем же критериям, что и конкурсные.
+const competitiveStandings = computed(() =>
+  standings.value.filter((s: any) => !s.out_of_competition),
+);
+const outOfCompetitionStandings = computed(() =>
+  standings.value.filter((s: any) => s.out_of_competition),
+);
+const stageViews = computed(() =>
+  stageStandings.value.map((stage: any) => ({
+    ...stage,
+    competitive: (stage.results ?? []).filter(
+      (r: any) => !r.out_of_competition,
+    ),
+    outOfCompetition: (stage.results ?? []).filter(
+      (r: any) => r.out_of_competition,
+    ),
+  })),
+);
+
 async function handleExportOverall() {
   const result = await exportOverall(props.competitionId);
   if (result !== null) {
@@ -138,62 +158,140 @@ async function handleExportIndividual() {
         <IconChartBar class="mx-auto mb-3 h-12 w-12" />
         <p>Нет данных. Добавьте результаты.</p>
       </div>
-      <Card v-else class="transition-all duration-200 hover:shadow-md">
-        <CardContent class="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead class="w-16 text-center">Место</TableHead>
-                <TableHead>Команда</TableHead>
-                <TableHead class="text-center">Сумма всех мест</TableHead>
-                <TableHead class="text-center">Сумма призовых мест</TableHead>
-                <TableHead class="text-center">1-х мест</TableHead>
-                <TableHead class="text-center">2-х мест</TableHead>
-                <TableHead class="text-center">3-х мест</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow
-                v-for="s in standings"
-                :key="s.team_id"
-                :class="s.out_of_competition ? 'text-muted-foreground' : ''"
-              >
-                <TableCell class="text-center">
-                  <span
-                    v-if="!s.out_of_competition"
-                    :class="[
-                      'inline-flex items-center gap-1 font-bold',
-                      s.rank <= 3 ? medalColors[s.rank - 1] : '',
-                    ]"
+      <template v-else>
+        <Card
+          v-if="competitiveStandings.length > 0"
+          class="transition-all duration-200 hover:shadow-md"
+        >
+          <CardContent class="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead class="w-16 text-center">Место</TableHead>
+                  <TableHead>Команда</TableHead>
+                  <TableHead class="text-center">Сумма всех мест</TableHead>
+                  <TableHead class="text-center">Сумма призовых мест</TableHead>
+                  <TableHead class="text-center">1-х мест</TableHead>
+                  <TableHead class="text-center">2-х мест</TableHead>
+                  <TableHead class="text-center">3-х мест</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-for="s in competitiveStandings" :key="s.team_id">
+                  <TableCell class="text-center">
+                    <span
+                      :class="[
+                        'inline-flex items-center gap-1 font-bold',
+                        s.rank <= 3 ? medalColors[s.rank - 1] : '',
+                      ]"
+                    >
+                      <IconTrophy v-if="s.rank <= 3" class="h-4 w-4" />
+                      {{ s.rank }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="font-medium">{{ s.team_name }}</TableCell>
+                  <TableCell class="text-center font-bold">{{
+                    s.total_place_points
+                  }}</TableCell>
+                  <TableCell class="text-center font-bold">{{
+                    s.prize_place_sum
+                  }}</TableCell>
+                  <TableCell class="text-center">{{
+                    s.first_places
+                  }}</TableCell>
+                  <TableCell class="text-center">{{
+                    s.second_places
+                  }}</TableCell>
+                  <TableCell class="text-center">{{
+                    s.third_places
+                  }}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card
+          v-if="outOfCompetitionStandings.length > 0"
+          class="mt-4 transition-all duration-200 hover:shadow-md border-dashed"
+        >
+          <CardContent class="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead
+                    class="w-20 text-center"
+                    title="Место в общем зачёте"
+                    >Место (общ.)</TableHead
                   >
-                    <IconTrophy v-if="s.rank <= 3" class="h-4 w-4" />
-                    {{ s.rank }}
-                  </span>
-                  <span v-else class="font-bold">—</span>
-                </TableCell>
-                <TableCell class="font-medium">
-                  {{ s.team_name }}
-                  <Badge
-                    v-if="s.out_of_competition"
-                    variant="secondary"
-                    class="ml-2 font-normal"
-                    >вне конкурса</Badge
-                  >
-                </TableCell>
-                <TableCell class="text-center font-bold">{{
-                  s.total_place_points
-                }}</TableCell>
-                <TableCell class="text-center font-bold">{{
-                  s.prize_place_sum
-                }}</TableCell>
-                <TableCell class="text-center">{{ s.first_places }}</TableCell>
-                <TableCell class="text-center">{{ s.second_places }}</TableCell>
-                <TableCell class="text-center">{{ s.third_places }}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  <TableHead class="w-16 text-center">Место</TableHead>
+                  <TableHead>Команда</TableHead>
+                  <TableHead class="text-center">Сумма всех мест</TableHead>
+                  <TableHead class="text-center">Сумма призовых мест</TableHead>
+                  <TableHead class="text-center">1-х мест</TableHead>
+                  <TableHead class="text-center">2-х мест</TableHead>
+                  <TableHead class="text-center">3-х мест</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow
+                  v-for="s in outOfCompetitionStandings"
+                  :key="s.team_id"
+                >
+                  <TableCell class="text-center">
+                    <span
+                      :class="[
+                        'inline-flex items-center gap-1 font-bold',
+                        s.rank <= 3 ? medalColors[s.rank - 1] : '',
+                      ]"
+                    >
+                      <IconTrophy v-if="s.rank <= 3" class="h-4 w-4" />
+                      {{ s.rank }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="text-center">
+                    <span
+                      :class="[
+                        'inline-flex items-center gap-1 font-bold',
+                        s.out_of_competition_rank <= 3
+                          ? medalColors[s.out_of_competition_rank - 1]
+                          : '',
+                      ]"
+                    >
+                      <IconTrophy
+                        v-if="s.out_of_competition_rank <= 3"
+                        class="h-4 w-4"
+                      />
+                      {{ s.out_of_competition_rank }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="font-medium">
+                    {{ s.team_name }}
+                    <Badge variant="secondary" class="ml-2 font-normal">
+                      {{ s.out_of_competition_reason || "вне конкурса" }}
+                    </Badge>
+                  </TableCell>
+                  <TableCell class="text-center font-bold">{{
+                    s.total_place_points
+                  }}</TableCell>
+                  <TableCell class="text-center font-bold">{{
+                    s.prize_place_sum
+                  }}</TableCell>
+                  <TableCell class="text-center">{{
+                    s.first_places
+                  }}</TableCell>
+                  <TableCell class="text-center">{{
+                    s.second_places
+                  }}</TableCell>
+                  <TableCell class="text-center">{{
+                    s.third_places
+                  }}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </template>
     </div>
 
     <!-- Stage Standings -->
@@ -206,7 +304,7 @@ async function handleExportIndividual() {
         <p>Нет данных по этапам</p>
       </div>
       <Card
-        v-for="stage in stageStandings"
+        v-for="stage in stageViews"
         :key="stage.stage_id"
         class="transition-all duration-200 hover:shadow-md"
       >
@@ -224,14 +322,9 @@ async function handleExportIndividual() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow
-                v-for="r in stage.results"
-                :key="r.team_id"
-                :class="r.out_of_competition ? 'text-muted-foreground' : ''"
-              >
+              <TableRow v-for="r in stage.competitive" :key="r.team_id">
                 <TableCell class="text-center">
                   <span
-                    v-if="!r.out_of_competition"
                     :class="[
                       'inline-flex items-center gap-1 font-bold',
                       r.rank <= 3 ? medalColors[r.rank - 1] : '',
@@ -240,17 +333,8 @@ async function handleExportIndividual() {
                     <IconTrophy v-if="r.rank <= 3" class="h-4 w-4" />
                     {{ r.rank }}
                   </span>
-                  <span v-else class="font-bold">—</span>
                 </TableCell>
-                <TableCell class="font-medium">
-                  {{ r.team_name }}
-                  <Badge
-                    v-if="r.out_of_competition"
-                    variant="secondary"
-                    class="ml-2 font-normal"
-                    >вне конкурса</Badge
-                  >
-                </TableCell>
+                <TableCell class="font-medium">{{ r.team_name }}</TableCell>
                 <TableCell class="text-center font-bold">{{
                   r.total_penalties
                 }}</TableCell>
@@ -260,6 +344,70 @@ async function handleExportIndividual() {
               </TableRow>
             </TableBody>
           </Table>
+
+          <div
+            v-if="stage.outOfCompetition.length > 0"
+            class="mt-4 rounded-lg border border-dashed"
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead
+                    class="w-20 text-center"
+                    title="Место в общем зачёте"
+                    >Место (общ.)</TableHead
+                  >
+                  <TableHead class="w-12 text-center">Место</TableHead>
+                  <TableHead>Команда</TableHead>
+                  <TableHead class="text-center">Штрафы</TableHead>
+                  <TableHead class="text-center">Время</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-for="r in stage.outOfCompetition" :key="r.team_id">
+                  <TableCell class="text-center">
+                    <span
+                      :class="[
+                        'inline-flex items-center gap-1 font-bold',
+                        r.rank <= 3 ? medalColors[r.rank - 1] : '',
+                      ]"
+                    >
+                      <IconTrophy v-if="r.rank <= 3" class="h-4 w-4" />
+                      {{ r.rank }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="text-center">
+                    <span
+                      :class="[
+                        'inline-flex items-center gap-1 font-bold',
+                        r.out_of_competition_rank <= 3
+                          ? medalColors[r.out_of_competition_rank - 1]
+                          : '',
+                      ]"
+                    >
+                      <IconTrophy
+                        v-if="r.out_of_competition_rank <= 3"
+                        class="h-4 w-4"
+                      />
+                      {{ r.out_of_competition_rank }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="font-medium">
+                    {{ r.team_name }}
+                    <Badge variant="secondary" class="ml-2 font-normal">
+                      {{ r.out_of_competition_reason || "вне конкурса" }}
+                    </Badge>
+                  </TableCell>
+                  <TableCell class="text-center font-bold">{{
+                    r.total_penalties
+                  }}</TableCell>
+                  <TableCell class="text-center font-mono">{{
+                    formatTimeLocal(r.total_time)
+                  }}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

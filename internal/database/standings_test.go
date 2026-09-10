@@ -99,8 +99,8 @@ func TestComputeStandingsOutOfCompetition(t *testing.T) {
 	}
 	for _, id := range []int64{empty.ID, incomplete.ID, noShow.ID} {
 		s := byTeam[id]
-		if !s.OutOfCompetition || s.Rank != 0 {
-			t.Fatalf("team %d: expected out of competition, got %+v", id, s)
+		if !s.OutOfCompetition || s.OutOfCompetitionRank == 0 || s.Rank != 2+s.OutOfCompetitionRank {
+			t.Fatalf("team %d: expected out of competition with overall rank, got %+v", id, s)
 		}
 	}
 
@@ -126,11 +126,118 @@ func TestComputeStandingsOutOfCompetition(t *testing.T) {
 		t.Fatal("stage 1 standings not found")
 	}
 	for _, res := range stage1.Results {
-		if res.TeamID == incomplete.ID && (res.Rank != 0 || !res.OutOfCompetition) {
-			t.Fatalf("incomplete team got stage rank: %+v", res)
+		if res.TeamID == incomplete.ID && (res.OutOfCompetitionRank != 3 || res.Rank != 5 || !res.OutOfCompetition) {
+			t.Fatalf("incomplete team expected overall stage rank 5 and group rank 3, got %+v", res)
 		}
 		if (res.TeamID == full1.ID || res.TeamID == full2.ID) && res.Rank == 0 {
 			t.Fatalf("competitive team lost stage rank: %+v", res)
+		}
+	}
+}
+
+func TestComputeStandingsOutOfCompetitionRanking(t *testing.T) {
+	r := newTestRepo(t)
+
+	comp, err := r.CreateCompetition(Competition{Name: "Тест"})
+	if err != nil {
+		t.Fatalf("create competition: %v", err)
+	}
+
+	stage1, err := r.CreateStage(comp.ID, "Этап 1")
+	if err != nil {
+		t.Fatalf("create stage: %v", err)
+	}
+	stage2, err := r.CreateStage(comp.ID, "Этап 2")
+	if err != nil {
+		t.Fatalf("create stage 2: %v", err)
+	}
+
+	partial, _ := r.CreateTeam(comp.ID, "Частичная")
+	noShow, _ := r.CreateTeam(comp.ID, "Неявка")
+	fullA, _ := r.CreateTeam(comp.ID, "Полная-А")
+	fullB, _ := r.CreateTeam(comp.ID, "Полная-Б")
+
+	partP := addParticipants(t, r, partial.ID, 4)
+	noShowP := addParticipants(t, r, noShow.ID, 4)
+	fullAP := addParticipants(t, r, fullA.ID, 4)
+	fullBP := addParticipants(t, r, fullB.ID, 4)
+
+	// Этап 1: "Полная-Б" не участвует.
+	for _, p := range fullAP {
+		if _, err := r.UpsertStageResult(stage1.ID, p.ID, 60, 2); err != nil {
+			t.Fatalf("upsert result: %v", err)
+		}
+	}
+	for _, p := range partP {
+		if _, err := r.UpsertStageResult(stage1.ID, p.ID, 70, 5); err != nil {
+			t.Fatalf("upsert result: %v", err)
+		}
+	}
+	for _, p := range noShowP {
+		if _, err := r.UpsertStageResult(stage1.ID, p.ID, 80, 1); err != nil {
+			t.Fatalf("upsert result: %v", err)
+		}
+	}
+
+	// Этап 2: "Полная-А" пропускает этап.
+	for _, p := range fullBP {
+		if _, err := r.UpsertStageResult(stage2.ID, p.ID, 50, 0); err != nil {
+			t.Fatalf("upsert result: %v", err)
+		}
+	}
+	for _, p := range partP {
+		if _, err := r.UpsertStageResult(stage2.ID, p.ID, 55, 1); err != nil {
+			t.Fatalf("upsert result: %v", err)
+		}
+	}
+	for _, p := range noShowP {
+		if _, err := r.UpsertStageResult(stage2.ID, p.ID, 60, 2); err != nil {
+			t.Fatalf("upsert result: %v", err)
+		}
+	}
+
+	standings, err := r.ComputeStandings(comp.ID)
+	if err != nil {
+		t.Fatalf("compute standings: %v", err)
+	}
+	if len(standings) != 4 {
+		t.Fatalf("expected 4 standings rows, got %d", len(standings))
+	}
+
+	// Этап 1 места: Неявка=1, Полная-А=2, Частичная=3.
+	// Этап 2 места: Полная-Б=1, Частичная=2, Неявка=3.
+	// Итог: Неявка 4 очка, Частичная 5 очков — конкурсные.
+	// Вне конкурса: Полная-Б (1 очко) выше Полной-А (2 очка).
+	if s := standings[0]; s.TeamID != noShow.ID || s.OutOfCompetition || s.Rank != 1 {
+		t.Fatalf("expected noShow at rank 1, got %+v", s)
+	}
+	if s := standings[1]; s.TeamID != partial.ID || s.OutOfCompetition || s.Rank != 2 {
+		t.Fatalf("expected partial at rank 2, got %+v", s)
+	}
+	if s := standings[2]; s.TeamID != fullB.ID || !s.OutOfCompetition || s.OutOfCompetitionRank != 1 || s.Rank != 3 || s.TotalPlacePoints != 1 {
+		t.Fatalf("expected fullB out of competition with group rank 1 and overall rank 3, got %+v", s)
+	}
+	if s := standings[3]; s.TeamID != fullA.ID || !s.OutOfCompetition || s.OutOfCompetitionRank != 2 || s.Rank != 4 || s.TotalPlacePoints != 2 {
+		t.Fatalf("expected fullA out of competition with group rank 2 and overall rank 4, got %+v", s)
+	}
+
+	// На этапе 2 "Полная-А" вне конкурса: общее место 4, в группе 1.
+	stageStandings, err := r.GetStageStandings(comp.ID)
+	if err != nil {
+		t.Fatalf("get stage standings: %v", err)
+	}
+	var stage2Standing *StageStanding
+	for i := range stageStandings {
+		if stageStandings[i].StageID == stage2.ID {
+			stage2Standing = &stageStandings[i]
+		}
+	}
+	if stage2Standing == nil {
+		t.Fatal("stage 2 standings not found")
+	}
+	for _, res := range stage2Standing.Results {
+		if res.TeamID == fullA.ID && (res.OutOfCompetitionRank != 1 || res.Rank != 4 || !res.OutOfCompetition) {
+			t.Fatalf("fullA: expected overall stage rank 4 and group rank 1, got %+v", res)
 		}
 	}
 }

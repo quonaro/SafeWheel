@@ -71,16 +71,18 @@ type StageStanding struct {
 }
 
 type StageTeamResult struct {
-	Rank             int     `json:"rank" db:"rank"`
-	StageID          int64   `json:"stage_id" db:"stage_id"`
-	StageName        string  `json:"stage_name" db:"stage_name"`
-	OrderIndex       int     `json:"order_index" db:"order_index"`
-	TeamID           int64   `json:"team_id" db:"team_id"`
-	TeamName         string  `json:"team_name" db:"team_name"`
-	TotalPenalties   int     `json:"total_penalties" db:"total_penalties"`
-	TotalTime        float64 `json:"total_time" db:"total_time"`
-	AvgAge           float64 `json:"avg_age" db:"avg_age"`
-	OutOfCompetition bool    `json:"out_of_competition" db:"-"`
+	Rank                   int     `json:"rank" db:"rank"`
+	StageID                int64   `json:"stage_id" db:"stage_id"`
+	StageName              string  `json:"stage_name" db:"stage_name"`
+	OrderIndex             int     `json:"order_index" db:"order_index"`
+	TeamID                 int64   `json:"team_id" db:"team_id"`
+	TeamName               string  `json:"team_name" db:"team_name"`
+	TotalPenalties         int     `json:"total_penalties" db:"total_penalties"`
+	TotalTime              float64 `json:"total_time" db:"total_time"`
+	AvgAge                 float64 `json:"avg_age" db:"avg_age"`
+	OutOfCompetition       bool    `json:"out_of_competition" db:"-"`
+	OutOfCompetitionRank   int     `json:"out_of_competition_rank" db:"-"`
+	OutOfCompetitionReason string  `json:"out_of_competition_reason" db:"-"`
 }
 
 type StageStandingWithParticipants struct {
@@ -168,15 +170,17 @@ type IndividualResult struct {
 }
 
 type OverallStanding struct {
-	Rank             int    `json:"rank" db:"rank"`
-	TeamID           int64  `json:"team_id" db:"team_id"`
-	TeamName         string `json:"team_name" db:"team_name"`
-	TotalPlacePoints int    `json:"total_place_points" db:"total_place_points"`
-	PrizePlaceSum    int    `json:"prize_place_sum" db:"-"`
-	FirstPlaces      int    `json:"first_places" db:"first_places"`
-	SecondPlaces     int    `json:"second_places" db:"second_places"`
-	ThirdPlaces      int    `json:"third_places" db:"third_places"`
-	OutOfCompetition bool   `json:"out_of_competition" db:"-"`
+	Rank                   int    `json:"rank" db:"rank"`
+	TeamID                 int64  `json:"team_id" db:"team_id"`
+	TeamName               string `json:"team_name" db:"team_name"`
+	TotalPlacePoints       int    `json:"total_place_points" db:"total_place_points"`
+	PrizePlaceSum          int    `json:"prize_place_sum" db:"-"`
+	FirstPlaces            int    `json:"first_places" db:"first_places"`
+	SecondPlaces           int    `json:"second_places" db:"second_places"`
+	ThirdPlaces            int    `json:"third_places" db:"third_places"`
+	OutOfCompetition       bool   `json:"out_of_competition" db:"-"`
+	OutOfCompetitionRank   int    `json:"out_of_competition_rank" db:"-"`
+	OutOfCompetitionReason string `json:"out_of_competition_reason" db:"-"`
 }
 
 type ParticipantStageStat struct {

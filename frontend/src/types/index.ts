@@ -67,6 +67,22 @@ export interface StageTeamResult {
   total_time: number;
   avg_age: number;
   out_of_competition: boolean;
+  out_of_competition_rank: number;
+  out_of_competition_reason: string;
+}
+
+export interface OverallStanding {
+  rank: number;
+  team_id: number;
+  team_name: string;
+  total_place_points: number;
+  prize_place_sum: number;
+  first_places: number;
+  second_places: number;
+  third_places: number;
+  out_of_competition: boolean;
+  out_of_competition_rank: number;
+  out_of_competition_reason: string;
 }
 
 export interface StageStanding {

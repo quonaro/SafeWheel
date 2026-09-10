@@ -354,7 +354,9 @@ function genderLabel(g: string) {
                 <div class="flex items-center gap-2">
                   <IconTrophy class="h-5 w-5 text-yellow-600" />
                   <span class="text-sm"
-                    >Место ({{ genderLabel(participantStats.gender) }})</span
+                    >Место в турнирной таблице ({{
+                      genderLabel(participantStats.gender)
+                    }})</span
                   >
                 </div>
                 <span class="text-2xl font-bold text-primary">
