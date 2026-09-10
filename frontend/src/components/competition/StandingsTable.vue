@@ -145,7 +145,8 @@ async function handleExportIndividual() {
               <TableRow>
                 <TableHead class="w-16 text-center">Место</TableHead>
                 <TableHead>Команда</TableHead>
-                <TableHead class="text-center">Сумма мест</TableHead>
+                <TableHead class="text-center">Сумма всех мест</TableHead>
+                <TableHead class="text-center">Сумма призовых мест</TableHead>
                 <TableHead class="text-center">1-х мест</TableHead>
                 <TableHead class="text-center">2-х мест</TableHead>
                 <TableHead class="text-center">3-х мест</TableHead>
@@ -181,6 +182,9 @@ async function handleExportIndividual() {
                 </TableCell>
                 <TableCell class="text-center font-bold">{{
                   s.total_place_points
+                }}</TableCell>
+                <TableCell class="text-center font-bold">{{
+                  s.prize_place_sum
                 }}</TableCell>
                 <TableCell class="text-center">{{ s.first_places }}</TableCell>
                 <TableCell class="text-center">{{ s.second_places }}</TableCell>

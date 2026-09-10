@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import {
   IconPlus,
   IconTrash,
@@ -62,7 +62,23 @@ const teamName = ref("");
 const participantName = ref("");
 const participantGender = ref("");
 const participantBirthDate = ref("");
-const participantAge = ref<number | null>(0);
+
+// Возраст вычисляется из даты рождения и не редактируется вручную.
+function calcAge(birthDate: string): number {
+  if (!birthDate) return 0;
+  const t = new Date(`${birthDate.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(t.getTime())) return 0;
+  const now = new Date();
+  let age = now.getFullYear() - t.getFullYear();
+  if (
+    now.getMonth() < t.getMonth() ||
+    (now.getMonth() === t.getMonth() && now.getDate() < t.getDate())
+  ) {
+    age--;
+  }
+  return age < 0 ? 0 : age;
+}
+const participantAge = computed(() => calcAge(participantBirthDate.value));
 
 async function initialize() {
   await loadTeams(props.competitionId);
@@ -154,7 +170,6 @@ function openCreateParticipant(teamId: number) {
   participantName.value = "";
   participantGender.value = "";
   participantBirthDate.value = "";
-  participantAge.value = 0;
   showParticipantDialog.value = true;
 }
 
@@ -162,8 +177,9 @@ function openEditParticipant(p: any) {
   editingParticipant.value = p;
   participantName.value = p.full_name;
   participantGender.value = p.gender || "";
-  participantBirthDate.value = p.birth_date || "";
-  participantAge.value = p.age;
+  // Обрезаем возможный "2012-03-15T00:00:00Z" из старых БД — <input type="date">
+  // не умеет показывать такой формат.
+  participantBirthDate.value = (p.birth_date || "").slice(0, 10);
   showParticipantDialog.value = true;
 }
 
@@ -174,11 +190,13 @@ async function saveParticipant() {
     return;
   }
   const teamId = expandedTeam.value!;
+  const birthDate = participantBirthDate.value;
   const data = {
     full_name: participantName.value,
     gender: participantGender.value || null,
-    birth_date: participantBirthDate.value || null,
-    age: Math.max(0, Math.trunc(Number(participantAge.value ?? 0) || 0)),
+    birth_date: birthDate || null,
+    // Возраст всегда берётся из даты рождения; без даты сохраняем прежний возраст.
+    age: birthDate ? calcAge(birthDate) : (editingParticipant.value?.age ?? 0),
   };
   const isEdit = !!editingParticipant.value;
   const result = isEdit
@@ -376,7 +394,13 @@ async function saveParticipant() {
             </div>
             <div class="space-y-2">
               <Label>Возраст</Label>
-              <Input v-model="participantAge" type="number" placeholder="0" />
+              <Input
+                :model-value="participantAge"
+                type="number"
+                disabled
+                placeholder="0"
+                title="Рассчитывается автоматически из даты рождения"
+              />
             </div>
           </div>
           <div class="space-y-2">

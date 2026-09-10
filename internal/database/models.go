@@ -172,6 +172,7 @@ type OverallStanding struct {
 	TeamID           int64  `json:"team_id" db:"team_id"`
 	TeamName         string `json:"team_name" db:"team_name"`
 	TotalPlacePoints int    `json:"total_place_points" db:"total_place_points"`
+	PrizePlaceSum    int    `json:"prize_place_sum" db:"-"`
 	FirstPlaces      int    `json:"first_places" db:"first_places"`
 	SecondPlaces     int    `json:"second_places" db:"second_places"`
 	ThirdPlaces      int    `json:"third_places" db:"third_places"`

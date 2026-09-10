@@ -32,7 +32,7 @@ func (s *ExportService) ExportOverallResults(competitionID int64) ([]byte, error
 	addTitle(d, fmt.Sprintf("%s — Общие результаты", comp.Name))
 	addSubtitle(d, "Итоговая таблица результатов соревнования")
 
-	header := []string{"Место", "Команда", "Сумма мест", "1-х", "2-х", "3-х"}
+	header := []string{"Место", "Команда", "Сумма всех мест", "Сумма призовых мест", "1-х", "2-х", "3-х"}
 	rows := make([][]string, 0, len(standings))
 	for _, st := range standings {
 		rank := fmt.Sprintf("%d", st.Rank)
@@ -45,6 +45,7 @@ func (s *ExportService) ExportOverallResults(competitionID int64) ([]byte, error
 			rank,
 			teamName,
 			fmt.Sprintf("%d", st.TotalPlacePoints),
+			fmt.Sprintf("%d", st.PrizePlaceSum),
 			fmt.Sprintf("%d", st.FirstPlaces),
 			fmt.Sprintf("%d", st.SecondPlaces),
 			fmt.Sprintf("%d", st.ThirdPlaces),

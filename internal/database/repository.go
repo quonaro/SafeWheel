@@ -143,6 +143,9 @@ func (r *Repository) ListParticipants(teamID int64) ([]Participant, error) {
 		slog.Error("ListParticipants", "teamID", teamID, "error", err)
 		return nil, err
 	}
+	for i := range participants {
+		participants[i].BirthDate = normalizeBirthDate(participants[i].BirthDate)
+	}
 	return participants, nil
 }
 
@@ -156,6 +159,7 @@ func (r *Repository) GetParticipantByID(id int64) (*Participant, error) {
 		slog.Error("GetParticipantByID", "id", id, "error", err)
 		return nil, err
 	}
+	p.BirthDate = normalizeBirthDate(p.BirthDate)
 	return &p, nil
 }
 
@@ -190,10 +194,7 @@ func (r *Repository) CreateParticipant(teamID int64, p Participant) (*Participan
 		return nil, fmt.Errorf("в команде не может быть больше %d участников", maxParticipants)
 	}
 
-	age := p.Age
-	if p.BirthDate != nil && age == 0 {
-		age = calcAge(*p.BirthDate)
-	}
+	age := participantAge(p)
 
 	res, err := tx.Exec(
 		"INSERT INTO participants (team_id, full_name, gender, birth_date, age, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
@@ -213,10 +214,7 @@ func (r *Repository) CreateParticipant(teamID int64, p Participant) (*Participan
 }
 
 func (r *Repository) UpdateParticipant(id int64, p Participant) (*Participant, error) {
-	age := p.Age
-	if p.BirthDate != nil && age == 0 {
-		age = calcAge(*p.BirthDate)
-	}
+	age := participantAge(p)
 	_, err := r.db.Exec(
 		"UPDATE participants SET full_name = ?, gender = ?, birth_date = ?, age = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
 		strings.TrimSpace(p.FullName), p.Gender, p.BirthDate, age, id,
@@ -476,6 +474,7 @@ func (r *Repository) ComputeStandings(competitionID int64) ([]OverallStanding, e
 			TeamID:           s.TeamID,
 			TeamName:         s.TeamName,
 			TotalPlacePoints: s.TotalPlacePoints,
+			PrizePlaceSum:    s.FirstPlaces + 2*s.SecondPlaces + 3*s.ThirdPlaces,
 			FirstPlaces:      s.FirstPlaces,
 			SecondPlaces:     s.SecondPlaces,
 			ThirdPlaces:      s.ThirdPlaces,
@@ -486,6 +485,7 @@ func (r *Repository) ComputeStandings(competitionID int64) ([]OverallStanding, e
 			TeamID:           s.TeamID,
 			TeamName:         s.TeamName,
 			TotalPlacePoints: s.TotalPlacePoints,
+			PrizePlaceSum:    s.FirstPlaces + 2*s.SecondPlaces + 3*s.ThirdPlaces,
 			FirstPlaces:      s.FirstPlaces,
 			SecondPlaces:     s.SecondPlaces,
 			ThirdPlaces:      s.ThirdPlaces,
@@ -676,7 +676,10 @@ func (r *Repository) GetParticipantsWithResults(competitionID int64, stageID int
 			results[i].Gender = rw.Gender.String
 		}
 		if rw.BirthDate.Valid {
-			results[i].BirthDate = rw.BirthDate.String
+			bd := rw.BirthDate.String
+			if n := normalizeBirthDate(&bd); n != nil {
+				results[i].BirthDate = *n
+			}
 		}
 	}
 	return results, nil
@@ -781,7 +784,10 @@ func (r *Repository) GetIndividualStandings(competitionID int64) ([]IndividualSt
 				ir.Gender = rw.Gender.String
 			}
 			if rw.BirthDate.Valid {
-				ir.BirthDate = rw.BirthDate.String
+				bd := rw.BirthDate.String
+				if n := normalizeBirthDate(&bd); n != nil {
+					ir.BirthDate = *n
+				}
 			}
 
 			switch ir.Gender {
@@ -1219,6 +1225,34 @@ func (r *Repository) computeTeamOverallRank(competitionID, teamID int64) int {
 }
 
 // ===== Helpers =====
+
+// participantAge derives the stored age from the birth date when one is set.
+// The client can no longer set an arbitrary age for participants that have a
+// birth date — age always follows the birth date.
+func participantAge(p Participant) int {
+	if p.BirthDate != nil && *p.BirthDate != "" {
+		return calcAge(*p.BirthDate)
+	}
+	return p.Age
+}
+
+// normalizeBirthDate converts the ISO8601 form produced by SQLite's DATE
+// affinity (e.g. "2012-03-15T00:00:00Z") back to plain "2006-01-02" so the
+// value round-trips through <input type="date">. Other values pass through
+// unchanged.
+func normalizeBirthDate(s *string) *string {
+	if s == nil {
+		return s
+	}
+	if _, err := time.Parse("2006-01-02", *s); err == nil {
+		return s
+	}
+	if t, err := time.Parse(time.RFC3339, *s); err == nil {
+		out := t.Format("2006-01-02")
+		return &out
+	}
+	return s
+}
 
 func calcAge(birthDate string) int {
 	t, err := time.Parse("2006-01-02", birthDate)

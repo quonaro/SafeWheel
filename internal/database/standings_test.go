@@ -88,8 +88,14 @@ func TestComputeStandingsOutOfCompetition(t *testing.T) {
 	if s := byTeam[full1.ID]; s.OutOfCompetition || s.Rank != 1 {
 		t.Fatalf("full1: expected rank 1 in competition, got %+v", s)
 	}
+	if s := byTeam[full1.ID]; s.FirstPlaces != 1 || s.PrizePlaceSum != 1 {
+		t.Fatalf("full1: expected 1 first place and prize place sum 1, got %+v", s)
+	}
 	if s := byTeam[full2.ID]; s.OutOfCompetition || s.Rank != 2 {
 		t.Fatalf("full2: expected rank 2 in competition, got %+v", s)
+	}
+	if s := byTeam[full2.ID]; s.SecondPlaces != 1 || s.PrizePlaceSum != 2 {
+		t.Fatalf("full2: expected 1 second place and prize place sum 2, got %+v", s)
 	}
 	for _, id := range []int64{empty.ID, incomplete.ID, noShow.ID} {
 		s := byTeam[id]

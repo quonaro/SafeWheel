@@ -83,7 +83,7 @@ func createTables(db *sqlx.DB) error {
 			team_id INTEGER NOT NULL,
 			full_name TEXT NOT NULL,
 			gender TEXT CHECK (gender IN ('М','Ж')),
-			birth_date DATE,
+			birth_date TEXT,
 			age INTEGER NOT NULL CHECK(age >= 0),
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -138,7 +138,7 @@ func runMigrations(db *sqlx.DB) error {
 	}{
 		{"ALTER TABLE competitions ADD COLUMN description TEXT DEFAULT ''"},
 		{"ALTER TABLE competitions ADD COLUMN settings TEXT DEFAULT '{}'"},
-		{"ALTER TABLE participants ADD COLUMN birth_date DATE"},
+		{"ALTER TABLE participants ADD COLUMN birth_date TEXT"},
 	}
 
 	for _, m := range migrations {
