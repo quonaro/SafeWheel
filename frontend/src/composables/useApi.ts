@@ -258,6 +258,10 @@ export function useExport() {
     return call(() => wails.ExportIndividualStandings(competitionId));
   }
 
+  async function exportReportArchive(competitionId: number) {
+    return call(() => wails.ExportCompetitionReportArchive(competitionId));
+  }
+
   return {
     loading,
     error,
@@ -265,6 +269,7 @@ export function useExport() {
     exportStages,
     exportAll,
     exportIndividual,
+    exportReportArchive,
   };
 }
 

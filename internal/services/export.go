@@ -1,8 +1,12 @@
 package services
 
 import (
+	"archive/zip"
 	"bytes"
 	"fmt"
+	"path/filepath"
+	"regexp"
+	"strings"
 
 	"safe-wheel/internal/database"
 
@@ -409,6 +413,124 @@ func (s *ExportService) ExportTeamStatistics(competitionID int64, teamID int64) 
 		return nil, fmt.Errorf("save docx: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+// ExportCompetitionReportArchive собирает единый ZIP-архив со всеми
+// отчётами и статистикой соревнования:
+//
+//	Результаты.docx
+//	Личные результаты.docx
+//	Результаты по этапам.docx
+//	Команды/<Команда>/<Команда>.docx          — статистика команды
+//	Команды/<Команда>/<Участник>.docx          — статистика участника
+//
+// onProgress вызывается после формирования каждого файла.
+func (s *ExportService) ExportCompetitionReportArchive(competitionID int64, onProgress func(message string, current, total int)) ([]byte, error) {
+	comp, err := s.repo.GetCompetitionByID(competitionID)
+	if err != nil || comp == nil {
+		return nil, fmt.Errorf("соревнование не найдено")
+	}
+
+	teams, err := s.repo.ListTeams(competitionID)
+	if err != nil {
+		return nil, err
+	}
+
+	total := 3
+	for _, t := range teams {
+		total += 1 + t.ParticipantCount
+	}
+	current := 0
+	report := func(message string) {
+		current++
+		if onProgress != nil {
+			onProgress(message, current, total)
+		}
+	}
+
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+
+	addZipFile := func(name string, data []byte) error {
+		w, err := zw.Create(name)
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(data)
+		return err
+	}
+
+	overall, err := s.ExportOverallResults(competitionID)
+	if err != nil {
+		return nil, fmt.Errorf("общие результаты: %w", err)
+	}
+	if err := addZipFile("Результаты.docx", overall); err != nil {
+		return nil, err
+	}
+	report("Результаты.docx")
+
+	individual, err := s.ExportIndividualStandings(competitionID)
+	if err != nil {
+		return nil, fmt.Errorf("личные результаты: %w", err)
+	}
+	if err := addZipFile("Личные результаты.docx", individual); err != nil {
+		return nil, err
+	}
+	report("Личные результаты.docx")
+
+	stageResults, err := s.ExportStageResults(competitionID)
+	if err != nil {
+		return nil, fmt.Errorf("результаты по этапам: %w", err)
+	}
+	if err := addZipFile("Результаты по этапам.docx", stageResults); err != nil {
+		return nil, err
+	}
+	report("Результаты по этапам.docx")
+
+	for _, team := range teams {
+		teamDir := sanitizeFileName(team.Name)
+		teamStats, err := s.ExportTeamStatistics(competitionID, team.ID)
+		if err != nil {
+			continue
+		}
+		if err := addZipFile(filepath.Join("Команды", teamDir, teamDir+".docx"), teamStats); err != nil {
+			return nil, err
+		}
+		report("Команды/" + team.Name)
+
+		participants, err := s.repo.ListParticipants(team.ID)
+		if err != nil {
+			continue
+		}
+		for _, p := range participants {
+			pStats, err := s.ExportParticipantStatistics(competitionID, p.ID)
+			if err != nil {
+				continue
+			}
+			name := sanitizeFileName(p.FullName) + ".docx"
+			if err := addZipFile(filepath.Join("Команды", teamDir, name), pStats); err != nil {
+				return nil, err
+			}
+			report(p.FullName)
+		}
+	}
+
+	if err := zw.Close(); err != nil {
+		return nil, fmt.Errorf("закрыть архив: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+// sanitizeFileName заменяет символы, недопустимые в именах файлов Windows,
+// чтобы архив корректно распаковывался на любом компьютере.
+var invalidFileNameChars = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
+
+func sanitizeFileName(name string) string {
+	s := strings.TrimSpace(invalidFileNameChars.ReplaceAllString(name, "_"))
+	if s == "" {
+		return "Без_имени"
+	}
+	return s
 }
 
 func addTitle(d *docx.Docx, text string) {

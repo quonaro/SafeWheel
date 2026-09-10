@@ -469,6 +469,35 @@ func (a *App) ExportTeamStatistics(competitionID int64, teamID int64) error {
 	return a.saveFile("Статистика_команды.docx", data)
 }
 
+func (a *App) ExportCompetitionReportArchive(competitionID int64) (bool, error) {
+	if err := a.ensureRepo(); err != nil {
+		return false, err
+	}
+	data, err := a.export.ExportCompetitionReportArchive(competitionID, func(message string, current, total int) {
+		runtime.EventsEmit(a.ctx, "report-progress", map[string]any{
+			"message": message,
+			"current": current,
+			"total":   total,
+		})
+	})
+	if err != nil {
+		return false, err
+	}
+	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		DefaultFilename: "Отчеты.zip",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Архив ZIP (*.zip)", Pattern: "*.zip"},
+		},
+	})
+	if err != nil || path == "" {
+		return false, nil
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // ===== Utility =====
 
 func (a *App) FormatTime(seconds float64) string {

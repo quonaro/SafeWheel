@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, onMounted, watch, computed, onBeforeUnmount } from "vue";
 import {
   IconTrophy,
   IconUsers,
@@ -17,7 +17,10 @@ import {
   IconDeviceFloppy,
   IconDownload,
   IconUpload,
+  IconFileZip,
+  IconLoader2,
 } from "@tabler/icons-vue";
+import { EventsOn } from "../wailsjs/runtime/runtime";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -36,6 +39,7 @@ import { Toaster } from "vue-sonner";
 import { toast } from "@/composables/useToast";
 import { useCompetitions } from "@/composables/useApi";
 import { useExchange } from "@/composables/useApi";
+import { useExport } from "@/composables/useApi";
 import { useTheme } from "@/composables/useTheme";
 import { useSettings } from "@/composables/useSettings";
 import { useAppState } from "@/composables/useAppState";
@@ -50,6 +54,7 @@ const { theme, toggleTheme } = useTheme();
 const { fontSize, FONT_SIZES } = useSettings();
 const { state } = useAppState();
 const { exportJSON, pickImportFile, importCompetitions } = useExchange();
+const { exportReportArchive } = useExport();
 
 const appVersion = __APP_VERSION__;
 
@@ -108,6 +113,8 @@ const tabs = [
 onMounted(async () => {
   await load();
 
+  unlistenReportProgress = EventsOn("report-progress", onReportProgress);
+
   const lastId = state.selectedCompetitionId;
   if (lastId != null) {
     const found = competitions.value.find((c) => c.id === lastId);
@@ -133,6 +140,10 @@ function selectCompetition(comp: any) {
 watch([() => selectedCompetition.value?.id, activeTab], ([id, tab]) => {
   if (id != null) state.selectedCompetitionId = id;
   state.activeTab = tab;
+});
+
+onBeforeUnmount(() => {
+  unlistenReportProgress?.();
 });
 
 async function handleCreate() {
@@ -194,6 +205,49 @@ async function handleEdit() {
     await load();
     selectCompetition(result);
     toast.success("Изменения сохранены");
+  }
+}
+
+const reportLoading = ref(false);
+const showReportProgress = ref(false);
+const reportProgressMessage = ref("Начинаем формирование...");
+const reportProgressCurrent = ref(0);
+const reportProgressTotal = ref(0);
+
+const reportProgressPercent = computed(() => {
+  if (!reportProgressTotal.value) return 0;
+  return Math.min(
+    100,
+    Math.round((reportProgressCurrent.value / reportProgressTotal.value) * 100),
+  );
+});
+
+const onReportProgress = (payload: any) => {
+  if (!payload) return;
+  reportProgressMessage.value = payload.message || reportProgressMessage.value;
+  reportProgressCurrent.value = Number(payload.current) || 0;
+  reportProgressTotal.value = Number(payload.total) || 0;
+};
+
+let unlistenReportProgress: (() => void) | null = null;
+
+async function handleExportReport() {
+  if (!selectedCompetition.value || reportLoading.value) return;
+  reportLoading.value = true;
+  reportProgressMessage.value = "Начинаем формирование...";
+  reportProgressCurrent.value = 0;
+  reportProgressTotal.value = 0;
+  showReportProgress.value = true;
+  try {
+    const result = await exportReportArchive(selectedCompetition.value.id);
+    if (result === true) {
+      toast.success("Отчет сформирован", {
+        description: "Архив со всеми отчетами и статистикой сохранен",
+      });
+    }
+  } finally {
+    reportLoading.value = false;
+    showReportProgress.value = false;
   }
 }
 
@@ -381,6 +435,16 @@ async function handleImport() {
           </div>
         </div>
         <div class="flex shrink-0 items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            :disabled="reportLoading"
+            @click="handleExportReport"
+            title="Сформировать архив всех отчетов и статистики"
+          >
+            <IconFileZip class="h-4 w-4" />
+            Отчет
+          </Button>
           <Button size="sm" @click="openEditDialog">
             <IconPencil class="h-4 w-4" />
             Изменить
@@ -553,6 +617,35 @@ async function handleImport() {
             Удалить
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Report Progress Dialog -->
+    <Dialog v-model:open="showReportProgress">
+      <DialogContent class="sm:max-w-md" @interact-outside.prevent>
+        <DialogHeader>
+          <DialogTitle>Формирование отчётов</DialogTitle>
+          <DialogDescription>
+            Собираем все отчёты и статистику в архив
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-3 py-2">
+          <div class="flex items-center gap-3">
+            <IconLoader2 class="h-5 w-5 shrink-0 animate-spin text-primary" />
+            <span class="min-w-0 flex-1 truncate text-sm">
+              {{ reportProgressMessage }}
+            </span>
+          </div>
+          <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              class="h-full rounded-full bg-primary transition-all duration-200"
+              :style="{ width: reportProgressPercent + '%' }"
+            />
+          </div>
+          <p class="text-right text-xs text-muted-foreground">
+            {{ reportProgressCurrent }} / {{ reportProgressTotal }}
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
 
