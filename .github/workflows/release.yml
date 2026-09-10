@@ -10,6 +10,11 @@ on:
 permissions:
   contents: write
 
+env:
+  # proxy.golang.org (Google Cloud Storage) intermittently resets connections on
+  # fresh runners; fall back to a mirror and then to VCS on failure.
+  GOPROXY: https://proxy.golang.org,https://goproxy.io,direct
+
 jobs:
   build-linux:
     runs-on: ubuntu-22.04
@@ -19,6 +24,17 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version-file: go.mod
+
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: go-mod-${{ runner.os }}-wails2.15-${{ hashFiles('go.sum') }}
+        restore-keys: |
+          go-mod-${{ runner.os }}-wails2.15-
+          go-mod-${{ runner.os }}-
 
     - uses: actions/setup-node@v4
       with:
@@ -38,7 +54,35 @@ jobs:
         key: wails-cli-${{ runner.os }}-v2.15.0
 
     - name: Install Wails CLI
-      run: command -v wails >/dev/null 2>&1 || go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
+      run: |
+        if ! command -v wails >/dev/null 2>&1; then
+          for i in 1 2 3 4 5; do
+            if go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0; then
+              break
+            fi
+            echo "wails install attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+            if [ "$i" -eq 5 ]; then
+              echo "Failed to install wails after 5 attempts"
+              exit 1
+            fi
+          done
+        fi
+        command -v wails
+
+    - name: Download Go modules
+      run: |
+        for i in 1 2 3 4 5; do
+          if go mod download all; then
+            break
+          fi
+          echo "module download attempt $i failed, retrying in $((i * 10))s..."
+          sleep $((i * 10))
+          if [ "$i" -eq 5 ]; then
+            echo "Failed to download Go modules after 5 attempts"
+            exit 1
+          fi
+        done
 
     - name: Build
       run: wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform linux/amd64 -o safe-wheel-linux-amd64
@@ -57,6 +101,17 @@ jobs:
       with:
         go-version-file: go.mod
 
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: go-mod-${{ runner.os }}-wails2.15-${{ hashFiles('go.sum') }}
+        restore-keys: |
+          go-mod-${{ runner.os }}-wails2.15-
+          go-mod-${{ runner.os }}-
+
     - uses: actions/setup-node@v4
       with:
         node-version: '22'
@@ -73,7 +128,35 @@ jobs:
         key: wails-cli-${{ runner.os }}-v2.15.0
 
     - name: Install Wails CLI
-      run: command -v wails >/dev/null 2>&1 || go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
+      run: |
+        if ! command -v wails >/dev/null 2>&1; then
+          for i in 1 2 3 4 5; do
+            if go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0; then
+              break
+            fi
+            echo "wails install attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+            if [ "$i" -eq 5 ]; then
+              echo "Failed to install wails after 5 attempts"
+              exit 1
+            fi
+          done
+        fi
+        command -v wails
+
+    - name: Download Go modules
+      run: |
+        for i in 1 2 3 4 5; do
+          if go mod download all; then
+            break
+          fi
+          echo "module download attempt $i failed, retrying in $((i * 10))s..."
+          sleep $((i * 10))
+          if [ "$i" -eq 5 ]; then
+            echo "Failed to download Go modules after 5 attempts"
+            exit 1
+          fi
+        done
 
     - name: Build
       run: wails build -tags webkit2_41 -ldflags "-s -w" -trimpath -platform windows/amd64 -nsis -installscope user -o safe-wheel-windows-amd64.exe
