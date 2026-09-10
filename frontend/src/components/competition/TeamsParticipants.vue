@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CalendarPicker } from "@/components/ui/calendar-picker";
 import {
   Dialog,
   DialogContent,
@@ -61,10 +62,10 @@ const editingParticipant = ref<any>(null);
 const teamName = ref("");
 const participantName = ref("");
 const participantGender = ref("");
-const participantBirthDate = ref("");
+const participantBirthDate = ref<string | null>("");
 
 // Возраст вычисляется из даты рождения и не редактируется вручную.
-function calcAge(birthDate: string): number {
+function calcAge(birthDate: string | null): number {
   if (!birthDate) return 0;
   const t = new Date(`${birthDate.slice(0, 10)}T00:00:00`);
   if (Number.isNaN(t.getTime())) return 0;
@@ -405,7 +406,10 @@ async function saveParticipant() {
           </div>
           <div class="space-y-2">
             <Label>Дата рождения</Label>
-            <Input v-model="participantBirthDate" type="date" />
+            <CalendarPicker
+              v-model="participantBirthDate"
+              placeholder="Дата рождения"
+            />
           </div>
         </div>
         <DialogFooter>
